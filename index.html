@@ -50,7 +50,12 @@
             L.Glify.prototype.fragmentShaderTemplate = fragmentShader;
             L.Glify.prototype.vertexShaderTemplate = vertexShader;
 
-            var glify = L.glify(leafletMap);
+            var glify = L.glify({
+                map: leafletMap,
+                clickPoint: function(point) {
+
+                }
+            });
             glify.setData(data);
             glify.render();
         });
