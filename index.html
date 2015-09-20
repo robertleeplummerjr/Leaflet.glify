@@ -26,33 +26,33 @@
 <link rel="stylesheet" href="bower_components/leaflet/dist/leaflet.css" />
 <script src="bower_components/leaflet/dist/leaflet.js"></script>
 <script src="leaflet.glify.js"></script>
-<script src="http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOverlay.js"></script>
-<script src="http://www.sumbera.com/gist/86T.json" charset="utf-8"></script>
+<script src="leaflet.canvasoverlay.js"></script>
 <script>
     function wget(url, fn) {
         var request = new XMLHttpRequest();
         request.open('GET', url, true);
         request.onload = function () {
-            if (request.status >= 200 && request.status < 400) {
-                fn(request.responseText);
-            }
+            if (request.status >= 200 && request.status < 400) fn(request.responseText);
         };
         request.send();
     }
 
     var leafletMap = L.map('map').setView([50.00, 14.44], 8);
+
     L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png")
         //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
         .addTo(leafletMap);
 
     wget('fragment-shader.glsl', function(fragmentShader) {
         wget('vertex-shader.glsl', function(vertexShader) {
-            L.Glify.prototype.fragmentShaderTemplate = fragmentShader;
-            L.Glify.prototype.vertexShaderTemplate = vertexShader;
+            wget('86T.json', function(raw) {
+                L.Glify.prototype.fragmentShaderTemplate = fragmentShader;
+                L.Glify.prototype.vertexShaderTemplate = vertexShader;
 
-            var glify = L.glify(leafletMap);
-            glify.setData(data);
-            glify.render();
+                L.glify(leafletMap)
+                    .setData(JSON.parse(raw))
+                    .render();
+            });
         });
     });
 </script>
