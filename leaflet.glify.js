@@ -145,7 +145,8 @@
         },
         drawOnCanvas: function(params) {
             var gl = this.gl,
-                canvas = this.canvas;
+                canvas = this.canvas,
+                map = this.settings.map;
 
             if (gl == null) return;
 
@@ -154,17 +155,17 @@
             this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
             gl.viewport(0, 0, canvas.width, canvas.height);
 
-            var pointSize = Math.max(leafletMap.getZoom() - 4.0, 1.0);
+            var pointSize = Math.max(map.getZoom() - 4.0, 1.0);
             gl.vertexAttrib1f(gl.aPointSize, pointSize);
 
             // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
             this.mapMatrix.set(this.pixelsToWebGLMatrix);
 
-            var bounds = leafletMap.getBounds(),
+            var bounds = map.getBounds(),
                 topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
                 offset = this.latLongToPixelXY(topLeft.lat, topLeft.lng),
                 // -- Scale to current zoom
-                scale = Math.pow(2, leafletMap.getZoom());
+                scale = Math.pow(2, map.getZoom());
 
             this
                 .scaleMatrix(scale, scale)

@@ -5,12 +5,12 @@ attribute vec4 aColor;
 varying vec4 vColor;
 
 void main() {
-    // Set the size of the point
-    glPointSize =  aPointSize;
+    //set the size of the point
+    gl_PointSize =  aPointSize;
 
-    // multiply each vertex by a matrix.
-    glPosition = uMatrix * aVertex;
+    //multiply each vertex by a matrix.
+    gl_Position = uMatrix * aVertex;
 
-    // pass the color to the fragment shader
+    //pass the color to the fragment shader
     vColor = aColor;
 }

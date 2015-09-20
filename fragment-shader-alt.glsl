@@ -18,6 +18,9 @@ void main() {
         t = dist / border;
     }
 
-    //works for overlapping circles if blending is enabled
-    gl_FragColor = mix(color0, color1, t);
+    //another way for circle
+    float centerDist = length(gl_PointCoord - 0.5);
+    float radius = 0.5;
+    // works for overlapping circles if blending is enabled
+    gl_FragColor = vec4(vColor[0], vColor[1], vColor[2], 0.2 * step(centerDist, radius));
 }

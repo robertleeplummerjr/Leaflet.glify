@@ -10,7 +10,6 @@
             padding: 0;
             margin: 0;
             background: rgb(14, 21, 30);
-            height: 100%;
         }
 
         #map {
@@ -28,38 +27,48 @@
 <script src="leaflet.glify.js"></script>
 <script src="leaflet.canvasoverlay.js"></script>
 <script>
-    function wget(url, fn) {
-        var request = new XMLHttpRequest();
-        request.open('GET', url, true);
-        request.onload = function () {
-            if (request.status >= 200 && request.status < 400) fn(request.responseText);
-        };
-        request.send();
+    function wget(urls, fn) {
+        var results = [],
+            lookup = {},
+            complete = 0,
+            total = urls.length;
+
+        urls.forEach(function(url) {
+            var i = lookup[url] = results.length,
+                request = new XMLHttpRequest();
+            results.push(null);
+            request.open('GET', url, true);
+            request.onload = function () {
+                if (request.status < 200 && request.status > 400) return;
+                results[i] = request.responseText;
+                complete++;
+                if (complete === total) fn.apply(null, results);
+            };
+            request.send();
+        });
     }
 
-    var leafletMap = L.map('map').setView([50.00, 14.44], 8);
+    var map = L.map('map')
+            .setView([50.00, 14.44], 8);
 
     L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png")
         //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
-        .addTo(leafletMap);
+        .addTo(map);
 
-    wget('fragment-shader.glsl', function(fragmentShader) {
-        wget('vertex-shader.glsl', function(vertexShader) {
-            wget('86T.json', function(raw) {
-                L.Glify.prototype.fragmentShaderTemplate = fragmentShader;
-                L.Glify.prototype.vertexShaderTemplate = vertexShader;
+    wget(['fragment-shader.glsl', 'vertex-shader.glsl', '86T.json'],
+        function(fragmentShader, vertexShader, raw) {
+            L.Glify.prototype.fragmentShaderTemplate = fragmentShader;
+            L.Glify.prototype.vertexShaderTemplate = vertexShader;
 
-                L.glify({
-                    map: leafletMap,
-                    clickPoint: function (point) {
+            L.glify({
+                map: map,
+                clickPoint: function (point) {
 
-                    }
-                })
-                .setData(JSON.parse(raw))
-                .render();
-            });
+                }
+            })
+            .setData(JSON.parse(raw))
+            .render();
         });
-    });
 </script>
 </body>
 </html>

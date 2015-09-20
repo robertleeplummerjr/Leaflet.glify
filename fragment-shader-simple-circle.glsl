@@ -18,6 +18,11 @@ void main() {
         t = dist / border;
     }
 
-    //works for overlapping circles if blending is enabled
-    gl_FragColor = mix(color0, color1, t);
+    //simple circles
+    float d = distance (gl_PointCoord, vec2(0.5,0.5));
+    if (d < 0.5 ){
+        gl_FragColor = vec4(vColor[0], vColor[1], vColor[2], 0.2);
+    } else {
+        discard;
+    }
 }
