@@ -12,6 +12,12 @@
         return settings;
     }
 
+    /**
+     *
+     * @param settings
+     * @constructor
+     * @memberOf L
+     */
     function Glify(settings) {
         this.settings = defaults(settings);
 
