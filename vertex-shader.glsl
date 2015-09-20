@@ -1,16 +1,16 @@
-uniform mat4 u_matrix;
-attribute vec4 a_vertex;
-attribute float a_pointSize;
-attribute vec4 a_color;
-varying vec4 v_color;
+uniform mat4 uMatrix;
+attribute vec4 aVertex;
+attribute float aPointSize;
+attribute vec4 aColor;
+varying vec4 vColor;
 
 void main() {
     // Set the size of the point
-    gl_PointSize =  a_pointSize;
+    glPointSize =  aPointSize;
 
     // multiply each vertex by a matrix.
-    gl_Position = u_matrix * a_vertex;
+    glPosition = uMatrix * aVertex;
 
     // pass the color to the fragment shader
-    v_color = a_color;
+    vColor = aColor;
 }

@@ -1,22 +1,26 @@
 var Glify = (function(window, document, L, undefined) {
     function Glify(map) {
-        var self = this;
-        this.glLayer = L.canvasOverlay()
-            .drawing(function(params) {
-                self.drawOnCanvas(params);
-            })
-            .addTo(map);
+        var self = this,
+            glLayer = this.glLayer = L.canvasOverlay()
+                .drawing(function(params) {
+                    self.drawOnCanvas(params);
+                })
+                .addTo(map),
+            canvas = this.canvas = glLayer.canvas();
 
-        var canvas = this.canvas = this.glLayer.canvas();
-        this.glLayer.canvas.width = canvas.clientWidth;
-        this.glLayer.canvas.height = canvas.clientHeight;
-        this.gl = canvas.getContext('experimental-webgl', { antialias: true });
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+
+        this.gl = canvas.getContext('experimental-webgl', {
+            antialias: true
+        });
 
         this.pixelsToWebGLMatrix = new Float32Array(16);
         this.mapMatrix = new Float32Array(16);
         this.vertexShader = null;
         this.fragmentShader = null;
         this.program = null;
+        this.uMatLoc = null;
         this.verts = [];
         this.data = [];
 
@@ -25,7 +29,8 @@ var Glify = (function(window, document, L, undefined) {
 
     Glify.prototype = {
         setup: function setup() {
-            this.setupVertexShader()
+            this
+                .setupVertexShader()
                 .setupFragmentShader()
                 .setupProgram();
         },
@@ -38,17 +43,17 @@ var Glify = (function(window, document, L, undefined) {
                 canvas = this.canvas,
                 program = this.program,
                 glLayer = this.glLayer,
-                u_matLoc = this.u_matLoc = gl.getUniformLocation(program, "u_matrix"),
-                colorLoc = gl.getAttribLocation(program, "a_color"),
-                vertLoc = gl.getAttribLocation(program, "a_vertex");
+                uMatLoc = this.uMatLoc = gl.getUniformLocation(program, "uMatrix"),
+                colorLoc = gl.getAttribLocation(program, "aColor"),
+                vertLoc = gl.getAttribLocation(program, "aVertex");
 
-            gl.aPointSize = gl.getAttribLocation(program, "a_pointSize");
+            gl.aPointSize = gl.getAttribLocation(program, "aPointSize");
             // Set the matrix to some that makes 1 unit 1 pixel.
 
             this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
             gl.viewport(0, 0, canvas.width, canvas.height);
 
-            gl.uniformMatrix4fv(u_matLoc, false, this.pixelsToWebGLMatrix);
+            gl.uniformMatrix4fv(uMatLoc, false, this.pixelsToWebGLMatrix);
 
             // -- data
             this.data.map(function (d, i) {
@@ -63,10 +68,11 @@ var Glify = (function(window, document, L, undefined) {
 
             gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
-            gl.vertexAttribPointer(vertLoc, 2, gl.FLOAT, false,fsize*5,0);
+            gl.vertexAttribPointer(vertLoc, 2, gl.FLOAT, false, fsize * 5 ,0);
             gl.enableVertexAttribArray(vertLoc);
+
             // -- offset for color buffer
-            gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, fsize*5, fsize*2);
+            gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, fsize * 5, fsize * 2);
             gl.enableVertexAttribArray(colorLoc);
 
             glLayer.redraw();
@@ -139,11 +145,11 @@ var Glify = (function(window, document, L, undefined) {
                 scale = Math.pow(2, leafletMap.getZoom());
 
             this
-                .scaleMatrix(this.mapMatrix, scale, scale)
-                .translateMatrix(this.mapMatrix, -offset.x, -offset.y);
+                .scaleMatrix(scale, scale)
+                .translateMatrix(-offset.x, -offset.y);
 
             // -- attach matrix value to 'mapMatrix' uniform in shader
-            gl.uniformMatrix4fv(this.u_matLoc, false, this.mapMatrix);
+            gl.uniformMatrix4fv(this.uMatLoc, false, this.mapMatrix);
             gl.drawArrays(gl.POINTS, 0, this.data.length);
 
             return this;
@@ -178,10 +184,10 @@ var Glify = (function(window, document, L, undefined) {
         // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
         // -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
         latLongToPixelXY: function(latitude, longitude) {
-            var pi_180 = Math.PI / 180.0,
-                pi_4 = Math.PI * 4,
-                sinLatitude = Math.sin(latitude * pi_180),
-                pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi_4)) * 256,
+            var pi180 = Math.PI / 180.0,
+                pi4 = Math.PI * 4,
+                sinLatitude = Math.sin(latitude * pi180),
+                pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
                 pixelX = ((longitude + 180) / 360) * 256;
 
             return {
@@ -189,7 +195,8 @@ var Glify = (function(window, document, L, undefined) {
                 y: pixelY
             };
         },
-        translateMatrix: function(matrix, tx, ty) {
+        translateMatrix: function(tx, ty) {
+            var matrix = this.mapMatrix;
             // translation is in last column of matrix
             matrix[12] += matrix[0] * tx + matrix[4] * ty;
             matrix[13] += matrix[1] * tx + matrix[5] * ty;
@@ -198,7 +205,8 @@ var Glify = (function(window, document, L, undefined) {
 
             return this;
         },
-        scaleMatrix: function(matrix, scaleX, scaleY) {
+        scaleMatrix: function(scaleX, scaleY) {
+            var matrix = this.mapMatrix;
             // scaling x and y, which is just scaling first two columns of matrix
             matrix[0] *= scaleX;
             matrix[1] *= scaleX;
