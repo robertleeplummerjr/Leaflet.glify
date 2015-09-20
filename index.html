@@ -49,9 +49,14 @@
                 L.Glify.prototype.fragmentShaderTemplate = fragmentShader;
                 L.Glify.prototype.vertexShaderTemplate = vertexShader;
 
-                L.glify(leafletMap)
-                    .setData(JSON.parse(raw))
-                    .render();
+                L.glify({
+                    map: leafletMap,
+                    clickPoint: function (point) {
+
+                    }
+                })
+                .setData(JSON.parse(raw))
+                .render();
             });
         });
     });

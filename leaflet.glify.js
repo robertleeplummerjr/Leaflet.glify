@@ -1,3 +1,25 @@
+(function(window, document, L, undefined) {
+
+    function defaults(userSettings) {
+        var defaults = Glify.defaults,
+            settings = {},
+            i;
+
+        for (i in defaults) if (defaults.hasOwnProperty(i)) {
+            settings[i] = (userSettings.hasOwnProperty(i) ? userSettings[i] : defaults[i]);
+        }
+
+        return settings;
+    }
+
+    function Glify(settings) {
+        var self = this;
+        this.settings = defaults(settings);
+        this.glLayer = L.canvasOverlay()
+            .drawing(function(params) {
+                self.drawOnCanvas(params);
+            })
+            .addTo(this.settings.map);
 var Glify = (function(window, document, L, undefined) {
     function Glify(map) {
         var self = this,
@@ -26,6 +48,11 @@ var Glify = (function(window, document, L, undefined) {
 
         this.setup();
     }
+
+    Glify.defaults = {
+        map: null,
+        clickPoint: function() {}
+    };
 
     Glify.prototype = {
         setup: function setup() {
@@ -229,12 +256,9 @@ var Glify = (function(window, document, L, undefined) {
         fragmentShaderTemplate: '{{fragment-shader}}'
     };
 
-    L.glify = function(map) {
-        var glify = new Glify(map);
-
-        return glify;
+    L.glify = function(settings) {
+        return new L.Glify(settings);
     };
 
     L.Glify = Glify;
-    return Glify;
 })(window, document, L);
