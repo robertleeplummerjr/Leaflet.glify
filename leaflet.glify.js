@@ -13,21 +13,16 @@
     }
 
     function Glify(settings) {
-        var self = this;
         this.settings = defaults(settings);
-        this.glLayer = L.canvasOverlay()
-            .drawing(function(params) {
-                self.drawOnCanvas(params);
-            })
-            .addTo(this.settings.map);
-var Glify = (function(window, document, L, undefined) {
-    function Glify(map) {
+
+        if (!settings.map) throw new Error('no leaflet "map" property defined');
+
         var self = this,
             glLayer = this.glLayer = L.canvasOverlay()
                 .drawing(function(params) {
                     self.drawOnCanvas(params);
                 })
-                .addTo(map),
+                .addTo(settings.map),
             canvas = this.canvas = glLayer.canvas();
 
         canvas.width = canvas.clientWidth;
