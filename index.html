@@ -57,17 +57,15 @@
 
     wget(['fragment-shader.glsl', 'vertex-shader.glsl', '86T.json'],
         function(fragmentShader, vertexShader, raw) {
-            L.Glify.prototype.fragmentShaderTemplate = fragmentShader;
-            L.Glify.prototype.vertexShaderTemplate = vertexShader;
-
             L.glify({
                 map: map,
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
                 clickPoint: function (point) {
 
-                }
-            })
-            .setData(JSON.parse(raw))
-            .render();
+                },
+                data: JSON.parse(raw)
+            });
         });
 </script>
 </body>

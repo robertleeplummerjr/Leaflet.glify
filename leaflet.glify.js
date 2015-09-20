@@ -15,13 +15,15 @@
     function Glify(settings) {
         this.settings = defaults(settings);
 
-        if (!settings.map) throw new Error('no leaflet "map" property defined');
+        if (!settings.vertexShader) throw new Error('no "vertexShader" string setting defined');
+        if (!settings.fragmentShader) throw new Error('no "fragmentShader" string setting defined');
+        if (!settings.data) throw new Error('no "map" array setting defined');
+        if (!settings.map) throw new Error('no leaflet "map" object setting defined');
 
-        var self = this,
-            glLayer = this.glLayer = L.canvasOverlay()
+        var glLayer = this.glLayer = L.canvasOverlay()
                 .drawing(function(params) {
-                    self.drawOnCanvas(params);
-                })
+                    this.drawOnCanvas(params);
+                }.bind(this))
                 .addTo(settings.map),
             canvas = this.canvas = glLayer.canvas();
 
@@ -39,94 +41,125 @@
         this.program = null;
         this.uMatLoc = null;
         this.verts = [];
-        this.data = [];
 
-        this.setup();
+        this
+            .setup()
+            .render();
     }
 
     Glify.defaults = {
         map: null,
-        clickPoint: function() {}
+        data: [],
+        vertexShader: '',
+        fragmentShader: '',
+        clickPoint: null
     };
 
     Glify.prototype = {
+        /**
+         *
+         * @returns {Glify}
+         */
         setup: function setup() {
-            this
+            return this
                 .setupVertexShader()
                 .setupFragmentShader()
                 .setupProgram();
         },
+
+        /**
+         *
+         * @returns {Glify}
+         */
         render: function() {
-            //  gl.disable(gl.DEPTH_TEST);
-            // ----------------------------
-            // look up the locations for the inputs to our shaders.
-            var self = this,
-                gl = this.gl,
+            //empty verts and repopulate
+            this.verts.length = 0;
+            // -- data
+            this.settings.data.map(function (d, i) {
+                var pixel = this.latLongToPixelXY(d[0], d[1]);
+                //-- 2 coord, 3 rgb colors interleaved buffer
+                this.verts.push(pixel.x, pixel.y, Math.random(), Math.random(), Math.random());
+            }.bind(this));
+
+            //look up the locations for the inputs to our shaders.
+            var gl = this.gl,
                 canvas = this.canvas,
                 program = this.program,
                 glLayer = this.glLayer,
                 uMatLoc = this.uMatLoc = gl.getUniformLocation(program, "uMatrix"),
-                colorLoc = gl.getAttribLocation(program, "aColor"),
-                vertLoc = gl.getAttribLocation(program, "aVertex");
+                colorLocation = gl.getAttribLocation(program, "aColor"),
+                vertexLocation = gl.getAttribLocation(program, "aVertex"),
+                vertexBuffer = gl.createBuffer(),
+                vertexArray = new Float32Array(this.verts),
+                fsize = vertexArray.BYTES_PER_ELEMENT;
 
             gl.aPointSize = gl.getAttribLocation(program, "aPointSize");
-            // Set the matrix to some that makes 1 unit 1 pixel.
 
+            //set the matrix to some that makes 1 unit 1 pixel.
             this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+
             gl.viewport(0, 0, canvas.width, canvas.height);
-
             gl.uniformMatrix4fv(uMatLoc, false, this.pixelsToWebGLMatrix);
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
+            gl.vertexAttribPointer(vertexLocation, 2, gl.FLOAT, false, fsize * 5 ,0);
+            gl.enableVertexAttribArray(vertexLocation);
 
-            // -- data
-            this.data.map(function (d, i) {
-                var pixel = self.latLongToPixelXY(d[0], d[1]);
-                //-- 2 coord, 3 rgb colors interleaved buffer
-                self.verts.push(pixel.x, pixel.y, Math.random(), Math.random(), Math.random());
-            });
-
-            var vertBuffer = gl.createBuffer(),
-                vertArray = new Float32Array(this.verts),
-                fsize = vertArray.BYTES_PER_ELEMENT;
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
-            gl.vertexAttribPointer(vertLoc, 2, gl.FLOAT, false, fsize * 5 ,0);
-            gl.enableVertexAttribArray(vertLoc);
-
-            // -- offset for color buffer
-            gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, fsize * 5, fsize * 2);
-            gl.enableVertexAttribArray(colorLoc);
+            //offset for color buffer
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, fsize * 5, fsize * 2);
+            gl.enableVertexAttribArray(colorLocation);
 
             glLayer.redraw();
 
             return this;
         },
-        setData: function(data) {
-            this.data = data;
 
+        /**
+         *
+         * @param data
+         * @returns {Glify}
+         */
+        setData: function(data) {
+            this.settings.data = data;
             return this;
         },
+
+        /**
+         *
+         * @returns {Glify}
+         */
         setupVertexShader: function() {
             var gl = this.gl,
                 vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
-            gl.shaderSource(vertexShader, this.vertexShaderTemplate);
+            gl.shaderSource(vertexShader, this.settings.vertexShader);
             gl.compileShader(vertexShader);
 
             this.vertexShader = vertexShader;
+
             return this;
         },
+
+        /**
+         *
+         * @returns {Glify}
+         */
         setupFragmentShader: function() {
             var gl = this.gl,
                 fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
-            gl.shaderSource(fragmentShader, this.fragmentShaderTemplate);
+            gl.shaderSource(fragmentShader, this.settings.fragmentShader);
             gl.compileShader(fragmentShader);
 
             this.fragmentShader = fragmentShader;
 
             return this;
         },
+
+        /**
+         *
+         * @returns {Glify}
+         */
         setupProgram: function() {
             // link shaders to create our program
             var gl = this.gl,
@@ -143,29 +176,34 @@
 
             return this;
         },
+
+        /**
+         *
+         * @param params
+         * @returns {Glify}
+         */
         drawOnCanvas: function(params) {
+            if (this.gl == null) return this;
+
             var gl = this.gl,
                 canvas = this.canvas,
-                map = this.settings.map;
-
-            if (gl == null) return;
+                map = this.settings.map,
+                zoom = map.getZoom(),
+                bounds = map.getBounds(),
+                topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
+                offset = this.latLongToPixelXY(topLeft.lat, topLeft.lng),
+                // -- Scale to current zoom
+                scale = Math.pow(2, zoom),
+                pointSize = Math.max(zoom - 4.0, 1.0);
 
             gl.clear(gl.COLOR_BUFFER_BIT);
 
             this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
             gl.viewport(0, 0, canvas.width, canvas.height);
-
-            var pointSize = Math.max(map.getZoom() - 4.0, 1.0);
             gl.vertexAttrib1f(gl.aPointSize, pointSize);
 
-            // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
+            //set base matrix to translate canvas pixel coordinates -> webgl coordinates
             this.mapMatrix.set(this.pixelsToWebGLMatrix);
-
-            var bounds = map.getBounds(),
-                topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-                offset = this.latLongToPixelXY(topLeft.lat, topLeft.lng),
-                // -- Scale to current zoom
-                scale = Math.pow(2, map.getZoom());
 
             this
                 .scaleMatrix(scale, scale)
@@ -173,39 +211,18 @@
 
             // -- attach matrix value to 'mapMatrix' uniform in shader
             gl.uniformMatrix4fv(this.uMatLoc, false, this.mapMatrix);
-            gl.drawArrays(gl.POINTS, 0, this.data.length);
+            gl.drawArrays(gl.POINTS, 0, this.settings.data.length);
 
             return this;
         },
 
-        // Returns a random integer from 0 to range - 1.
-        randomInt: function(range) {
-            return Math.floor(Math.random() * range);
-        },
-
-        /*
-         function latlonToPixels(lat, lon) {
-         initialResolution = 2 * Math.PI * 6378137 / 256, // at zoomlevel 0
-         originShift = 2 * Math.PI * 6378137 / 2;
-
-         // -- to meters
-         var mx = lon * originShift / 180;
-         var my = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
-         my = my * originShift / 180;
-
-
-         // -- to pixels at zoom level 0
-
-         var res = initialResolution;
-         x = (mx + originShift) / res,
-         y = (my + originShift) / res;
-
-
-         return { x: x, y: 256- y };
-         }
+        /**
+         * converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
+         * source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
+         * @param latitude
+         * @param longitude
+         * @returns {{x: number, y: number}}
          */
-        // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
-        // -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
         latLongToPixelXY: function(latitude, longitude) {
             var pi180 = Math.PI / 180.0,
                 pi4 = Math.PI * 4,
@@ -218,6 +235,13 @@
                 y: pixelY
             };
         },
+
+        /**
+         *
+         * @param tx
+         * @param ty
+         * @returns {Glify}
+         */
         translateMatrix: function(tx, ty) {
             var matrix = this.mapMatrix;
             // translation is in last column of matrix
@@ -228,6 +252,13 @@
 
             return this;
         },
+
+        /**
+         *
+         * @param scaleX
+         * @param scaleY
+         * @returns {Glify}
+         */
         scaleMatrix: function(scaleX, scaleY) {
             var matrix = this.mapMatrix;
             // scaling x and y, which is just scaling first two columns of matrix
@@ -243,13 +274,17 @@
 
             return this;
         },
+
+        /**
+         *
+         * @param map
+         * @returns {Glify}
+         */
         addTo: function(map) {
             this.glLayer.addTo(map);
 
             return this;
-        },
-        vertexShaderTemplate: '{{vertex-shader}}',
-        fragmentShaderTemplate: '{{fragment-shader}}'
+        }
     };
 
     L.glify = function(settings) {
