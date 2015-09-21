@@ -18,10 +18,18 @@
             width: 100%;
             background-color: #333;
         }
+        #lnlt {
+            position: absolute;
+            bottom: 0;
+            right: 50px;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
 <div id="map"></div>
+<div id="lnlt"></div>
+</body>
 <link rel="stylesheet" href="bower_components/leaflet/dist/leaflet.css" />
 <script src="bower_components/leaflet/dist/leaflet.js"></script>
 <script src="leaflet.glify.js"></script>
@@ -49,7 +57,8 @@
     }
 
     var map = L.map('map')
-            .setView([50.00, 14.44], 8);
+            .setView([50.00, 14.44], 8),
+        lnlt = document.getElementById('lnlt');
 
     L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png")
         //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
@@ -67,6 +76,16 @@
                 data: JSON.parse(raw)
             });
         });
+
+    map.on('mousemove', function (e) {
+        lnlt.textContent =
+                " Latitude: " + (e.latlng.lat).toFixed(5)
+                + " | Longitude: " + (e.latlng.lng).toFixed(5)
+                + " | Zoom: " + map.getZoom() + " ";
+    });
+
+    /**
+     * pixels left = point - circleShape
+     */
 </script>
-</body>
 </html>

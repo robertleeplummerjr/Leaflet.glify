@@ -16,14 +16,13 @@
      *
      * @param settings
      * @constructor
-     * @memberOf L
      */
     function Glify(settings) {
         this.settings = defaults(settings);
 
         if (!settings.vertexShader) throw new Error('no "vertexShader" string setting defined');
         if (!settings.fragmentShader) throw new Error('no "fragmentShader" string setting defined');
-        if (!settings.data) throw new Error('no "map" array setting defined');
+        if (!settings.data) throw new Error('no "data" array setting defined');
         if (!settings.map) throw new Error('no leaflet "map" object setting defined');
 
         var glLayer = this.glLayer = L.canvasOverlay()
@@ -36,17 +35,16 @@
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
 
-        this.gl = canvas.getContext('experimental-webgl', {
-            antialias: true
-        });
+        this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
         this.pixelsToWebGLMatrix = new Float32Array(16);
         this.mapMatrix = new Float32Array(16);
         this.vertexShader = null;
         this.fragmentShader = null;
         this.program = null;
-        this.uMatLoc = null;
-        this.verts = [];
+        this.uMatrix = null;
+        this.verts = null;
+        this.latLonLookup = null;
 
         this
             .setup()
@@ -58,6 +56,7 @@
         data: [],
         vertexShader: '',
         fragmentShader: '',
+        pointThreshold: 10,
         clickPoint: null
     };
 
@@ -66,7 +65,12 @@
          *
          * @returns {Glify}
          */
-        setup: function setup() {
+        setup: function () {
+            var self = this;
+            this.settings.map.on('click', function(e) {
+                self.lookup(e.latlng, e.containerPoint);
+            });
+
             return this
                 .setupVertexShader()
                 .setupFragmentShader()
@@ -79,10 +83,24 @@
          */
         render: function() {
             //empty verts and repopulate
-            this.verts.length = 0;
+            this.verts = [];
+            this.latLonLookup = {};
             // -- data
             this.settings.data.map(function (d, i) {
-                var pixel = this.latLongToPixelXY(d[0], d[1]);
+                var lat = d[0],
+                    lon = d[1],
+                    latLookupKey = lat.toFixed(2),
+                    lonLookupKey = lon.toFixed(2),
+                    latLonKey = latLookupKey + 'x' + lonLookupKey,
+                    pixel = this.latLongToPixelXY(lat, lon),
+                    lookup = this.latLonLookup[latLonKey];
+
+                if (lookup === undefined) {
+                    lookup = this.latLonLookup[latLonKey] = [];
+                }
+
+                lookup.push(pixel);
+
                 //-- 2 coord, 3 rgb colors interleaved buffer
                 this.verts.push(pixel.x, pixel.y, Math.random(), Math.random(), Math.random());
             }.bind(this));
@@ -92,7 +110,7 @@
                 canvas = this.canvas,
                 program = this.program,
                 glLayer = this.glLayer,
-                uMatLoc = this.uMatLoc = gl.getUniformLocation(program, "uMatrix"),
+                uMatrix = this.uMatrix = gl.getUniformLocation(program, "uMatrix"),
                 colorLocation = gl.getAttribLocation(program, "aColor"),
                 vertexLocation = gl.getAttribLocation(program, "aVertex"),
                 vertexBuffer = gl.createBuffer(),
@@ -105,7 +123,7 @@
             this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
             gl.viewport(0, 0, canvas.width, canvas.height);
-            gl.uniformMatrix4fv(uMatLoc, false, this.pixelsToWebGLMatrix);
+            gl.uniformMatrix4fv(uMatrix, false, this.pixelsToWebGLMatrix);
             gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
             gl.vertexAttribPointer(vertexLocation, 2, gl.FLOAT, false, fsize * 5 ,0);
@@ -216,7 +234,7 @@
                 .translateMatrix(-offset.x, -offset.y);
 
             // -- attach matrix value to 'mapMatrix' uniform in shader
-            gl.uniformMatrix4fv(this.uMatLoc, false, this.mapMatrix);
+            gl.uniformMatrix4fv(this.uMatrix, false, this.mapMatrix);
             gl.drawArrays(gl.POINTS, 0, this.settings.data.length);
 
             return this;
@@ -237,6 +255,8 @@
                 pixelX = ((longitude + 180) / 360) * 256;
 
             return {
+                lat: latitude,
+                lon: longitude,
                 x: pixelX,
                 y: pixelY
             };
@@ -290,6 +310,35 @@
             this.glLayer.addTo(map);
 
             return this;
+        },
+
+        /**
+         *
+         * @param {L.LatLng} coords
+         * @param {L.Point} containerPoint
+         */
+        lookup: function(coords, containerPoint) {
+            var latLookupKey = coords.lat.toFixed(2),
+                lonLookupKey = coords.lng.toFixed(2),
+                standardLatLonKey = latLookupKey + 'x' + lonLookupKey,
+
+                settings = this.settings,
+                map = settings.map,
+                pointThreshold = settings.pointThreshold,
+
+                leftThreshold = containerPoint.x - pointThreshold,
+                rightThreshold = containerPoint.x + pointThreshold,
+                topThreshold = containerPoint.y - pointThreshold,
+                bottomThreshold = containerPoint.y + pointThreshold,
+
+                neThreshold = map.containerPointToLatLng(new L.Path(leftThreshold, topThreshold)),
+                swThreshold = map.containerPointToLatLng(new L.Path(rightThreshold, bottomThreshold)),
+
+                neThresholdLatLonKey = neThreshold.lat.toFixed(2) + 'x' + neThreshold.lng.toFixed(2),
+                swThresholdLatLonKey = swThreshold.lat.toFixed(2) + 'x' + swThreshold.lng.toFixed(2);
+
+            
+
         }
     };
 
