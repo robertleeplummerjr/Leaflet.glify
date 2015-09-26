@@ -71,7 +71,13 @@
                 vertexShader: vertexShader,
                 fragmentShader: fragmentShader,
                 clickPoint: function (point) {
+                    //set up a standalone popup (use a popup as a layer)
+                    L.popup()
+                        .setLatLng(point)
+                        .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lng)
+                        .openOn(map);
 
+                    console.log(point);
                 },
                 data: JSON.parse(raw)
             });
