@@ -331,11 +331,11 @@
          * @returns {*}
          */
         lookup: function(coords) {
-            var x = coords.lat - 0.03,
+            var x = coords.lat - 0.01,
                 y,
 
-                xMax = coords.lat + 0.03,
-                yMax = coords.lng + 0.03,
+                xMax = coords.lat + 0.01,
+                yMax = coords.lng + 0.01,
 
                 foundI,
                 foundMax,
