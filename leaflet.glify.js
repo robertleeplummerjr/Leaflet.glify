@@ -58,7 +58,32 @@
         vertexShader: '',
         fragmentShader: '',
         pointThreshold: 10,
-        clickPoint: null
+        clickPoint: null,
+        color: 'red'
+    };
+
+    Glify.color = {
+        green : {r: 0, g: 1, b: 0},
+        red   : {r: 1, g: 0, b: 0},
+        blue  : {r: 0, g: 0, b: 1},
+        teal  : {r: 0, g: 1, b: 1},
+        yellow: {r: 1, g: 1, b: 0},
+        random: function() {
+            return {
+                r: Math.random(),
+                g: Math.random(),
+                b: Math.random()
+            };
+        },
+        pallet : function() {
+            switch (Math.round(Math.random() * 4)) {
+                case 0: return Glify.color.green;
+                case 1: return Glify.color.red;
+                case 2: return Glify.color.blue;
+                case 3: return Glify.color.teal;
+                case 4: return Glify.color.yellow;
+            }
+        }
     };
 
     Glify.prototype = {
@@ -99,22 +124,39 @@
             this.verts = [];
             this.latLngLookup = {};
             // -- data
-            this.settings.data.map(function (d, i) {
-                var lat = d[0],
-                    lng = d[1],
-                    key = lat.toFixed(2) + 'x' + lng.toFixed(2),
-                    pixel = this.latLngToPixelXY(lat, lng, key),
-                    lookup = this.latLngLookup[key];
+            var settings = this.settings,
+                colorKey = settings.color,
+                colorFn,
+                color = Glify.color[ colorKey ];
 
-                if (lookup === undefined) {
-                    lookup = this.latLngLookup[key] = [];
-                }
+            if (color === undefined) {
+                color = colorKey;
+            }
 
-                lookup.push(pixel);
+            if (color.call !== undefined) {
+                colorKey = color;
+            }
 
-                //-- 2 coord, 3 rgb colors interleaved buffer
-                this.verts.push(pixel.x, pixel.y, Math.random(), Math.random(), Math.random());
-            }.bind(this));
+            //see if colorKey is actually a function
+            if (colorKey.call !== undefined) {
+                colorFn = colorKey;
+                this.settings.data.map(function (latLng, i) {
+                    var pixel = this.latLngToPixelXY(latLng[0], latLng[1]),
+                        color = colorFn();
+
+                    //-- 2 coord, 3 rgb colors interleaved buffer
+                    this.verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+                }.bind(this));
+            } else {
+                this.settings.data.map(function (latLng, i) {
+                    var pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
+
+                    //-- 2 coord, 3 rgb colors interleaved buffer
+                    this.verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+                }.bind(this));
+            }
+
+
 
             //look up the locations for the inputs to our shaders.
             var gl = this.gl,
@@ -256,23 +298,33 @@
          * source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
          * @param latitude
          * @param longitude
-         * @param [key]
          * @returns {{x: number, y: number}}
          */
-        latLngToPixelXY: function(latitude, longitude, key) {
+        latLngToPixelXY: function(latitude, longitude) {
             var pi180 = Math.PI / 180.0,
                 pi4 = Math.PI * 4,
                 sinLatitude = Math.sin(latitude * pi180),
                 pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
-                pixelX = ((longitude + 180) / 360) * 256;
+                pixelX = ((longitude + 180) / 360) * 256,
+                pixel,
+                key = latitude.toFixed(2) + 'x' + longitude.toFixed(2),
+                lookup = this.latLngLookup[key];
 
-            return {
+            pixel = {
                 lat: latitude,
                 lng: longitude,
                 x: pixelX,
                 y: pixelY,
                 key: key
             };
+
+            if (lookup === undefined) {
+                lookup = this.latLngLookup[key] = [];
+            }
+
+            lookup.push(pixel);
+
+            return pixel;
         },
 
         /**
@@ -331,11 +383,11 @@
          * @returns {*}
          */
         lookup: function(coords) {
-            var x = coords.lat - 0.01,
+            var x = coords.lat - 0.03,
                 y,
 
-                xMax = coords.lat + 0.01,
-                yMax = coords.lng + 0.01,
+                xMax = coords.lat + 0.03,
+                yMax = coords.lng + 0.03,
 
                 foundI,
                 foundMax,
@@ -345,7 +397,7 @@
                 key;
 
             for (; x <= xMax; x+=0.01) {
-                y = coords.lng - 0.01;
+                y = coords.lng - 0.03;
                 for (; y <= yMax; y+=0.01) {
                     key = x.toFixed(2) + 'x' + y.toFixed(2);
                     found = this.latLngLookup[key];
@@ -365,28 +417,27 @@
 
         /**
          *
-         * @param origin
+         * @param targetLocation
          * @param points
          * @returns {*}
          */
-        closestPoint: function(origin, points) {
-            function d(point) {
-                return Math.pow(point.lat, 2) + Math.pow(point.lng, 2);
+        closestPoint: function(targetLocation, points) {
+            function vectorDistance(dx, dy) {
+                return Math.sqrt(dx * dx + dy * dy);
             }
 
-            var closest = points
-                .reduce(function(min, p) {
-                    if (d(p) < min.d) {
-                        min.point = p;
-                    }
+            function locationDistance(location1, location2) {
+                var dx = location1.lat - location2.lat,
+                    dy = location1.lng - location2.lng;
 
-                    return min;
-                },{
-                    point: origin,
-                    d: d(origin)
-                }).point;
+                return vectorDistance(dx, dy);
+            }
 
-            return (closest === origin ? null : closest);
+            return points.reduce(function(prev, curr) {
+                var prevDistance = locationDistance(targetLocation , prev),
+                    currDistance = locationDistance(targetLocation , curr);
+                return (prevDistance < currDistance) ? prev : curr;
+            });
         },
         debugPoint: function(containerPoint) {
             var el = document.createElement('div'),
