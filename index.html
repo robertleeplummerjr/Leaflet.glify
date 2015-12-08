@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-    <title>Many Points with  leaflet WebGL</title>
+    <title>Many Points with leaflet WebGL</title>
     <meta charset="utf-8">
 
     <style>
@@ -32,8 +32,8 @@
 </body>
 <link rel="stylesheet" href="bower_components/leaflet/dist/leaflet.css" />
 <script src="bower_components/leaflet/dist/leaflet.js"></script>
-<script src="leaflet.glify.js"></script>
-<script src="leaflet.canvasoverlay.js"></script>
+<script src="src/js/glify.js"></script>
+<script src="src/js/canvasoverlay.js"></script>
 <script>
     function wget(urls, fn) {
         var results = [],
@@ -64,25 +64,22 @@
         //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
         .addTo(map);
 
-    wget(['fragment-shader.glsl', 'vertex-shader.glsl', '86T.json'],
-        function(fragmentShader, vertexShader, raw) {
-            L.glify({
-                map: map,
-                vertexShader: vertexShader,
-                fragmentShader: fragmentShader,
-                clickPoint: function (point) {
-                    //set up a standalone popup (use a popup as a layer)
-                    L.popup()
-                        .setLatLng(point)
-                        .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
-                        .openOn(map);
+    wget(['86T.json'], function(points) {
+      L.glify.points({
+        map: map,
+        clickPoint: function (point) {
+          //set up a standalone popup (use a popup as a layer)
+          L.popup()
+              .setLatLng(point)
+              .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
+              .openOn(map);
 
-                    console.log(point);
-                },
-                data: JSON.parse(raw),
-                color: 'red'
-            });
-        });
+          console.log(point);
+        },
+        data: JSON.parse(points),
+        color: 'red'
+      });
+    });
 
     map.on('mousemove', function (e) {
         lnlt.textContent =
@@ -90,9 +87,5 @@
                 + " | Longitude: " + (e.latlng.lng).toFixed(5)
                 + " | Zoom: " + map.getZoom() + " ";
     });
-
-    /**
-     * pixels left = point - circleShape
-     */
 </script>
 </html>
