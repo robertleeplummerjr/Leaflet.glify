@@ -32,8 +32,8 @@
 </body>
 <link rel="stylesheet" href="bower_components/leaflet/dist/leaflet.css" />
 <script src="bower_components/leaflet/dist/leaflet.js"></script>
-<script src="src/js/glify.js"></script>
-<script src="src/js/canvasoverlay.js"></script>
+<script src="bower_components/earcut/src/earcut.js"></script>
+<script src="glify.js"></script>
 <script>
     function wget(urls, fn) {
         var results = [],
@@ -44,7 +44,6 @@
         urls.forEach(function(url) {
             var i = lookup[url] = results.length,
                 request = new XMLHttpRequest();
-            results.push(null);
             request.open('GET', url, true);
             request.onload = function () {
                 if (request.status < 200 && request.status > 400) return;
@@ -64,7 +63,7 @@
         //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
         .addTo(map);
 
-    wget(['86T.json'], function(points) {
+    wget(['86T.json', 'CZDistricts.json'], function(points, districts) {
       L.glify.points({
         map: map,
         clickPoint: function (point) {
@@ -77,6 +76,21 @@
           console.log(point);
         },
         data: JSON.parse(points),
+        color: 'red'
+      });
+
+      L.glify.shapes({
+        map: map,
+        clickShape: function (feature) {
+          //set up a standalone popup (use a popup as a layer)
+          L.popup()
+              .setLatLng(point)
+              .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
+              .openOn(map);
+
+          console.log(point);
+        },
+        data: JSON.parse(districts),
         color: 'red'
       });
     });
