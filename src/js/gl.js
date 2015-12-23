@@ -9,6 +9,7 @@ var gl = {
   BLEND: null,
   COLOR_BUFFER_BIT: null,
   POINTS: null,
+  TRIANGLES: null,
 
   getUniformLocation: function() {},
   getAttribLocation: function() {},

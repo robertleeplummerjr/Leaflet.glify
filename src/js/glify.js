@@ -11,14 +11,16 @@
     return settings;
   }
 
-  var glify = {
+  L.glify = {
     points: function(settings) {
-      return new L.glify.Points(settings);
+      return new this.Points(settings);
     },
-    shapes: function() {
-      return new L.glify.Shapes(settings);
+    shapes: function(settings) {
+      return new this.Shapes(settings);
     },
-    defaultShaders: {
+    Points: null,
+    Shapes: null,
+    shader: {
       vertex: null,
       fragment: {
         dot: null,
@@ -26,8 +28,4 @@
       }
     }
   };
-
-  //injection
-
-  L.glify = glify;
 })(window, document, L);

@@ -32,74 +32,75 @@
 </body>
 <link rel="stylesheet" href="bower_components/leaflet/dist/leaflet.css" />
 <script src="bower_components/leaflet/dist/leaflet.js"></script>
-<script src="bower_components/earcut/src/earcut.js"></script>
+<script>
+  var module = {exports: window};
+</script>
+<script src="http://www.sumbera.com/gist/js/earcut/earcut-1.4.2.js"></script>
 <script src="glify.js"></script>
 <script>
-    function wget(urls, fn) {
-        var results = [],
-            lookup = {},
-            complete = 0,
-            total = urls.length;
+  var map = L.map('map')
+          .setView([50.00, 14.44], 8),
+    lnlt = document.getElementById('lnlt');
 
-        urls.forEach(function(url) {
-            var i = lookup[url] = results.length,
-                request = new XMLHttpRequest();
-            request.open('GET', url, true);
-            request.onload = function () {
-                if (request.status < 200 && request.status > 400) return;
-                results[i] = request.responseText;
-                complete++;
-                if (complete === total) fn.apply(null, results);
-            };
-            request.send();
-        });
-    }
+  L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png")
+    //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
+    .addTo(map);
 
-    var map = L.map('map')
-            .setView([50.00, 14.44], 8),
-        lnlt = document.getElementById('lnlt');
+  wget(['86T.json', 'CZDistricts.json'], function(points, districts) {
+    L.glify.points({
+      map: map,
+      clickPoint: function (point) {
+        //set up a standalone popup (use a popup as a layer)
+        L.popup()
+          .setLatLng(point)
+          .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
+          .openOn(map);
 
-    L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png")
-        //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
-        .addTo(map);
-
-    wget(['86T.json', 'CZDistricts.json'], function(points, districts) {
-      L.glify.points({
-        map: map,
-        clickPoint: function (point) {
-          //set up a standalone popup (use a popup as a layer)
-          L.popup()
-              .setLatLng(point)
-              .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
-              .openOn(map);
-
-          console.log(point);
-        },
-        data: JSON.parse(points),
-        color: 'red'
-      });
-
-      L.glify.shapes({
-        map: map,
-        clickShape: function (feature) {
-          //set up a standalone popup (use a popup as a layer)
-          L.popup()
-              .setLatLng(point)
-              .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
-              .openOn(map);
-
-          console.log(point);
-        },
-        data: JSON.parse(districts),
-        color: 'red'
-      });
+        console.log(point);
+      },
+      data: JSON.parse(points),
+      color: 'red'
     });
 
-    map.on('mousemove', function (e) {
-        lnlt.textContent =
-                " Latitude: " + (e.latlng.lat).toFixed(5)
-                + " | Longitude: " + (e.latlng.lng).toFixed(5)
-                + " | Zoom: " + map.getZoom() + " ";
+    L.glify.shapes({
+      map: map,
+      clickShape: function (feature) {
+        //set up a standalone popup (use a popup as a layer)
+        /*L.popup()
+          .setLatLng(point)
+          .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
+          .openOn(map);*/
+
+        console.log(point);
+      },
+      data: JSON.parse(districts),
+      color: 'red'
     });
+  });
+
+  map.on('mousemove', function (e) {
+    lnlt.textContent =
+      " Latitude: " + (e.latlng.lat).toFixed(5)
+      + " | Longitude: " + (e.latlng.lng).toFixed(5)
+      + " | Zoom: " + map.getZoom() + " ";
+  });
+
+  function wget(urls, fn) {
+    var results = [],
+      complete = 0,
+      total = urls.length;
+
+    urls.forEach(function(url, i) {
+      var request = new XMLHttpRequest();
+      request.open('GET', url, true);
+      request.onload = function () {
+        if (request.status < 200 && request.status > 400) return;
+        results[i] = request.responseText;
+        complete++;
+        if (complete === total) fn.apply(null, results);
+      };
+      request.send();
+    });
+  }
 </script>
 </html>

@@ -50,10 +50,11 @@ readFiles([
     vertexSrc) {
 
     glifySrc = glifySrc
-      .replace('//injection', pointsSrc + shapesSrc)
-      .replace('vertex: null', 'vertex: ' + glslMin(vertexSrc))
-      .replace('dot: null', 'dot: ' + glslMin(dotSrc))
-      .replace('polygon: null', 'polygon: ' + glslMin(vertexSrc));
+      .replace('Points: null' , 'Points: ' + pointsSrc)
+      .replace('Shapes: null' , 'Shapes: ' + shapesSrc)
+      .replace('vertex: null' , 'vertex: '  + glslMin(vertexSrc))
+      .replace('dot: null'    , 'dot: '     + glslMin(dotSrc))
+      .replace('polygon: null', 'polygon: ' + glslMin(polygonSrc));
 
     fs.writeFile('glify.js', glifySrc + canvasoverlaySrc, function(err) {
       if (err) throw err;
