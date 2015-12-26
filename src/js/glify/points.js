@@ -73,6 +73,7 @@
 
       if (settings.click) {
         if (this.maps.indexOf(settings.map) < 0) {
+          this.maps.push(map);
           map.on('click', function (e) {
             point = self.closest(e.latlng, self.instances.map(function(instance) {
               return instance.lookup(e.latlng);
