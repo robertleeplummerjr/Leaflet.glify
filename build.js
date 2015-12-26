@@ -36,6 +36,7 @@ readFiles([
     'src/js/canvasoverlay.js',
     'src/js/glify/points.js',
     'src/js/glify/shapes.js',
+    'src/js/glify/map-matrix.js',
     'src/shader/fragment/dot.glsl',
     'src/shader/fragment/polygon.glsl',
     'src/shader/vertex.glsl'
@@ -45,13 +46,16 @@ readFiles([
     canvasoverlaySrc,
     pointsSrc,
     shapesSrc,
+    mapMatrixSrc,
     dotSrc,
     polygonSrc,
     vertexSrc) {
 
     glifySrc = glifySrc
+      .replace('//top-message', '//this file was auto generated, any edits to it will be lost when you run `node build.js`')
       .replace('Points: null' , 'Points: ' + pointsSrc)
       .replace('Shapes: null' , 'Shapes: ' + shapesSrc)
+      .replace('mapMatrix: null' , 'mapMatrix: ' + mapMatrixSrc)
       .replace('vertex: null' , 'vertex: '  + glslMin(vertexSrc))
       .replace('dot: null'    , 'dot: '     + glslMin(dotSrc))
       .replace('polygon: null', 'polygon: ' + glslMin(polygonSrc));

@@ -18,16 +18,6 @@
             width: 100%;
             background-color: #333;
         }
-
-        canvas {
-          position: absolute;
-        }
-        #lnlt {
-            position: absolute;
-            bottom: 0;
-            right: 50px;
-            color: #ffffff;
-        }
     </style>
 </head>
 <body>
@@ -68,8 +58,7 @@
 
         console.log(point);
       },
-      data: JSON.parse(districts),
-      color: 'red'
+      data: JSON.parse(districts)
     });
 
     L.glify.points({
@@ -83,16 +72,8 @@
 
         console.log(point);
       },
-      data: JSON.parse(points),
-      color: 'red'
+      data: JSON.parse(points)
     });
-  });
-
-  map.on('mousemove', function (e) {
-    lnlt.textContent =
-      " Latitude: " + (e.latlng.lat).toFixed(5)
-      + " | Longitude: " + (e.latlng.lng).toFixed(5)
-      + " | Zoom: " + map.getZoom() + " ";
   });
 
   function wget(urls, fn) {

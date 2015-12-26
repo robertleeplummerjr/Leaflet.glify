@@ -20,11 +20,13 @@
 
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
+    canvas.style.position = 'absolute';
+    canvas.className = settings.className;
 
     this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
     this.pixelsToWebGLMatrix = new Float32Array(16);
-    this.mapMatrix = new Float32Array(16);
+    this.mapMatrix = L.glify.mapMatrix();
     this.vertexShader = null;
     this.fragmentShader = null;
     this.program = null;
@@ -45,36 +47,10 @@
     fragmentShaderSource: function() { return L.glify.shader.fragment.dot; },
     pointThreshold: 10,
     clickPoint: null,
-    color: 'red'
-  };
-
-  Points.color = {
-    green: {r: 0, g: 1, b: 0},
-    red: {r: 1, g: 0, b: 0},
-    blue: {r: 0, g: 0, b: 1},
-    teal: {r: 0, g: 1, b: 1},
-    yellow: {r: 1, g: 1, b: 0},
-    random: function () {
-      return {
-        r: Math.random(),
-        g: Math.random(),
-        b: Math.random()
-      };
-    },
-    pallet: function () {
-      switch (Math.round(Math.random() * 4)) {
-        case 0:
-          return Points.color.green;
-        case 1:
-          return Points.color.red;
-        case 2:
-          return Points.color.blue;
-        case 3:
-          return Points.color.teal;
-        case 4:
-          return Points.color.yellow;
-      }
-    }
+    color: 'random',
+    opacity: 0.6,
+    pointSize: null,
+    className: ''
   };
 
   Points.prototype = {
@@ -119,20 +95,22 @@
         canvas = this.canvas,
         program = this.program,
         glLayer = this.glLayer,
-        uMatrix = this.uMatrix = gl.getUniformLocation(program, "uMatrix"),
-        colorLocation = gl.getAttribLocation(program, "aColor"),
-        vertexLocation = gl.getAttribLocation(program, "aVertex"),
+        uMatrix = this.uMatrix = gl.getUniformLocation(program, 'uMatrix'),
+        opacity = gl.getUniformLocation(program, 'opacity'),
+        colorLocation = gl.getAttribLocation(program, 'aColor'),
+        vertexLocation = gl.getAttribLocation(program, 'aVertex'),
         vertexBuffer = gl.createBuffer(),
         vertexArray = new Float32Array(this.verts),
         fsize = vertexArray.BYTES_PER_ELEMENT;
 
-      gl.aPointSize = gl.getAttribLocation(program, "aPointSize");
+      gl.aPointSize = gl.getAttribLocation(program, 'aPointSize');
 
       //set the matrix to some that makes 1 unit 1 pixel.
       this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniformMatrix4fv(uMatrix, false, this.pixelsToWebGLMatrix);
+      gl.uniform1f(opacity, this.settings.opacity);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
       gl.vertexAttribPointer(vertexLocation, 2, gl.FLOAT, false, fsize * 5, 0);
@@ -152,39 +130,38 @@
       this.verts = [];
 
       // -- data
-      var self = this,
-        verts = this.verts,
+      var verts = this.verts,
         settings = this.settings,
         data = settings.data,
         colorKey = settings.color,
         colorFn,
-        color = Points.color[colorKey];
-
-      if (color === undefined) {
-        color = colorKey;
-      }
-
-      if (color.call !== undefined) {
-        colorKey = color;
-      }
+        color,
+        i = 0,
+        max = data.length,
+        latLng,
+        pixel;
 
       //see if colorKey is actually a function
-      if (colorKey.call !== undefined) {
+      if (typeof colorKey === 'function') {
         colorFn = colorKey;
-        data.map(function (latLng, i) {
-          var pixel = self.latLngToPixelXY(latLng[0], latLng[1]),
-            color = colorFn();
+        for(; i < max; i++) {
+          latLng = data[i];
+          pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
+          color = colorFn();
 
           //-- 2 coord, 3 rgb colors interleaved buffer
           verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
-        });
+        }
       } else {
-        data.map(function (latLng, i) {
-          var pixel = self.latLngToPixelXY(latLng[0], latLng[1]);
+        colorFn = L.glify.color[colorKey];
+        for(; i < max; i++) {
+          latLng = data[i];
+          pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
+          color = colorFn();
 
           //-- 2 coord, 3 rgb colors interleaved buffer
           verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
-        });
+        }
       }
 
       return this;
@@ -272,25 +249,23 @@
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
         offset = this.latLngToPixelXY(topLeft.lat, topLeft.lng),
-      // -- Scale to current zoom
+        // -- Scale to current zoom
         scale = Math.pow(2, zoom),
-        pointSize = Math.max(zoom - 4.0, 1.0),
+        pointSize = settings.pointSize === null ? Math.max(zoom - 4.0, 1.0) : settings.pointSize,
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
       pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.vertexAttrib1f(gl.aPointSize, pointSize);
 
       //set base matrix to translate canvas pixel coordinates -> webgl coordinates
-      mapMatrix.set(pixelsToWebGLMatrix);
-
-      this
-        .scaleMatrix(scale, scale)
+      mapMatrix
+        .set(pixelsToWebGLMatrix)
+        .scaleMatrix(scale)
         .translateMatrix(-offset.x, -offset.y);
 
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.vertexAttrib1f(gl.aPointSize, pointSize);
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
       gl.drawArrays(gl.POINTS, 0, settings.data.length);
@@ -330,45 +305,6 @@
       lookup.push(pixel);
 
       return pixel;
-    },
-
-    /**
-     *
-     * @param tx
-     * @param ty
-     * @returns {Points}
-     */
-    translateMatrix: function (tx, ty) {
-      var matrix = this.mapMatrix;
-      // translation is in last column of matrix
-      matrix[12] += matrix[0] * tx + matrix[4] * ty;
-      matrix[13] += matrix[1] * tx + matrix[5] * ty;
-      matrix[14] += matrix[2] * tx + matrix[6] * ty;
-      matrix[15] += matrix[3] * tx + matrix[7] * ty;
-
-      return this;
-    },
-
-    /**
-     *
-     * @param scaleX
-     * @param scaleY
-     * @returns {Points}
-     */
-    scaleMatrix: function (scaleX, scaleY) {
-      var matrix = this.mapMatrix;
-      // scaling x and y, which is just scaling first two columns of matrix
-      matrix[0] *= scaleX;
-      matrix[1] *= scaleX;
-      matrix[2] *= scaleX;
-      matrix[3] *= scaleX;
-
-      matrix[4] *= scaleY;
-      matrix[5] *= scaleY;
-      matrix[6] *= scaleY;
-      matrix[7] *= scaleY;
-
-      return this;
     },
 
     /**

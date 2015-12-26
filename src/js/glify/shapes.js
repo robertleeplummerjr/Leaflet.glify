@@ -15,11 +15,13 @@
 
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
+    canvas.style.position = 'absolute';
+    canvas.className = settings.className;
 
     this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
     this.pixelsToWebGLMatrix = new Float32Array(16);
-    this.mapMatrix = new Float32Array(16);
+    this.mapMatrix = L.glify.mapMatrix();
     this.vertexShader = null;
     this.fragmentShader = null;
     this.program = null;
@@ -133,7 +135,7 @@
         triangles = earcut([rawVerts]);
         for (i = 0, iMax = triangles.length; i < iMax; i++) {
           triangle = triangles[i];
-          pixel = this.latLonToPixelXY(triangle[0], triangle[1]);
+          pixel = L.glify.latLonToPixelXY(triangle[0], triangle[1]);
           verts.push(pixel.x, pixel.y, currentColor[0], currentColor[1], currentColor[2]
             /**random color -> **/ );
           //TODO: handle color
@@ -212,64 +214,25 @@
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
       // -- Scale to current zoom
         scale = Math.pow(2, map.getZoom()),
-        offset = this.latLonToPixelXY(topLeft.lat, topLeft.lng),
+        offset = L.glify.latLonToPixelXY(topLeft.lat, topLeft.lng),
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
       pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+
+      // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
+      mapMatrix
+        .set(pixelsToWebGLMatrix)
+        .scaleMatrix(scale)
+        .translateMatrix(-offset.x, -offset.y);
+
+      gl.clear(gl.COLOR_BUFFER_BIT);
       gl.viewport(0, 0, canvas.width, canvas.height);
 
       gl.vertexAttrib1f(gl.aPointSize, pointSize);
-
-      // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-      mapMatrix.set(pixelsToWebGLMatrix);
-
-      this
-        .scaleMatrix(mapMatrix, scale, scale)
-        .translateMatrix(mapMatrix, -offset.x, -offset.y);
-
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
-    },
-    // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
-    // -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
-
-    latLonToPixelXY: function (latitude, longitude) {
-      var pi_180 = Math.PI / 180.0,
-        pi_4 = Math.PI * 4,
-        sinLatitude = Math.sin(latitude * pi_180),
-        pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi_4)) * 256,
-        pixelX = ((longitude + 180) / 360) * 256;
-
-      return {x: pixelX, y: pixelY};
-    },
-
-    translateMatrix: function (matrix, tx, ty) {
-      // translation is in last column of matrix
-      matrix[12] += matrix[0] * tx + matrix[4] * ty;
-      matrix[13] += matrix[1] * tx + matrix[5] * ty;
-      matrix[14] += matrix[2] * tx + matrix[6] * ty;
-      matrix[15] += matrix[3] * tx + matrix[7] * ty;
-
-      return this;
-    },
-
-    scaleMatrix: function (matrix, scaleX, scaleY) {
-      // scaling x and y, which is just scaling first two columns of matrix
-      matrix[0] *= scaleX;
-      matrix[1] *= scaleX;
-      matrix[2] *= scaleX;
-      matrix[3] *= scaleX;
-
-      matrix[4] *= scaleY;
-      matrix[5] *= scaleY;
-      matrix[6] *= scaleY;
-      matrix[7] *= scaleY;
-
-      return this;
     }
   };
 

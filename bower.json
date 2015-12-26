@@ -28,6 +28,7 @@
   ],
   "dependencies": {
     "earcut": "https://github.com/mapbox/earcut.git#~2.0.7",
-    "leaflet": "~0.7.5"
+    "leaflet": "~0.7.5",
+    "rbush": "https://github.com/mourner/rbush.git#~1.4.2"
   }
 }
