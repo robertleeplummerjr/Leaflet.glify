@@ -38,6 +38,7 @@
    * @constructor
    */
   function Points(settings) {
+    this.instances.push(this);
     this.settings = defaults(settings, Points.defaults);
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -80,34 +81,53 @@
     vertexShaderSource: function() { return L.glify.shader.vertex; },
     fragmentShaderSource: function() { return L.glify.shader.fragment.dot; },
     pointThreshold: 10,
-    clickPoint: null,
+    click: null,
     color: 'random',
     opacity: 0.6,
-    pointSize: null,
-    className: ''
+    size: null,
+    className: '',
+    sensitivity: 2
   };
 
+
   Points.prototype = {
+    instances: [],
+    maps: [],
     /**
      *
      * @returns {Points}
      */
     setup: function () {
       var self = this,
-        settings = this.settings;
+        settings = this.settings,
+        map = settings.map,
+        xy,
+        point,
+        latLng;
 
-      if (settings.clickPoint) {
-        settings.map.on('click', function (e) {
-          var point = self.lookup(e.latlng);
-          if (point !== null) {
-            settings.clickPoint(point, e);
-          }
+      if (settings.click) {
+        if (this.maps.indexOf(settings.map) < 0) {
+          map.on('click', function (e) {
+            point = self.closest(e.latlng, self.instances.map(function(instance) {
+              return instance.lookup(e.latlng);
+            }));
 
+            if (point !== null) {
+              latLng = L.latLng(point[0], point[1]);
+              xy = map.latLngToLayerPoint(latLng);
+              if (self.pointInCircle(xy, e.layerPoint, self.pointSize() * settings.sensitivity)) {
+                settings.click(point, {
+                  latLng: latLng,
+                  xy: xy
+                }, e);
+              }
+            }
 
-          if (settings.debug) {
-            self.debugPoint(e.containerPoint);
-          }
-        });
+            if (settings.debug) {
+              self.debugPoint(e.containerPoint);
+            }
+          });
+        }
       }
 
       return this
@@ -173,8 +193,11 @@
         color,
         i = 0,
         max = data.length,
+        latLngLookup = this.latLngLookup,
         latLng,
-        pixel;
+        pixel,
+        lookup,
+        key;
 
       //see if colorKey is actually a function
       if (typeof colorKey === 'function') {
@@ -189,27 +212,25 @@
         }
       }
 
-      //use colorFn function here
-      if (colorFn !== null) {
-        for(; i < max; i++) {
-          latLng = data[i];
-          pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
+      for(; i < max; i++) {
+        latLng = data[i];
+        key = latLng[0].toFixed(2) + 'x' + latLng[1].toFixed(2);
+        lookup = latLngLookup[key];
+        pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
+
+        if (lookup === undefined) {
+          lookup = latLngLookup[key] = [];
+        }
+
+        lookup.push(latLng);
+
+        //use colorFn function here if it exists
+        if (colorFn) {
           color = colorFn();
-
-          //-- 2 coord, 3 rgb colors interleaved buffer
-          verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
         }
-      }
 
-      //use color object here
-      else {
-        for(; i < max; i++) {
-          latLng = data[i];
-          pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
-
-          //-- 2 coord, 3 rgb colors interleaved buffer
-          verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
-        }
+        //-- 2 coord, 3 rgb colors interleaved buffer
+        verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
 
       return this;
@@ -281,6 +302,16 @@
       return this;
     },
 
+    pointSize: function() {
+      var settings = this.settings,
+        map = settings.map,
+        pointSize = settings.size,
+        // -- Scale to current zoom
+        zoom = map.getZoom();
+
+      return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize
+    },
+
     /**
      *
      * @param params
@@ -293,13 +324,11 @@
         canvas = this.canvas,
         settings = this.settings,
         map = settings.map,
-        zoom = map.getZoom(),
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
         offset = this.latLngToPixelXY(topLeft.lat, topLeft.lng),
-        // -- Scale to current zoom
+        zoom = map.getZoom(),
         scale = Math.pow(2, zoom),
-        pointSize = settings.pointSize === null ? Math.max(zoom - 4.0, 1.0) : settings.pointSize,
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 
@@ -313,7 +342,7 @@
 
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.vertexAttrib1f(gl.aPointSize, pointSize);
+      gl.vertexAttrib1f(gl.aPointSize, this.pointSize());
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
       gl.drawArrays(gl.POINTS, 0, settings.data.length);
@@ -333,28 +362,12 @@
         pi4 = Math.PI * 4,
         sinLatitude = Math.sin(latitude * pi180),
         pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
-        pixelX = ((longitude + 180) / 360) * 256,
-        pixel,
-        key = latitude.toFixed(2) + 'x' + longitude.toFixed(2),
-        lookup = this.latLngLookup[key];
+        pixelX = ((longitude + 180) / 360) * 256;
 
-      pixel = {
-        lat: latitude,
-        lng: longitude,
+      return {
         x: pixelX,
-        y: pixelY,
-        key: key
+        y: pixelY
       };
-
-      this.pixels.push(pixel);
-
-      if (lookup === undefined) {
-        lookup = this.latLngLookup[key] = [];
-      }
-
-      lookup.push(pixel);
-
-      return pixel;
     },
 
     /**
@@ -396,7 +409,6 @@
             foundI = 0;
             foundMax = found.length;
             for (; foundI < foundMax; foundI++) {
-              found[foundI].key = key;
               matches.push(found[foundI]);
             }
           }
@@ -404,7 +416,7 @@
       }
 
       //try matches first, if it is empty, try the pixels, and hope they aren't too big
-      return this.closestPoint(coords, matches.length === 0 ? this.pixels.slice(0) : matches);
+      return this.closest(coords, matches.length === 0 ? this.pixels.slice(0) : matches);
     },
 
     /**
@@ -413,23 +425,31 @@
      * @param points
      * @returns {*}
      */
-    closestPoint: function (targetLocation, points) {
-      function vectorDistance(dx, dy) {
-        return Math.sqrt(dx * dx + dy * dy);
-      }
-
-      function locationDistance(location1, location2) {
-        var dx = location1.lat - location2.lat,
-          dy = location1.lng - location2.lng;
-
-        return vectorDistance(dx, dy);
-      }
-
+    closest: function (targetLocation, points) {
+      var self = this;
       return points.reduce(function (prev, curr) {
-        var prevDistance = locationDistance(targetLocation, prev),
-          currDistance = locationDistance(targetLocation, curr);
+        var prevDistance = self.locationDistance(targetLocation, prev),
+          currDistance = self.locationDistance(targetLocation, curr);
         return (prevDistance < currDistance) ? prev : curr;
       });
+    },
+    pointInCircle: function (centerPoint, checkPoint, radius) {
+      var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
+      return distanceSquared <= radius * radius;
+    },
+    vectorDistance: function (dx, dy) {
+      return Math.sqrt(dx * dx + dy * dy);
+    },
+    locationDistance: function (location1, location2) {
+      var settings = this.settings,
+        map = settings.map,
+        point1 = map.latLngToLayerPoint(location1),
+        point2 = map.latLngToLayerPoint(location2),
+
+        dx = point1.x - point2.x,
+        dy = point1.y - point2.y;
+
+      return this.vectorDistance(dx, dy);
     },
     debugPoint: function (containerPoint) {
       var el = document.createElement('div'),
@@ -454,6 +474,7 @@
 })(),
     Shapes: (function () {
   function Shapes(settings) {
+    this.instances.push(this);
     this.settings = defaults(settings, Shapes.defaults);
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -500,6 +521,7 @@
   };
 
   Shapes.prototype = {
+    instances: [],
     setup: function () {
 
       return this

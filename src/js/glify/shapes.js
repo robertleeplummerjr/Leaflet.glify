@@ -1,5 +1,6 @@
 (function () {
   function Shapes(settings) {
+    this.instances.push(this);
     this.settings = defaults(settings, Shapes.defaults);
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -46,6 +47,7 @@
   };
 
   Shapes.prototype = {
+    instances: [],
     setup: function () {
 
       return this
