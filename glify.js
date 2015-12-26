@@ -399,7 +399,8 @@
         }
       }
 
-      return this.closestPoint(coords, matches);
+      //try matches first, if it is empty, try the verts, and hope they aren't too big
+      return this.closestPoint(coords, matches.length === 0 ? this.verts.slice(0) : matches);
     },
 
     /**
