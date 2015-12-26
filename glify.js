@@ -167,7 +167,7 @@
         settings = this.settings,
         data = settings.data,
         colorKey = settings.color,
-        colorFn,
+        colorFn = null,
         color,
         i = 0,
         max = data.length,
@@ -177,6 +177,18 @@
       //see if colorKey is actually a function
       if (typeof colorKey === 'function') {
         colorFn = colorKey;
+      }
+      //we know that colorKey isn't a function, but L.glify.color[key] might be, check that here
+      else {
+        color = L.glify.color[colorKey];
+
+        if (typeof color === 'function') {
+          colorFn = color;
+        }
+      }
+
+      //use colorFn function here
+      if (colorFn !== null) {
         for(; i < max; i++) {
           latLng = data[i];
           pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
@@ -185,12 +197,13 @@
           //-- 2 coord, 3 rgb colors interleaved buffer
           verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
         }
-      } else {
-        colorFn = L.glify.color[colorKey];
+      }
+
+      //use color object here
+      else {
         for(; i < max; i++) {
           latLng = data[i];
           pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
-          color = colorFn();
 
           //-- 2 coord, 3 rgb colors interleaved buffer
           verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
