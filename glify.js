@@ -67,7 +67,6 @@
     this.uMatrix = null;
     this.verts = null;
     this.latLngLookup = null;
-    this.pixels = null;
 
     this
       .setup()
@@ -181,7 +180,6 @@
     resetVertices: function () {
       //empty verts and repopulate
       this.latLngLookup = {};
-      this.pixels = [];
       this.verts = [];
 
       // -- data
@@ -415,8 +413,8 @@
         }
       }
 
-      //try matches first, if it is empty, try the pixels, and hope they aren't too big
-      return this.closest(coords, matches.length === 0 ? this.pixels.slice(0) : matches);
+      //try matches first, if it is empty, try the data, and hope it isn't too big
+      return this.closest(coords, matches.length === 0 ? this.settings.data.slice(0) : matches);
     },
 
     /**
