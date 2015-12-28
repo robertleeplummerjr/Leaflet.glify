@@ -39,9 +39,15 @@
       blue: {r: 0, g: 0, b: 1},
       teal: {r: 0, g: 1, b: 1},
       yellow: {r: 1, g: 1, b: 0},
-      black: {r: 1, g: 1, b: 1},
+
+      white: {r: 1, g: 1, b: 1},
+      black: {r: 0, g: 0, b: 0},
+
       gray: {r: 0.5, g: 0.5, b: 0.5},
-      grey: {r: 0.5, g: 0.5, b: 0.5},
+
+      get grey() {
+        return L.glify.color.gray;
+      },
       random: function () {
         return {
           r: Math.random(),
