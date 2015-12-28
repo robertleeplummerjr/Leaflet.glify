@@ -14,6 +14,11 @@
   }
 
   L.glify = {
+    get instances() {
+      return []
+        .concat(L.glify.Points.instances)
+        .concat(L.glify.Shapes.instances);
+    },
     points: function(settings) {
       return new this.Points(settings);
     },

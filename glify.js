@@ -14,6 +14,11 @@
   }
 
   L.glify = {
+    get instances() {
+      return []
+        .concat(L.glify.Points.instances)
+        .concat(L.glify.Shapes.instances);
+    },
     points: function(settings) {
       return new this.Points(settings);
     },
@@ -38,7 +43,7 @@
    * @constructor
    */
   function Points(settings) {
-    this.instances.push(this);
+    Points.instances.push(this);
     this.settings = defaults(settings, Points.defaults);
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -55,7 +60,9 @@
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
     canvas.style.position = 'absolute';
-    canvas.className = settings.className;
+    if (settings.className) {
+      canvas.className = settings.className;
+    }
 
     this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
@@ -88,9 +95,10 @@
     sensitivity: 2
   };
 
+  //statics
+  Points.instances = [];
 
   Points.prototype = {
-    instances: [],
     maps: [],
     /**
      *
@@ -108,7 +116,7 @@
         if (this.maps.indexOf(settings.map) < 0) {
           this.maps.push(map);
           map.on('click', function (e) {
-            point = self.closest(e.latlng, self.instances.map(function(instance) {
+            point = self.closest(e.latlng, Points.instances.map(function(instance) {
               return instance.lookup(e.latlng);
             }));
 
@@ -466,6 +474,10 @@
       document.body.appendChild(el);
 
       return this;
+    },
+    remove: function() {
+      this.settings.map.removeLayer(this.glLayer);
+      return this;
     }
   };
 
@@ -473,7 +485,7 @@
 })(),
     Shapes: (function () {
   function Shapes(settings) {
-    this.instances.push(this);
+    Shapes.instances.push(this);
     this.settings = defaults(settings, Shapes.defaults);
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -490,7 +502,9 @@
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
     canvas.style.position = 'absolute';
-    canvas.className = settings.className;
+    if (settings.className) {
+      canvas.className = settings.className;
+    }
 
     this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
@@ -516,13 +530,15 @@
     fragmentShaderSource: function() { return L.glify.shader.fragment.polygon; },
     pointThreshold: 10,
     clickShape: null,
-    color: 'red'
+    color: 'random',
+    className: ''
   };
 
-  Shapes.prototype = {
-    instances: [],
-    setup: function () {
+  //statics
+  Shapes.instances = [];
 
+  Shapes.prototype = {
+    setup: function () {
       return this
         .setupVertexShader()
         .setupFragmentShader()
@@ -708,6 +724,10 @@
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
+    },
+    remove: function() {
+      this.settings.map.removeLayer(this.glLayer);
+      return this;
     }
   };
 
@@ -889,8 +909,7 @@ L.CanvasOverlay = L.Class.extend({
     if (map.options.zoomAnimation) {
       map.off('zoomanim', this._animateZoom, this);
     }
-    this_canvas = null;
-
+    this._canvas = null;
   },
 
   addTo: function (map) {

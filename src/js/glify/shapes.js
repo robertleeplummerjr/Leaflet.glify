@@ -1,6 +1,6 @@
 (function () {
   function Shapes(settings) {
-    this.instances.push(this);
+    Shapes.instances.push(this);
     this.settings = defaults(settings, Shapes.defaults);
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -17,7 +17,9 @@
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
     canvas.style.position = 'absolute';
-    canvas.className = settings.className;
+    if (settings.className) {
+      canvas.className = settings.className;
+    }
 
     this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
@@ -43,13 +45,15 @@
     fragmentShaderSource: function() { return L.glify.shader.fragment.polygon; },
     pointThreshold: 10,
     clickShape: null,
-    color: 'red'
+    color: 'random',
+    className: ''
   };
 
-  Shapes.prototype = {
-    instances: [],
-    setup: function () {
+  //statics
+  Shapes.instances = [];
 
+  Shapes.prototype = {
+    setup: function () {
       return this
         .setupVertexShader()
         .setupFragmentShader()
@@ -235,6 +239,10 @@
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
+    },
+    remove: function() {
+      this.settings.map.removeLayer(this.glLayer);
+      return this;
     }
   };
 
