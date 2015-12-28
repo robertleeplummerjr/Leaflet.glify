@@ -11,6 +11,8 @@
     if (!settings.data) throw new Error('no "data" array setting defined');
     if (!settings.map) throw new Error('no leaflet "map" object setting defined');
 
+    this.active = true;
+
     var self = this,
       glLayer = this.glLayer = L.canvasOverlay()
         .drawing(function (params) {
@@ -439,6 +441,7 @@
     },
     remove: function() {
       this.settings.map.removeLayer(this.glLayer);
+      this.active = false;
       return this;
     }
   };
