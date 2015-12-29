@@ -347,7 +347,7 @@
      * @returns {Points}
      */
     addTo: function (map) {
-      this.glLayer.addTo(map);
+      this.glLayer.addTo(map || this.settings.map);
 
       return this;
     },

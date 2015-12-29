@@ -242,6 +242,11 @@
       gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
     },
+    addTo: function(map) {
+      this.glLayer.addTo(map || this.settings.map);
+
+      return this;
+    },
     remove: function() {
       this.settings.map.removeLayer(this.glLayer);
       this.active = false;
