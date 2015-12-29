@@ -244,6 +244,7 @@
     },
     addTo: function(map) {
       this.glLayer.addTo(map || this.settings.map);
+      this.active = true;
 
       return this;
     },
