@@ -18,7 +18,7 @@
           self.drawOnCanvas();
         })
         .addTo(settings.map),
-      canvas = this.canvas = glLayer.canvas();
+      canvas = this.canvas = glLayer.canvas;
 
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;

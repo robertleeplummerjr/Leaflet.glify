@@ -27,10 +27,6 @@ L.CanvasOverlay = L.Class.extend({
     return this;
   },
 
-  canvas: function () {
-    return this._canvas;
-  },
-
   redraw: function (callback) {
     if (typeof callback === 'function') {
       this._redrawCallbacks.push(callback);
@@ -43,18 +39,18 @@ L.CanvasOverlay = L.Class.extend({
 
   onAdd: function (map) {
     this._map = map;
-    this._canvas = L.DomUtil.create('canvas', 'leaflet-heatmap-layer');
+    this.canvas = L.DomUtil.create('canvas', 'leaflet-heatmap-layer');
 
     var size = this._map.getSize()
       , animated = this._map.options.zoomAnimation && L.Browser.any3d
       ;
 
-    this._canvas.width = size.x;
-    this._canvas.height = size.y;
+    this.canvas.width = size.x;
+    this.canvas.height = size.y;
 
-    L.DomUtil.addClass(this._canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
+    L.DomUtil.addClass(this.canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
 
-    map._panes.overlayPane.appendChild(this._canvas);
+    map._panes.overlayPane.appendChild(this.canvas);
 
     map.on('moveend', this._reset, this);
     map.on('resize',  this._resize, this);
@@ -67,7 +63,7 @@ L.CanvasOverlay = L.Class.extend({
   },
 
   onRemove: function (map) {
-    map.getPanes().overlayPane.removeChild(this._canvas);
+    map.getPanes().overlayPane.removeChild(this.canvas);
 
     map.off('moveend', this._reset, this);
     map.off('resize', this._resize, this);
@@ -75,7 +71,7 @@ L.CanvasOverlay = L.Class.extend({
     if (map.options.zoomAnimation) {
       map.off('zoomanim', this._animateZoom, this);
     }
-    this._canvas = null;
+    this.canvas = null;
   },
 
   addTo: function (map) {
@@ -84,13 +80,13 @@ L.CanvasOverlay = L.Class.extend({
   },
 
   _resize: function (resizeEvent) {
-    this._canvas.width  = resizeEvent.newSize.x;
-    this._canvas.height = resizeEvent.newSize.y;
+    this.canvas.width  = resizeEvent.newSize.x;
+    this.canvas.height = resizeEvent.newSize.y;
   },
 
   _reset: function () {
     var topLeft = this._map.containerPointToLayerPoint([0, 0]);
-    L.DomUtil.setPosition(this._canvas, topLeft);
+    L.DomUtil.setPosition(this.canvas, topLeft);
     this._redraw();
   },
 
@@ -103,7 +99,7 @@ L.CanvasOverlay = L.Class.extend({
 
     if (this._userDrawFunc) {
       this._userDrawFunc(this, {
-        canvas   :this._canvas,
+        canvas   :this.canvas,
         bounds   : bounds,
         size     : size,
         zoomScale: zoomScale,
@@ -124,7 +120,7 @@ L.CanvasOverlay = L.Class.extend({
       , offset = this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos())
       ;
 
-    this._canvas.style[L.DomUtil.TRANSFORM] = L.DomUtil.getTranslateString(offset) + ' scale(' + scale + ')';
+    this.canvas.style[L.DomUtil.TRANSFORM] = L.DomUtil.getTranslateString(offset) + ' scale(' + scale + ')';
   }
 });
 
