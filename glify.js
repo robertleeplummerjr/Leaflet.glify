@@ -52,9 +52,8 @@
     this.active = true;
 
     var self = this,
-      glLayer = this.glLayer = L.canvasOverlay()
-        .drawing(function (params) {
-          self.drawOnCanvas(params);
+      glLayer = this.glLayer = L.canvasOverlay(function() {
+          self.drawOnCanvas();
         })
         .addTo(settings.map),
       canvas = this.canvas = glLayer.canvas();
@@ -323,10 +322,9 @@
 
     /**
      *
-     * @param params
      * @returns {Points}
      */
-    drawOnCanvas: function (params) {
+    drawOnCanvas: function () {
       if (this.gl == null) return this;
 
       var gl = this.gl,
@@ -387,8 +385,7 @@
     addTo: function (map) {
       this.glLayer.addTo(map || this.settings.map);
       this.active = true;
-
-      return this;
+      return this.render();
     },
 
     /**
@@ -498,9 +495,8 @@
     this.active = true;
 
     var self = this,
-      glLayer = this.glLayer = L.canvasOverlay()
-        .drawing(function (params) {
-          self.drawOnCanvas(params);
+      glLayer = this.glLayer = L.canvasOverlay(function() {
+          self.drawOnCanvas();
         })
         .addTo(settings.map),
       canvas = this.canvas = glLayer.canvas();
@@ -699,8 +695,13 @@
 
       return this;
     },
-    drawOnCanvas: function (canvasOverlay, params) {
-      if (this.gl == null) return;
+
+    /**
+     *
+     * @return Shapes
+     */
+    drawOnCanvas: function () {
+      if (this.gl == null) return this;
 
       var gl = this.gl,
         settings = this.settings,
@@ -730,12 +731,13 @@
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
+
+      return this;
     },
     addTo: function(map) {
       this.glLayer.addTo(map || this.settings.map);
       this.active = true;
-
-      return this;
+      return this.render();
     },
     remove: function() {
       this.settings.map.removeLayer(this.glLayer);
@@ -845,8 +847,8 @@
 
   //node-dependencies
 
-})(window, document, L);//taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOverlay.js, added as part of this lib because if need from library
-/*
+})(window, document, L);/*
+originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOverlay.js, added and customized as part of this lib because of need from library
  Generic  Canvas Overlay for leaflet,
  Stanislav Sumbera, April , 2014
 
@@ -854,15 +856,13 @@
  - added few useful params fro userDrawFunc callback
  - fixed resize map bug
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
-
-
  */
 
-
 L.CanvasOverlay = L.Class.extend({
-
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
+    this._frame = null;
+    this._redrawCallbacks = [];
     L.setOptions(this, options);
   },
 
@@ -880,26 +880,28 @@ L.CanvasOverlay = L.Class.extend({
     return this._canvas;
   },
 
-  redraw: function () {
-    if (!this._frame) {
+  redraw: function (callback) {
+    if (typeof callback === 'function') {
+      this._redrawCallbacks.push(callback);
+    }
+    if (this._frame === null) {
       this._frame = L.Util.requestAnimFrame(this._redraw, this);
     }
     return this;
   },
 
-
-
   onAdd: function (map) {
     this._map = map;
     this._canvas = L.DomUtil.create('canvas', 'leaflet-heatmap-layer');
 
-    var size = this._map.getSize();
+    var size = this._map.getSize()
+      , animated = this._map.options.zoomAnimation && L.Browser.any3d
+      ;
+
     this._canvas.width = size.x;
     this._canvas.height = size.y;
 
-    var animated = this._map.options.zoomAnimation && L.Browser.any3d;
     L.DomUtil.addClass(this._canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
-
 
     map._panes.overlayPane.appendChild(this._canvas);
 
@@ -934,6 +936,7 @@ L.CanvasOverlay = L.Class.extend({
     this._canvas.width  = resizeEvent.newSize.x;
     this._canvas.height = resizeEvent.newSize.y;
   },
+
   _reset: function () {
     var topLeft = this._map.containerPointToLayerPoint([0, 0]);
     L.DomUtil.setPosition(this._canvas, topLeft);
@@ -941,37 +944,36 @@ L.CanvasOverlay = L.Class.extend({
   },
 
   _redraw: function () {
-    var size     = this._map.getSize();
-    var bounds   = this._map.getBounds();
-    var zoomScale = (size.x * 180) / (20037508.34  * (bounds.getEast() - bounds.getWest())); // resolution = 1/zoomScale
-    var zoom = this._map.getZoom();
-
-    // console.time('process');
+    var size      = this._map.getSize()
+      , bounds    = this._map.getBounds()
+      , zoomScale = (size.x * 180) / (20037508.34  * (bounds.getEast() - bounds.getWest())) // resolution = 1/zoomScale
+      , zoom      = this._map.getZoom()
+      ;
 
     if (this._userDrawFunc) {
-      this._userDrawFunc(this,
-        {
-          canvas   :this._canvas,
-          bounds   : bounds,
-          size     : size,
-          zoomScale: zoomScale,
-          zoom : zoom,
-          options: this.options
-        });
+      this._userDrawFunc(this, {
+        canvas   :this._canvas,
+        bounds   : bounds,
+        size     : size,
+        zoomScale: zoomScale,
+        zoom     : zoom,
+        options  : this.options
+      });
     }
 
-
-    // console.timeEnd('process');
+    while (this._redrawCallbacks.length > 0) {
+      this._redrawCallbacks.shift()(this);
+    }
 
     this._frame = null;
   },
 
   _animateZoom: function (e) {
-    var scale = this._map.getZoomScale(e.zoom),
-      offset = this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos());
+    var scale = this._map.getZoomScale(e.zoom)
+      , offset = this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos())
+      ;
 
     this._canvas.style[L.DomUtil.TRANSFORM] = L.DomUtil.getTranslateString(offset) + ' scale(' + scale + ')';
-
   }
 });
 

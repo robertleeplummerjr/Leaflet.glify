@@ -14,9 +14,8 @@
     this.active = true;
 
     var self = this,
-      glLayer = this.glLayer = L.canvasOverlay()
-        .drawing(function (params) {
-          self.drawOnCanvas(params);
+      glLayer = this.glLayer = L.canvasOverlay(function() {
+          self.drawOnCanvas();
         })
         .addTo(settings.map),
       canvas = this.canvas = glLayer.canvas();
@@ -285,10 +284,9 @@
 
     /**
      *
-     * @param params
      * @returns {Points}
      */
-    drawOnCanvas: function (params) {
+    drawOnCanvas: function () {
       if (this.gl == null) return this;
 
       var gl = this.gl,

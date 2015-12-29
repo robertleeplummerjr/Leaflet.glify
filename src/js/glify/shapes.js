@@ -9,9 +9,8 @@
     this.active = true;
 
     var self = this,
-      glLayer = this.glLayer = L.canvasOverlay()
-        .drawing(function (params) {
-          self.drawOnCanvas(params);
+      glLayer = this.glLayer = L.canvasOverlay(function() {
+          self.drawOnCanvas();
         })
         .addTo(settings.map),
       canvas = this.canvas = glLayer.canvas();
@@ -210,8 +209,13 @@
 
       return this;
     },
-    drawOnCanvas: function (canvasOverlay, params) {
-      if (this.gl == null) return;
+
+    /**
+     *
+     * @return Shapes
+     */
+    drawOnCanvas: function () {
+      if (this.gl == null) return this;
 
       var gl = this.gl,
         settings = this.settings,
@@ -241,6 +245,8 @@
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
+
+      return this;
     },
     addTo: function(map) {
       this.glLayer.addTo(map || this.settings.map);
