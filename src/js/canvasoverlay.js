@@ -8,7 +8,7 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  - fixed resize map bug
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
-node
+
 L.CanvasOverlay = L.Class.extend({
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
