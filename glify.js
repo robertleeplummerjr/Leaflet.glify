@@ -62,7 +62,7 @@
     canvas.height = canvas.clientHeight;
     canvas.style.position = 'absolute';
     if (settings.className) {
-      canvas.className = settings.className;
+      canvas.className += ' ' + settings.className;
     }
 
     this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -505,7 +505,7 @@
     canvas.height = canvas.clientHeight;
     canvas.style.position = 'absolute';
     if (settings.className) {
-      canvas.className = settings.className;
+      canvas.className += ' ' + settings.className;
     }
 
     this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -857,7 +857,7 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  - fixed resize map bug
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
-
+node
 L.CanvasOverlay = L.Class.extend({
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
@@ -888,7 +888,7 @@ L.CanvasOverlay = L.Class.extend({
 
   onAdd: function (map) {
     this._map = map;
-    this.canvas = L.DomUtil.create('canvas', 'leaflet-heatmap-layer');
+    this.canvas = this.canvas || L.DomUtil.create('canvas');
 
     var size = this._map.getSize()
       , animated = this._map.options.zoomAnimation && L.Browser.any3d
@@ -920,7 +920,6 @@ L.CanvasOverlay = L.Class.extend({
     if (map.options.zoomAnimation) {
       map.off('zoomanim', this._animateZoom, this);
     }
-    this.canvas = null;
   },
 
   addTo: function (map) {

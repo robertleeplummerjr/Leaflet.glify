@@ -24,7 +24,7 @@
     canvas.height = canvas.clientHeight;
     canvas.style.position = 'absolute';
     if (settings.className) {
-      canvas.className = settings.className;
+      canvas.className += ' ' + settings.className;
     }
 
     this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
