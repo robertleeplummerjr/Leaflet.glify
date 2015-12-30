@@ -213,7 +213,7 @@
       }
       //we know that colorKey isn't a function, but L.glify.color[key] might be, check that here
       else {
-        color = L.glify.color[colorKey] || color;
+        color = L.glify.color[colorKey] || colorKey;
 
         if (typeof color === 'function') {
           colorFn = color;
