@@ -749,6 +749,18 @@
   return Shapes;
 })(),
     color: {
+      fromHex: function(hex) {
+        if (hex.length < 6) return null;
+
+        if (hex[0] === '#') {
+          hex = hex.substring(1, hex.length);
+        }
+        var r = parseInt(hex[0] + hex[1], 16),
+          g = parseInt(hex[2] + hex[3], 16),
+          b = parseInt(hex[4] + hex[5], 16);
+
+        return {r: r / 255, g: g / 255, b: b / 255};
+      },
       green: {r: 0, g: 1, b: 0},
       red: {r: 1, g: 0, b: 0},
       blue: {r: 0, g: 0, b: 1},
