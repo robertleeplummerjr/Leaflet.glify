@@ -39,7 +39,7 @@ L.CanvasOverlay = L.Class.extend({
 
   onAdd: function (map) {
     this._map = map;
-    this.canvas = this.canvas || L.DomUtil.create('canvas');
+    this.canvas = this.canvas || document.createElement('canvas');
 
     var size = this._map.getSize()
       , animated = this._map.options.zoomAnimation && L.Browser.any3d
@@ -48,7 +48,7 @@ L.CanvasOverlay = L.Class.extend({
     this.canvas.width = size.x;
     this.canvas.height = size.y;
 
-    L.DomUtil.addClass(this.canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
+    this.canvas.className = 'leaflet-zoom-' + (animated ? 'animated' : 'hide');
 
     map._panes.overlayPane.appendChild(this.canvas);
 

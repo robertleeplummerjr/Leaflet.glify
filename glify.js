@@ -122,7 +122,7 @@
             closestFromEach = [];
             instancesLookup = {};
             Points.instances.forEach(function (instance) {
-              if (!instance.active) return null;
+              if (!instance.active) return;
 
               var point = instance.lookup(e.latlng);
               instancesLookup[point] = instance;
@@ -133,6 +133,7 @@
 
             if (found !== null) {
               (function(point, instance) {
+                if (!instance) return;
                 latLng = L.latLng(point[0], point[1]);
                 xy = map.latLngToLayerPoint(latLng);
                 if (self.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
@@ -912,7 +913,7 @@ L.CanvasOverlay = L.Class.extend({
 
   onAdd: function (map) {
     this._map = map;
-    this.canvas = this.canvas || L.DomUtil.create('canvas');
+    this.canvas = this.canvas || document.createElement('canvas');
 
     var size = this._map.getSize()
       , animated = this._map.options.zoomAnimation && L.Browser.any3d
@@ -921,7 +922,7 @@ L.CanvasOverlay = L.Class.extend({
     this.canvas.width = size.x;
     this.canvas.height = size.y;
 
-    L.DomUtil.addClass(this.canvas, 'leaflet-zoom-' + (animated ? 'animated' : 'hide'));
+    this.canvas.className = 'leaflet-zoom-' + (animated ? 'animated' : 'hide');
 
     map._panes.overlayPane.appendChild(this.canvas);
 
