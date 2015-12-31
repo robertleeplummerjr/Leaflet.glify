@@ -84,7 +84,7 @@
             closestFromEach = [];
             instancesLookup = {};
             Points.instances.forEach(function (instance) {
-              if (!instance.active) return null;
+              if (!instance.active) return;
 
               var point = instance.lookup(e.latlng);
               instancesLookup[point] = instance;
