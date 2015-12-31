@@ -109,6 +109,8 @@
       var self = this,
         settings = this.settings,
         map = settings.map,
+        closestFromEach,
+        instancesLookup,
         xy,
         found,
         latLng;
@@ -117,26 +119,29 @@
         if (this.maps.indexOf(settings.map) < 0) {
           this.maps.push(map);
           map.on('click', function (e) {
-            found = self.closest(e.latlng, Points.instances.map(function(instance) {
+            closestFromEach = [];
+            instancesLookup = {};
+            Points.instances.forEach(function (instance) {
               if (!instance.active) return null;
 
-              return {
-                point: instance.lookup(e.latlng),
-                instance: instance
-              };
-            }));
+              var point = instance.lookup(e.latlng);
+              instancesLookup[point] = instance;
+              closestFromEach.push(point);
+            });
+
+            found = self.closest(e.latlng, closestFromEach);
 
             if (found !== null) {
-              (function(point, instance, settings) {
+              (function(point, instance) {
                 latLng = L.latLng(point[0], point[1]);
                 xy = map.latLngToLayerPoint(latLng);
-                if (self.pointInCircle(xy, e.layerPoint, instance.pointSize() * settings.sensitivity)) {
+                if (self.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
                   instance.settings.click(point, {
                     latLng: latLng,
                     xy: xy
                   }, e);
                 }
-              })(found.point, found.instance, found.instance.settings);
+              })(found, instancesLookup[found]);
             }
 
             if (settings.debug) {
