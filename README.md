@@ -27,4 +27,6 @@ L.glify.points({
 });
 ```
 
+Soon to come, lines.
+
 more to come
