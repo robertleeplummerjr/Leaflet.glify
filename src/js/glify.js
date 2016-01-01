@@ -92,6 +92,9 @@
       vertex: null,
       fragment: {
         dot: null,
+        point: null,
+        simpleCircle: null,
+        square: null,
         polygon: null
       }
     }

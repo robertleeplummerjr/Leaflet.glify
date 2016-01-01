@@ -3,13 +3,14 @@ varying vec4 vColor;
 uniform float opacity;
 
 void main() {
-
     float border = 0.05;
     float radius = 0.5;
+    vec2 center = vec2(0.5, 0.5);
+
     vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
     vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity);
 
-    vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
+    vec2 m = gl_PointCoord.xy - center;
     float dist = radius - sqrt(m.x * m.x + m.y * m.y);
 
     float t = 0.0;

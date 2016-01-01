@@ -37,8 +37,14 @@ readFiles([
     'src/js/glify/points.js',
     'src/js/glify/shapes.js',
     'src/js/glify/map-matrix.js',
+
     'src/shader/fragment/dot.glsl',
+    'src/shader/fragment/point.glsl',
+    'src/shader/fragment/simple-circle.glsl',
+    'src/shader/fragment/square.glsl',
+
     'src/shader/fragment/polygon.glsl',
+
     'src/shader/vertex.glsl'
   ],
   function(
@@ -47,17 +53,29 @@ readFiles([
     pointsSrc,
     shapesSrc,
     mapMatrixSrc,
+
     dotSrc,
+    pointSrc,
+    simpleCircleSrc,
+    squareSrc,
+
     polygonSrc,
+
     vertexSrc) {
 
     glifySrc = glifySrc
       .replace('//top-message', '//this file was auto generated, any edits to it will be lost when you run `node build.js`')
       .replace('Points: null' , 'Points: ' + pointsSrc)
       .replace('Shapes: null' , 'Shapes: ' + shapesSrc)
-      .replace('mapMatrix: null' , 'mapMatrix: ' + mapMatrixSrc)
+      .replace('mapMatrix: null', 'mapMatrix: ' + mapMatrixSrc)
+
       .replace('vertex: null' , 'vertex: '  + glslMin(vertexSrc))
-      .replace('dot: null'    , 'dot: '     + glslMin(dotSrc))
+
+      .replace('dot: null'         , 'dot: '          + glslMin(dotSrc))
+      .replace('point: null'       , 'point: '        + glslMin(pointSrc))
+      .replace('simpleCircle: null', 'simpleCircle: ' + glslMin(simpleCircleSrc))
+      .replace('square: null'      , 'square: '       + glslMin(squareSrc))
+
       .replace('polygon: null', 'polygon: ' + glslMin(polygonSrc));
 
     fs.writeFile('glify.js', glifySrc + canvasoverlaySrc, function(err) {

@@ -48,11 +48,11 @@
     data: [],
     debug: false,
     vertexShaderSource: function() { return L.glify.shader.vertex; },
-    fragmentShaderSource: function() { return L.glify.shader.fragment.dot; },
+    fragmentShaderSource: function() { return L.glify.shader.fragment.point; },
     pointThreshold: 10,
     click: null,
     color: 'random',
-    opacity: 0.6,
+    opacity: 0.8,
     size: null,
     className: '',
     sensitivity: 2

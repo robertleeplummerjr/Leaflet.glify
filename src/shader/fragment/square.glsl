@@ -1,12 +1,13 @@
 precision mediump float;
 varying vec4 vColor;
+uniform float opacity;
 
 void main() {
 
     float border = 0.05;
     float radius = 0.5;
     vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0);
-    vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], 0.2);
+    vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity);
 
     vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5);
     float dist = radius - sqrt(m.x * m.x + m.y * m.y);
@@ -18,9 +19,8 @@ void main() {
         t = dist / border;
     }
 
-    //another way for circle
-    float centerDist = length(gl_PointCoord - 0.5);
-    float radius = 0.5;
-    // works for overlapping circles if blending is enabled
-    gl_FragColor = vec4(vColor[0], vColor[1], vColor[2], 0.2 * step(centerDist, radius));
+
+    //squares
+    gl_FragColor = vColor;
+    gl_FragColor = vec4(vColor[0], vColor[1], vColor[2], opacity); // vColor;
 }

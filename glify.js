@@ -86,11 +86,11 @@
     data: [],
     debug: false,
     vertexShaderSource: function() { return L.glify.shader.vertex; },
-    fragmentShaderSource: function() { return L.glify.shader.fragment.dot; },
+    fragmentShaderSource: function() { return L.glify.shader.fragment.point; },
     pointThreshold: 10,
     click: null,
     color: 'random',
-    opacity: 0.6,
+    opacity: 0.8,
     size: null,
     className: '',
     sensitivity: 2
@@ -863,7 +863,10 @@
     shader: {
       vertex: "uniform mat4 uMatrix;attribute vec4 aVertex;attribute float aPointSize;attribute vec4 aColor;varying vec4 vColor;void main() { gl_PointSize = aPointSize; gl_Position = uMatrix * aVertex; vColor = aColor;}",
       fragment: {
-        dot: "precision mediump float;varying vec4 vColor;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5); float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } gl_FragColor = mix(color0, color1, t);}",
+        dot: "precision mediump float;varying vec4 vColor;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec2 center = vec2(0.5, 0.5); vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - center; float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } gl_FragColor = mix(color0, color1, t);}",
+        point: "precision mediump float;varying vec4 vColor;uniform float opacity;void main (void) { float border = 0.1; float radius = 0.5; vec2 center = vec2(0.5, 0.5); vec4 color = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - center; float dist1 = radius - sqrt(m.x * m.x + m.y * m.y); float t1 = 0.0; if (dist1 > border) { t1 = 1.0; } else if (dist1 > 0.0) { t1 = dist1 / border; } float outerBorder = 0.05; float innerBorder = 0.8; vec4 borderColor = vec4(0, 0, 0, 0.4); vec2 uv = gl_PointCoord.xy; vec4 clearColor = vec4(0, 0, 0, 0); uv -= center; float dist2 = sqrt(dot(uv, uv)); float t2 = 1.0 + smoothstep(radius, radius + outerBorder, dist2) - smoothstep(radius - innerBorder, radius, dist2); gl_FragColor = mix(mix(borderColor, clearColor, t2), color, t1);}",
+        simpleCircle: "precision mediump float;varying vec4 vColor;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5); float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } float d = distance (gl_PointCoord, vec2(0.5, 0.5)); if (d < 0.5 ){ gl_FragColor = color1; } else { discard; }}",
+        square: "precision mediump float;varying vec4 vColor;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5); float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } gl_FragColor = vColor; gl_FragColor = vec4(vColor[0], vColor[1], vColor[2], opacity); }",
         polygon: "precision mediump float; varying vec4 vColor; void main() { gl_FragColor = vColor; gl_FragColor.a = 0.8; }"
       }
     }
