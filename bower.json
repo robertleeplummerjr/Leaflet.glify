@@ -30,5 +30,10 @@
     "earcut": "https://github.com/mapbox/earcut.git#~2.0.7",
     "leaflet": "~0.7.5",
     "rbush": "https://github.com/mourner/rbush.git#~1.4.2"
+  },
+  "devDependencies": {
+    "rbush": "https://github.com/mourner/rbush.git#~1.4.2",
+    "polygon-lookup": "https://github.com/pelias/polygon-lookup.git",
+    "point-in-polygon": "https://github.com/substack/point-in-polygon.git#~1.0.0"
   }
 }

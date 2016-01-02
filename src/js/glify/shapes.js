@@ -54,12 +54,62 @@
   Shapes.instances = [];
 
   Shapes.prototype = {
+    maps: [],
+    /**
+     *
+     * @returns {Shapes}
+     */
     setup: function () {
+
+      var settings = this.settings;
+      if (settings.click) {
+        if (this.maps.indexOf(settings.map) < 0) {
+          this.maps.push(map);
+          map.on('click', function (e) {
+            var closestFromEach = [],
+              instancesLookup = {},
+              found;
+
+            Points.instances.forEach(function (instance) {
+              if (!instance.active) return;
+
+              var point = instance.lookup(e.latlng);
+              instancesLookup[point] = instance;
+              closestFromEach.push(point);
+            });
+
+            found = self.closest(e.latlng, closestFromEach);
+
+            if (found !== null) {
+              (function(point, instance) {
+                if (!instance) return;
+                latLng = L.latLng(point[0], point[1]);
+                xy = map.latLngToLayerPoint(latLng);
+                if (self.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
+                  instance.settings.click(point, {
+                    latLng: latLng,
+                    xy: xy
+                  }, e);
+                }
+              })(found, instancesLookup[found]);
+            }
+
+            if (settings.debug) {
+              self.debugPoint(e.containerPoint);
+            }
+          });
+        }
+      }
+
       return this
         .setupVertexShader()
         .setupFragmentShader()
         .setupProgram();
     },
+    /**
+     *
+     * @returns {Shapes}
+     */
     render: function () {
       this.resetVertices();
       // triangles or point count
@@ -105,6 +155,11 @@
 
       return this;
     },
+
+    /**
+     *
+     * @returns {Shapes}
+     */
     resetVertices: function () {
       this.verts = [];
 
@@ -248,11 +303,22 @@
 
       return this;
     },
+
+    /**
+     *
+     * @param {L.Map} [map]
+     * @returns {Shapes}
+     */
     addTo: function(map) {
       this.glLayer.addTo(map || this.settings.map);
       this.active = true;
       return this.render();
     },
+
+    /**
+     *
+     * @returns {Shapes}
+     */
     remove: function() {
       this.settings.map.removeLayer(this.glLayer);
       this.active = false;
