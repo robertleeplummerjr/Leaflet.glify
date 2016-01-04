@@ -51,6 +51,8 @@ please submit pull requests by first editing src/* and then running `node build.
     if (!settings.map) throw new Error('no leaflet "map" object setting defined');
 
     this.active = true;
+    console.log(this);
+
 
     var self = this,
       glLayer = this.glLayer = L.canvasOverlay(function() {
@@ -497,7 +499,8 @@ please submit pull requests by first editing src/* and then running `node build.
   };
 
   return Points;
-})(),
+})()
+,
     Shapes: (function () {
   function Shapes(settings) {
     Shapes.instances.push(this);
@@ -950,7 +953,7 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
 
-L.CanvasOverlay = L.Class.extend({
+L.CanvasOverlay = L.Layer.extend({
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
@@ -978,31 +981,6 @@ L.CanvasOverlay = L.Class.extend({
     return this;
   },
 
-  onAdd: function (map) {
-    this._map = map;
-    this.canvas = this.canvas || document.createElement('canvas');
-
-    var size = this._map.getSize()
-      , animated = this._map.options.zoomAnimation && L.Browser.any3d
-      ;
-
-    this.canvas.width = size.x;
-    this.canvas.height = size.y;
-
-    this.canvas.className = 'leaflet-zoom-' + (animated ? 'animated' : 'hide');
-
-    map._panes.overlayPane.appendChild(this.canvas);
-
-    map.on('moveend', this._reset, this);
-    map.on('resize',  this._resize, this);
-
-    if (map.options.zoomAnimation && L.Browser.any3d) {
-      map.on('zoomanim', this._animateZoom, this);
-    }
-
-    this._reset();
-  },
-
   onRemove: function (map) {
     map.getPanes().overlayPane.removeChild(this.canvas);
 
@@ -1017,6 +995,31 @@ L.CanvasOverlay = L.Class.extend({
   addTo: function (map) {
     map.addLayer(this);
     return this;
+  },
+
+  _layerAdd: function (e) {
+    this._map = e.target;
+    this.canvas = this.canvas || document.createElement('canvas');
+
+    var size = this._map.getSize()
+    , animated = this._map.options.zoomAnimation && L.Browser.any3d
+    ;
+
+    this.canvas.width = size.x;
+    this.canvas.height = size.y;
+
+    this.canvas.className = 'leaflet-zoom-' + (animated ? 'animated' : 'hide');
+
+    this._map._panes.overlayPane.appendChild(this.canvas);
+
+    this._map.on('moveend', this._reset, this);
+    this._map.on('resize',  this._resize, this);
+
+    if (this._map.options.zoomAnimation && L.Browser.any3d) {
+      this._map.on('zoomanim', this._animateZoom, this);
+    }
+
+    this._reset();
   },
 
   _resize: function (resizeEvent) {
@@ -1067,6 +1070,7 @@ L.CanvasOverlay = L.Class.extend({
 L.canvasOverlay = function (userDrawFunc, options) {
   return new L.CanvasOverlay(userDrawFunc, options);
 };
+
 
 //third party libraries
 
