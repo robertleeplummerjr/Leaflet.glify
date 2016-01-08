@@ -25,6 +25,23 @@
     shapes: function(settings) {
       return new this.Shapes(settings);
     },
+    flattenData: function (data) {
+      var dim = data[0][0].length,
+        result = {vertices: [], holes: [], dimensions: dim},
+        holeIndex = 0;
+
+      for (var i = 0; i < data.length; i++) {
+        for (var j = 0; j < data[i].length; j++) {
+          for (var d = 0; d < dim; d++) result.vertices.push(data[i][j][d]);
+        }
+        if (i > 0) {
+          holeIndex += data[i - 1].length;
+          result.holes.push(holeIndex);
+        }
+      }
+
+      return result;
+    },
     // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
     // -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
     latLonToPixelXY: function (latitude, longitude) {

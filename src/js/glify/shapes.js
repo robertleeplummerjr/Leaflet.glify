@@ -174,7 +174,6 @@
         currentColor,
         featureIndex = 0,
         featureMax = features.length,
-        triangle,
         triangles,
         coords,
         iMax,
@@ -186,18 +185,18 @@
         feature = features[featureIndex];
 
         //***
-        coords = feature.geometry.coordinates[0];
-        for (i = 0, iMax = coords.length; i < iMax; i++) {
-          rawVerts.push([coords[i][1], coords[i][0]]);
-        }
+        rawVerts = L.glify.flattenData(feature.geometry.coordinates);
 
-        rawVerts.pop();
         currentColor = [Math.random(), Math.random(), Math.random()];
 
-        triangles = earcut([rawVerts]);
-        for (i = 0, iMax = triangles.length; i < iMax; i++) {
-          triangle = triangles[i];
-          pixel = L.glify.latLonToPixelXY(triangle[0], triangle[1]);
+        var vertices = rawVerts.vertices,
+          holes = rawVerts.holes,
+          dim = rawVerts.dimensions,
+          indices = earcut(vertices, holes, dim);
+
+        for (i = 0, iMax = indices.length; i < iMax; i += 2) {
+
+          pixel = L.glify.latLonToPixelXY(vertices[indices[i]], vertices[indices[i + 1]]);
           verts.push(pixel.x, pixel.y, currentColor[0], currentColor[1], currentColor[2]
             /**random color -> **/ );
           //TODO: handle color

@@ -65,6 +65,7 @@ readFiles([
     'src/shader/vertex.glsl',
 
     //node dependencies
+    'bower_components/earcut/src/earcut.js',
     'bower_components/rbush/rbush.js',
     'bower_components/point-in-polygon/index.js',
     'bower_components/polygon-lookup/lib/polygon_utils.js',
@@ -86,6 +87,7 @@ readFiles([
 
     vertexSrc,
 
+    earcut,
     rbush,
     pointInPolygon,
     polygonUtils,
@@ -111,6 +113,7 @@ please submit pull requests by first editing src/* and then running `node build.
       + canvasoverlaySrc
 
       + '\n\n//third party libraries\n\n'
+      + deNodeify(earcut, 'earcut')
       + deNodeify(rbush)
       + deNodeify(pointInPolygon, 'pointInPolygon')
       + deNodeify(polygonUtils, 'polygonUtils')
