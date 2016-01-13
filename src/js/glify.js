@@ -42,13 +42,36 @@
 
       return result;
     },
+    eachCoordinate: function (coordinates, vertexCB, holeCB, dimCB) {
+      var dim = coordinates[0][0].length,
+        coordinate,
+        holeIndex = 0,
+        i = 0,
+        iMax = coordinates.length,
+        j,
+        jMax;
+
+      for (; i < iMax; i++) {
+        coordinate = coordinates[i];
+        for (j = 0, jMax = coordinate.length; j < jMax; j++) {
+          vertexCB.apply(null, coordinate[j]);
+        }
+
+        if (i > 0) {
+          holeIndex += coordinates[i - 1].length;
+          holeCB(holeIndex);
+        }
+      }
+
+      dimCB(dim);
+    },
     // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
     // -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
-    latLonToPixelXY: function (latitude, longitude) {
-      var pi_180 = Math.PI / 180.0,
-        pi_4 = Math.PI * 4,
-        sinLatitude = Math.sin(latitude * pi_180),
-        pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi_4)) * 256,
+    latLonToPixel: function (latitude, longitude) {
+      var pi180 = Math.PI / 180.0,
+        pi4 = Math.PI * 4,
+        sinLatitude = Math.sin(latitude * pi180),
+        pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
         pixelX = ((longitude + 180) / 360) * 256;
 
       return {x: pixelX, y: pixelY};

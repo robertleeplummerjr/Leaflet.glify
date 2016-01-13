@@ -165,8 +165,9 @@
 
       var pixel,
         verts = this.verts,
-        rawVerts = [],
-      //-- verts only
+        vertices,
+        holes,
+        dimensions,
         settings = this.settings,
         data = settings.data,
         features = data.features,
@@ -174,33 +175,42 @@
         currentColor,
         featureIndex = 0,
         featureMax = features.length,
-        triangles,
-        coords,
+        pixel,
+        pixels,
         iMax,
         i;
 
       // -- data
       for (; featureIndex < featureMax; featureIndex++) {
-        rawVerts = [];
+        vertices = [];
+        holes = [];
+        dimensions = null;
+        pixels = [];
         feature = features[featureIndex];
-
         //***
-        rawVerts = L.glify.flattenData(feature.geometry.coordinates);
-
         currentColor = [Math.random(), Math.random(), Math.random()];
 
-        var vertices = rawVerts.vertices,
-          holes = rawVerts.holes,
-          dim = rawVerts.dimensions,
-          indices = earcut(vertices, holes, dim);
+        L.glify.eachCoordinate([feature.geometry.coordinates[0]], function(lon, lat) {
+          pixel = L.glify.latLonToPixel(lat, lon);
+          vertices.push(pixel.x);
+          vertices.push(pixel.y);
+          pixel.lat = lat;
+          pixel.lon = lon;
+          pixels.push(pixel);
+        }, function(holeIndex) {
+          holes.push(holeIndex);
+        }, function(_dimensions) {
+          dimensions = _dimensions;
+        });
 
-        for (i = 0, iMax = indices.length; i < iMax; i += 2) {
+        var indices = earcut(vertices, holes, dimensions);
 
-          pixel = L.glify.latLonToPixelXY(vertices[indices[i]], vertices[indices[i + 1]]);
-          verts.push(pixel.x, pixel.y, currentColor[0], currentColor[1], currentColor[2]
+        for (i = 0, iMax = indices.length; i < iMax; i+= 2) {
+          verts.push(vertices[indices[i]], vertices[indices[i + 1]], currentColor[0], currentColor[1], currentColor[2]
             /**random color -> **/ );
           //TODO: handle color
         }
+        featureIndex = featureMax;
       }
 
       console.log("num points:   " + (verts.length / 5));
@@ -280,7 +290,7 @@
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
       // -- Scale to current zoom
         scale = Math.pow(2, map.getZoom()),
-        offset = L.glify.latLonToPixelXY(topLeft.lat, topLeft.lng),
+        offset = L.glify.latLonToPixel(topLeft.lat, topLeft.lng),
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 

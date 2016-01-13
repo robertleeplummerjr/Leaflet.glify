@@ -43,13 +43,36 @@ please submit pull requests by first editing src/* and then running `node build.
 
       return result;
     },
+    eachCoordinate: function (coordinates, vertexCB, holeCB, dimCB) {
+      var dim = coordinates[0][0].length,
+        coordinate,
+        holeIndex = 0,
+        i = 0,
+        iMax = coordinates.length,
+        j,
+        jMax;
+
+      for (; i < iMax; i++) {
+        coordinate = coordinates[i];
+        for (j = 0, jMax = coordinate.length; j < jMax; j++) {
+          vertexCB.apply(null, coordinate[j]);
+        }
+
+        if (i > 0) {
+          holeIndex += coordinates[i - 1].length;
+          holeCB(holeIndex);
+        }
+      }
+
+      dimCB(dim);
+    },
     // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
     // -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
-    latLonToPixelXY: function (latitude, longitude) {
-      var pi_180 = Math.PI / 180.0,
-        pi_4 = Math.PI * 4,
-        sinLatitude = Math.sin(latitude * pi_180),
-        pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi_4)) * 256,
+    latLonToPixel: function (latitude, longitude) {
+      var pi180 = Math.PI / 180.0,
+        pi4 = Math.PI * 4,
+        sinLatitude = Math.sin(latitude * pi180),
+        pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
         pixelX = ((longitude + 180) / 360) * 256;
 
       return {x: pixelX, y: pixelY};
@@ -146,6 +169,8 @@ please submit pull requests by first editing src/* and then running `node build.
               instancesLookup[point] = instance;
               closestFromEach.push(point);
             });
+
+            if (instancesLookup.length < 1) return;
 
             found = self.closest(e.latlng, closestFromEach);
 
@@ -255,7 +280,7 @@ please submit pull requests by first editing src/* and then running `node build.
         latLng = data[i];
         key = latLng[0].toFixed(2) + 'x' + latLng[1].toFixed(2);
         lookup = latLngLookup[key];
-        pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
+        pixel = L.glify.latLonToPixel(latLng[0], latLng[1]);
 
         if (lookup === undefined) {
           lookup = latLngLookup[key] = [];
@@ -364,7 +389,7 @@ please submit pull requests by first editing src/* and then running `node build.
         map = settings.map,
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-        offset = this.latLngToPixelXY(topLeft.lat, topLeft.lng),
+        offset = L.glify.latLonToPixel(topLeft.lat, topLeft.lng),
         zoom = map.getZoom(),
         scale = Math.pow(2, zoom),
         mapMatrix = this.mapMatrix,
@@ -386,26 +411,6 @@ please submit pull requests by first editing src/* and then running `node build.
       gl.drawArrays(gl.POINTS, 0, settings.data.length);
 
       return this;
-    },
-
-    /**
-     * converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
-     * source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
-     * @param latitude
-     * @param longitude
-     * @returns {{x: number, y: number}}
-     */
-    latLngToPixelXY: function (latitude, longitude) {
-      var pi180 = Math.PI / 180.0,
-        pi4 = Math.PI * 4,
-        sinLatitude = Math.sin(latitude * pi180),
-        pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
-        pixelX = ((longitude + 180) / 360) * 256;
-
-      return {
-        x: pixelX,
-        y: pixelY
-      };
     },
 
     /**
@@ -682,8 +687,9 @@ please submit pull requests by first editing src/* and then running `node build.
 
       var pixel,
         verts = this.verts,
-        rawVerts = [],
-      //-- verts only
+        vertices,
+        holes,
+        dimensions,
         settings = this.settings,
         data = settings.data,
         features = data.features,
@@ -691,33 +697,42 @@ please submit pull requests by first editing src/* and then running `node build.
         currentColor,
         featureIndex = 0,
         featureMax = features.length,
-        triangles,
-        coords,
+        pixel,
+        pixels,
         iMax,
         i;
 
       // -- data
       for (; featureIndex < featureMax; featureIndex++) {
-        rawVerts = [];
+        vertices = [];
+        holes = [];
+        dimensions = null;
+        pixels = [];
         feature = features[featureIndex];
-
         //***
-        rawVerts = L.glify.flattenData(feature.geometry.coordinates);
-
         currentColor = [Math.random(), Math.random(), Math.random()];
 
-        var vertices = rawVerts.vertices,
-          holes = rawVerts.holes,
-          dim = rawVerts.dimensions,
-          indices = earcut(vertices, holes, dim);
+        L.glify.eachCoordinate([feature.geometry.coordinates[0]], function(lon, lat) {
+          pixel = L.glify.latLonToPixel(lat, lon);
+          vertices.push(pixel.x);
+          vertices.push(pixel.y);
+          pixel.lat = lat;
+          pixel.lon = lon;
+          pixels.push(pixel);
+        }, function(holeIndex) {
+          holes.push(holeIndex);
+        }, function(_dimensions) {
+          dimensions = _dimensions;
+        });
 
-        for (i = 0, iMax = indices.length; i < iMax; i += 2) {
+        var indices = earcut(vertices, holes, dimensions);
 
-          pixel = L.glify.latLonToPixelXY(vertices[indices[i]], vertices[indices[i + 1]]);
-          verts.push(pixel.x, pixel.y, currentColor[0], currentColor[1], currentColor[2]
+        for (i = 0, iMax = indices.length; i < iMax; i+= 2) {
+          verts.push(vertices[indices[i]], vertices[indices[i + 1]], currentColor[0], currentColor[1], currentColor[2]
             /**random color -> **/ );
           //TODO: handle color
         }
+        featureIndex = featureMax;
       }
 
       console.log("num points:   " + (verts.length / 5));
@@ -797,7 +812,7 @@ please submit pull requests by first editing src/* and then running `node build.
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
       // -- Scale to current zoom
         scale = Math.pow(2, map.getZoom()),
-        offset = L.glify.latLonToPixelXY(topLeft.lat, topLeft.lng),
+        offset = L.glify.latLonToPixel(topLeft.lat, topLeft.lng),
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 

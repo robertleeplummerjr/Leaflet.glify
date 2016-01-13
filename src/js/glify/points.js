@@ -91,6 +91,8 @@
               closestFromEach.push(point);
             });
 
+            if (instancesLookup.length < 1) return;
+
             found = self.closest(e.latlng, closestFromEach);
 
             if (found !== null) {
@@ -199,7 +201,7 @@
         latLng = data[i];
         key = latLng[0].toFixed(2) + 'x' + latLng[1].toFixed(2);
         lookup = latLngLookup[key];
-        pixel = this.latLngToPixelXY(latLng[0], latLng[1]);
+        pixel = L.glify.latLonToPixel(latLng[0], latLng[1]);
 
         if (lookup === undefined) {
           lookup = latLngLookup[key] = [];
@@ -308,7 +310,7 @@
         map = settings.map,
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-        offset = this.latLngToPixelXY(topLeft.lat, topLeft.lng),
+        offset = L.glify.latLonToPixel(topLeft.lat, topLeft.lng),
         zoom = map.getZoom(),
         scale = Math.pow(2, zoom),
         mapMatrix = this.mapMatrix,
@@ -330,26 +332,6 @@
       gl.drawArrays(gl.POINTS, 0, settings.data.length);
 
       return this;
-    },
-
-    /**
-     * converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
-     * source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
-     * @param latitude
-     * @param longitude
-     * @returns {{x: number, y: number}}
-     */
-    latLngToPixelXY: function (latitude, longitude) {
-      var pi180 = Math.PI / 180.0,
-        pi4 = Math.PI * 4,
-        sinLatitude = Math.sin(latitude * pi180),
-        pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
-        pixelX = ((longitude + 180) / 360) * 256;
-
-      return {
-        x: pixelX,
-        y: pixelY
-      };
     },
 
     /**
