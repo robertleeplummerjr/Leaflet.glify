@@ -167,7 +167,7 @@
         verts = this.verts,
         vertices,
         holes,
-        dimensions,
+        index,
         settings = this.settings,
         data = settings.data,
         features = data.features,
@@ -175,6 +175,10 @@
         currentColor,
         featureIndex = 0,
         featureMax = features.length,
+        triangles,
+        indices,
+        flat,
+        dim,
         pixel,
         pixels,
         iMax,
@@ -182,35 +186,27 @@
 
       // -- data
       for (; featureIndex < featureMax; featureIndex++) {
-        vertices = [];
-        holes = [];
-        dimensions = null;
-        pixels = [];
         feature = features[featureIndex];
         //***
+        triangles = [];
         currentColor = [Math.random(), Math.random(), Math.random()];
 
-        L.glify.eachCoordinate([feature.geometry.coordinates[0]], function(lon, lat) {
-          pixel = L.glify.latLonToPixel(lat, lon);
-          vertices.push(pixel.x);
-          vertices.push(pixel.y);
-          pixel.lat = lat;
-          pixel.lon = lon;
-          pixels.push(pixel);
-        }, function(holeIndex) {
-          holes.push(holeIndex);
-        }, function(_dimensions) {
-          dimensions = _dimensions;
-        });
+        flat = L.glify.flattenData(feature.geometry.coordinates);
 
-        var indices = earcut(vertices, holes, dimensions);
+        indices = earcut(flat.vertices, flat.holes, flat.dimensions);
 
-        for (i = 0, iMax = indices.length; i < iMax; i+= 2) {
-          verts.push(vertices[indices[i]], vertices[indices[i + 1]], currentColor[0], currentColor[1], currentColor[2]
+        dim = feature.geometry.coordinates[0][0].length;
+        for (i = 0, iMax = indices.length; i < iMax; i++) {
+          index = indices[i];
+          triangles.push(flat.vertices[index * dim + 1], flat.vertices[index * dim]);
+        }
+
+        for (i = 0, iMax = triangles.length; i < iMax; i) {
+          pixel = L.glify.latLonToPixel(triangles[i++],triangles[i++]);
+          verts.push(pixel.x, pixel.y, currentColor[0], currentColor[1], currentColor[2]
             /**random color -> **/ );
           //TODO: handle color
         }
-        featureIndex = featureMax;
       }
 
       console.log("num points:   " + (verts.length / 5));
