@@ -32,9 +32,6 @@
 </body>
 <link rel="stylesheet" href="bower_components/leaflet/dist/leaflet.css" />
 <script src="bower_components/leaflet/dist/leaflet.js"></script>
-<script>
-  var module = {exports: window};
-</script>
 <script src="glify.js"></script>
 <script>
   var map = L.map('map')
@@ -54,7 +51,7 @@
           .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
           .openOn(map);*/
 
-        console.log(point);
+        console.log(feature);
       },
       data: JSON.parse(districts)
     });

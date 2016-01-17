@@ -46,7 +46,6 @@
   Points.defaults = {
     map: null,
     data: [],
-    debug: false,
     vertexShaderSource: function() { return L.glify.shader.vertex; },
     fragmentShaderSource: function() { return L.glify.shader.fragment.point; },
     pointThreshold: 10,
@@ -68,52 +67,9 @@
      * @returns {Points}
      */
     setup: function () {
-      var self = this,
-        settings = this.settings,
-        map = settings.map,
-        closestFromEach,
-        instancesLookup,
-        xy,
-        found,
-        latLng;
-
+      var settings = this.settings;
       if (settings.click) {
-        if (this.maps.indexOf(settings.map) < 0) {
-          this.maps.push(map);
-          map.on('click', function (e) {
-            closestFromEach = [];
-            instancesLookup = {};
-            Points.instances.forEach(function (instance) {
-              if (!instance.active) return;
-
-              var point = instance.lookup(e.latlng);
-              instancesLookup[point] = instance;
-              closestFromEach.push(point);
-            });
-
-            if (instancesLookup.length < 1) return;
-
-            found = self.closest(e.latlng, closestFromEach);
-
-            if (found !== null) {
-              (function(point, instance) {
-                if (!instance) return;
-                latLng = L.latLng(point[0], point[1]);
-                xy = map.latLngToLayerPoint(latLng);
-                if (self.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
-                  instance.settings.click(point, {
-                    latLng: latLng,
-                    xy: xy
-                  }, e);
-                }
-              })(found, instancesLookup[found]);
-            }
-
-            if (settings.debug) {
-              self.debugPoint(e.containerPoint);
-            }
-          });
-        }
+        L.glify.setupClick(settings.map);
       }
 
       return this
@@ -380,62 +336,53 @@
       }
 
       //try matches first, if it is empty, try the data, and hope it isn't too big
-      return this.closest(coords, matches.length === 0 ? this.settings.data.slice(0) : matches);
-    },
-
-    /**
-     *
-     * @param targetLocation
-     * @param points
-     * @returns {*}
-     */
-    closest: function (targetLocation, points) {
-      var self = this;
-      return points.reduce(function (prev, curr) {
-        var prevDistance = self.locationDistance(targetLocation, prev),
-          currDistance = self.locationDistance(targetLocation, curr);
-        return (prevDistance < currDistance) ? prev : curr;
-      });
-    },
-    pointInCircle: function (centerPoint, checkPoint, radius) {
-      var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
-      return distanceSquared <= radius * radius;
-    },
-    vectorDistance: function (dx, dy) {
-      return Math.sqrt(dx * dx + dy * dy);
-    },
-    locationDistance: function (location1, location2) {
-      var settings = this.settings,
-        map = settings.map,
-        point1 = map.latLngToLayerPoint(location1),
-        point2 = map.latLngToLayerPoint(location2),
-
-        dx = point1.x - point2.x,
-        dy = point1.y - point2.y;
-
-      return this.vectorDistance(dx, dy);
-    },
-    debugPoint: function (containerPoint) {
-      var el = document.createElement('div'),
-        s = el.style,
-        x = containerPoint.x,
-        y = containerPoint.y;
-
-      s.left = x + 'px';
-      s.top = y + 'px';
-      s.width = '10px';
-      s.height = '10px';
-      s.position = 'absolute';
-      s.backgroundColor = '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
-
-      document.body.appendChild(el);
-
-      return this;
+      return L.glify.closest(coords, matches.length === 0 ? this.settings.data.slice(0) : matches, this.settings.map);
     },
     remove: function() {
       this.settings.map.removeLayer(this.glLayer);
       this.active = false;
       return this;
+    }
+  };
+
+  Points.tryClick = function(e, map) {
+    var settings,
+        instance,
+        closestFromEach = [],
+        instancesLookup = {},
+        point,
+        xy,
+        found,
+        latLng;
+
+    Points.instances.forEach(function (_instance) {
+      settings = _instance.settings;
+      if (!_instance.active) return;
+      if (settings.map !== map) return;
+      if (!settings.click) return;
+
+      point = _instance.lookup(e.latlng);
+      instancesLookup[point] = _instance;
+      closestFromEach.push(point);
+    });
+
+    if (closestFromEach.length < 1) return;
+
+    found = L.glify.closest(e.latlng, closestFromEach, map);
+
+    if (found === null) return;
+
+    instance = instancesLookup[found];
+    if (!instance) return;
+    latLng = L.latLng(found[0], found[1]);
+    xy = map.latLngToLayerPoint(latLng);
+    if (L.glify.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
+      instance.settings.click(found, {
+        latLng: latLng,
+        xy: xy
+      }, e);
+
+      return true;
     }
   };
 

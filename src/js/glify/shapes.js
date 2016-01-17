@@ -32,6 +32,7 @@
     this.uMatrix = null;
     this.verts = null;
     this.latLngLookup = null;
+    this.polygonLookup = null;
 
     this
       .setup()
@@ -45,7 +46,7 @@
     vertexShaderSource: function() { return L.glify.shader.vertex; },
     fragmentShaderSource: function() { return L.glify.shader.fragment.polygon; },
     pointThreshold: 10,
-    clickShape: null,
+    click: null,
     color: 'random',
     className: ''
   };
@@ -60,45 +61,9 @@
      * @returns {Shapes}
      */
     setup: function () {
-
       var settings = this.settings;
       if (settings.click) {
-        if (this.maps.indexOf(settings.map) < 0) {
-          this.maps.push(map);
-          map.on('click', function (e) {
-            var closestFromEach = [],
-              instancesLookup = {},
-              found;
-
-            Points.instances.forEach(function (instance) {
-              if (!instance.active) return;
-
-              var point = instance.lookup(e.latlng);
-              instancesLookup[point] = instance;
-              closestFromEach.push(point);
-            });
-
-            found = self.closest(e.latlng, closestFromEach);
-
-            if (found !== null) {
-              (function(point, instance) {
-                if (!instance) return;
-                latLng = L.latLng(point[0], point[1]);
-                xy = map.latLngToLayerPoint(latLng);
-                if (self.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
-                  instance.settings.click(point, {
-                    latLng: latLng,
-                    xy: xy
-                  }, e);
-                }
-              })(found, instancesLookup[found]);
-            }
-
-            if (settings.debug) {
-              self.debugPoint(e.containerPoint);
-            }
-          });
-        }
+        L.glify.setupClick(settings.map);
       }
 
       return this
@@ -162,11 +127,12 @@
      */
     resetVertices: function () {
       this.verts = [];
+      this.polygonLookup = new PolygonLookup();
 
       var pixel,
         verts = this.verts,
         vertices,
-        holes,
+        polygonLookup = this.polygonLookup,
         index,
         settings = this.settings,
         data = settings.data,
@@ -183,6 +149,8 @@
         pixels,
         iMax,
         i;
+
+      polygonLookup.loadFeatureCollection(data);
 
       // -- data
       for (; featureIndex < featureMax; featureIndex++) {
@@ -329,6 +297,23 @@
       this.active = false;
       return this;
     }
+  };
+
+  Shapes.tryClick = function(e, map) {
+    var settings,
+        feature;
+
+    Shapes.instances.forEach(function (_instance) {
+      settings = _instance.settings;
+      if (!_instance.active) return;
+      if (settings.map !== map) return;
+      if (!settings.click) return;
+
+      feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+      if (feature !== undefined) {
+        settings.click(feature);
+      }
+    });
   };
 
   return Shapes;

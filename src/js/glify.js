@@ -42,29 +42,6 @@
 
       return result;
     },
-    eachCoordinate: function (coordinates, vertexCB, holeCB, dimCB) {
-      var dim = coordinates[0][0].length,
-        coordinate,
-        holeIndex = 0,
-        i = 0,
-        iMax = coordinates.length,
-        j,
-        jMax;
-
-      for (; i < iMax; i++) {
-        coordinate = coordinates[i];
-        for (j = 0, jMax = coordinate.length; j < jMax; j++) {
-          vertexCB.apply(null, coordinate[j]);
-        }
-
-        if (i > 0) {
-          holeIndex += coordinates[i - 1].length;
-          holeCB(holeIndex);
-        }
-      }
-
-      dimCB(dim);
-    },
     // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
     // -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
     latLonToPixel: function (latitude, longitude) {
@@ -78,9 +55,75 @@
     },
     Points: null,
     Shapes: null,
+    maps: [],
+    setupClick: function(map) {
+      if (this.maps.indexOf(map) < 0) {
+        this.maps.push(map);
+        map.on('click', function (e) {
+          var hit;
+          hit = L.glify.Points.tryClick(e, map);
+          if (typeof hit !== 'undefined') return hit;
+
+          //todo: handle lines
+
+          hit = L.glify.Shapes.tryClick(e, map);
+          if (typeof hit !== 'undefined') return hit;
+        });
+      }
+    },
+    pointInCircle: function (centerPoint, checkPoint, radius) {
+      var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
+      return distanceSquared <= radius * radius;
+    },
+    debugPoint: function (containerPoint) {
+      var el = document.createElement('div'),
+          s = el.style,
+          x = containerPoint.x,
+          y = containerPoint.y;
+
+      s.left = x + 'px';
+      s.top = y + 'px';
+      s.width = '10px';
+      s.height = '10px';
+      s.position = 'absolute';
+      s.backgroundColor = '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
+
+      document.body.appendChild(el);
+
+      return this;
+    },
+    /**
+     *
+     * @param targetLocation
+     * @param points
+     * @param map
+     * @returns {*}
+     */
+    closest: function (targetLocation, points, map) {
+      var self = this;
+      if (points.length < 1) return null;
+      return points.reduce(function (prev, curr) {
+        var prevDistance = self.locationDistance(targetLocation, prev, map),
+            currDistance = self.locationDistance(targetLocation, curr, map);
+        return (prevDistance < currDistance) ? prev : curr;
+      });
+    },
+    vectorDistance: function (dx, dy) {
+      return Math.sqrt(dx * dx + dy * dy);
+    },
+    locationDistance: function (location1, location2, map) {
+      var point1 = map.latLngToLayerPoint(location1),
+          point2 = map.latLngToLayerPoint(location2),
+
+          dx = point1.x - point2.x,
+          dy = point1.y - point2.y;
+
+      return this.vectorDistance(dx, dy);
+    },
     color: {
       fromHex: function(hex) {
         if (hex.length < 6) return null;
+        hex = hex.toLowerCase();
 
         if (hex[0] === '#') {
           hex = hex.substring(1, hex.length);
