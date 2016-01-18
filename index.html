@@ -62,7 +62,7 @@
         //set up a standalone popup (use a popup as a layer)
         L.popup()
             .setLatLng(point)
-            .setContent("You clicked the point at longitude:" + point[L.glify.longitudeKey] + ', latitude:' + point[0])
+            .setContent("You clicked the point at longitude:" + point[L.glify.longitudeKey] + ', latitude:' + point[L.glify.latitudeKey])
             .openOn(map);
 
         console.log(point);
