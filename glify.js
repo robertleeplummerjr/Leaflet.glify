@@ -116,7 +116,6 @@ please submit pull requests by first editing src/* and then running `node build.
     data: [],
     vertexShaderSource: function() { return L.glify.shader.vertex; },
     fragmentShaderSource: function() { return L.glify.shader.fragment.point; },
-    pointThreshold: 10,
     click: null,
     color: 'random',
     opacity: 0.8,
@@ -501,10 +500,8 @@ please submit pull requests by first editing src/* and then running `node build.
   Shapes.defaults = {
     map: null,
     data: [],
-    debug: false,
     vertexShaderSource: function() { return L.glify.shader.vertex; },
     fragmentShaderSource: function() { return L.glify.shader.fragment.polygon; },
-    pointThreshold: 10,
     click: null,
     color: 'random',
     className: ''
@@ -590,14 +587,15 @@ please submit pull requests by first editing src/* and then running `node build.
 
       var pixel,
         verts = this.verts,
-        vertices,
         polygonLookup = this.polygonLookup,
         index,
         settings = this.settings,
         data = settings.data,
         features = data.features,
         feature,
-        currentColor,
+        colorKey = settings.color,
+        colorFn = null,
+        color,
         featureIndex = 0,
         featureMax = features.length,
         triangles,
@@ -605,18 +603,34 @@ please submit pull requests by first editing src/* and then running `node build.
         flat,
         dim,
         pixel,
-        pixels,
         iMax,
         i;
 
       polygonLookup.loadFeatureCollection(data);
+
+      //see if colorKey is actually a function
+      if (typeof colorKey === 'function') {
+        colorFn = colorKey;
+      }
+      //we know that colorKey isn't a function, but L.glify.color[key] might be, check that here
+      else {
+        color = L.glify.color[colorKey] || colorKey;
+
+        if (typeof color === 'function') {
+          colorFn = color;
+        }
+      }
 
       // -- data
       for (; featureIndex < featureMax; featureIndex++) {
         feature = features[featureIndex];
         //***
         triangles = [];
-        currentColor = [Math.random(), Math.random(), Math.random()];
+
+        //use colorFn function here if it exists
+        if (colorFn) {
+          color = colorFn();
+        }
 
         flat = L.glify.flattenData(feature.geometry.coordinates);
 
@@ -630,9 +644,7 @@ please submit pull requests by first editing src/* and then running `node build.
 
         for (i = 0, iMax = triangles.length; i < iMax; i) {
           pixel = L.glify.latLonToPixel(triangles[i++],triangles[i++]);
-          verts.push(pixel.x, pixel.y, currentColor[0], currentColor[1], currentColor[2]
-            /**random color -> **/ );
-          //TODO: handle color
+          verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
         }
       }
 

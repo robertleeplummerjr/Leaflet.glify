@@ -48,7 +48,6 @@
     data: [],
     vertexShaderSource: function() { return L.glify.shader.vertex; },
     fragmentShaderSource: function() { return L.glify.shader.fragment.point; },
-    pointThreshold: 10,
     click: null,
     color: 'random',
     opacity: 0.8,
