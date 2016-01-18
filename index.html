@@ -44,25 +44,25 @@
   wget(['86T.json', 'CZDistricts.json'], function(points, districts) {
     L.glify.shapes({
       map: map,
-      click: function (feature, details) {
-        //set up a standalone popup (use a popup as a layer)
-        /*L.popup()
-          .setLatLng(point)
-          .setContent("You clicked the point at longitude:" + point.lng + ', latitude:' + point.lat)
-          .openOn(map);*/
+      click: function (e, feature) {
+        L.popup()
+          .setLatLng(e.latlng)
+          .setContent("You clicked on " + feature.properties.NAZKR_ENG)
+          .openOn(map);
 
         console.log(feature);
+        console.log(e);
       },
       data: JSON.parse(districts)
     });
 
     L.glify.points({
       map: map,
-      click: function (point, details) {
+      click: function (e, point, xy) {
         //set up a standalone popup (use a popup as a layer)
         L.popup()
             .setLatLng(point)
-            .setContent("You clicked the point at longitude:" + details.latLng.lng + ', latitude:' + details.latLng.lat)
+            .setContent("You clicked the point at longitude:" + point[L.glify.longitudeKey] + ', latitude:' + point[0])
             .openOn(map);
 
         console.log(point);

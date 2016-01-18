@@ -14,6 +14,18 @@
   }
 
   L.glify = {
+    longitudeKey: 1,
+    latitudeKey: 0,
+    longitudeFirst: function() {
+      L.glify.longitudeKey = 0;
+      L.glify.latitudeKey = 1;
+      return L.glify;
+    },
+    latitudeFirst: function() {
+      L.glify.latitudeKey = 0;
+      L.glify.longitudeKey = 1;
+      return L.glify;
+    },
     get instances() {
       return []
         .concat(L.glify.Points.instances)
@@ -62,12 +74,12 @@
         map.on('click', function (e) {
           var hit;
           hit = L.glify.Points.tryClick(e, map);
-          if (typeof hit !== 'undefined') return hit;
+          if (hit !== undefined) return hit;
 
           //todo: handle lines
 
           hit = L.glify.Shapes.tryClick(e, map);
-          if (typeof hit !== 'undefined') return hit;
+          if (hit !== undefined) return hit;
         });
       }
     },

@@ -15,6 +15,18 @@ please submit pull requests by first editing src/* and then running `node build.
   }
 
   L.glify = {
+    longitudeKey: 1,
+    latitudeKey: 0,
+    longitudeFirst: function() {
+      L.glify.longitudeKey = 0;
+      L.glify.latitudeKey = 1;
+      return L.glify;
+    },
+    latitudeFirst: function() {
+      L.glify.latitudeKey = 0;
+      L.glify.longitudeKey = 1;
+      return L.glify;
+    },
     get instances() {
       return []
         .concat(L.glify.Points.instances)
@@ -191,6 +203,8 @@ please submit pull requests by first editing src/* and then running `node build.
         i = 0,
         max = data.length,
         latLngLookup = this.latLngLookup,
+        latitudeKey = L.glify.latitudeKey,
+        longitudeKey = L.glify.longitudeKey,
         latLng,
         pixel,
         lookup,
@@ -211,9 +225,9 @@ please submit pull requests by first editing src/* and then running `node build.
 
       for(; i < max; i++) {
         latLng = data[i];
-        key = latLng[0].toFixed(2) + 'x' + latLng[1].toFixed(2);
+        key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
         lookup = latLngLookup[key];
-        pixel = L.glify.latLonToPixel(latLng[0], latLng[1]);
+        pixel = L.glify.latLonToPixel(latLng[latitudeKey], latLng[longitudeKey]);
 
         if (lookup === undefined) {
           lookup = latLngLookup[key] = [];
@@ -402,7 +416,8 @@ please submit pull requests by first editing src/* and then running `node build.
   };
 
   Points.tryClick = function(e, map) {
-    var settings,
+    var result,
+        settings,
         instance,
         closestFromEach = [],
         instancesLookup = {},
@@ -430,15 +445,13 @@ please submit pull requests by first editing src/* and then running `node build.
 
     instance = instancesLookup[found];
     if (!instance) return;
-    latLng = L.latLng(found[0], found[1]);
-    xy = map.latLngToLayerPoint(latLng);
-    if (L.glify.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
-      instance.settings.click(found, {
-        latLng: latLng,
-        xy: xy
-      }, e);
 
-      return true;
+    latLng = L.latLng(found[L.glify.latitudeKey], found[L.glify.longitudeKey]);
+    xy = map.latLngToLayerPoint(latLng);
+
+    if (L.glify.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
+      result = instance.settings.click(e, found, xy);
+      return result !== undefined ? result : true;
     }
   };
 
@@ -612,7 +625,7 @@ please submit pull requests by first editing src/* and then running `node build.
         dim = feature.geometry.coordinates[0][0].length;
         for (i = 0, iMax = indices.length; i < iMax; i++) {
           index = indices[i];
-          triangles.push(flat.vertices[index * dim + 1], flat.vertices[index * dim]);
+          triangles.push(flat.vertices[index * dim + L.glify.longitudeKey], flat.vertices[index * dim + L.glify.latitudeKey]);
         }
 
         for (i = 0, iMax = triangles.length; i < iMax; i) {
@@ -746,7 +759,8 @@ please submit pull requests by first editing src/* and then running `node build.
   };
 
   Shapes.tryClick = function(e, map) {
-    var settings,
+    var result,
+        settings,
         feature;
 
     Shapes.instances.forEach(function (_instance) {
@@ -757,9 +771,11 @@ please submit pull requests by first editing src/* and then running `node build.
 
       feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
       if (feature !== undefined) {
-        settings.click(feature);
+        result = settings.click(e, feature);
       }
     });
+
+    return result !== undefined ? result : true;
   };
 
   return Shapes;
@@ -771,12 +787,12 @@ please submit pull requests by first editing src/* and then running `node build.
         map.on('click', function (e) {
           var hit;
           hit = L.glify.Points.tryClick(e, map);
-          if (typeof hit !== 'undefined') return hit;
+          if (hit !== undefined) return hit;
 
           //todo: handle lines
 
           hit = L.glify.Shapes.tryClick(e, map);
-          if (typeof hit !== 'undefined') return hit;
+          if (hit !== undefined) return hit;
         });
       }
     },

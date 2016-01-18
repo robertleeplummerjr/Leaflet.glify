@@ -10,7 +10,7 @@ inspired by http://bl.ocks.org/Sumbera/c6fed35c377a46ff74c3 & need
 L.glify.shapes({
   map: map,
   data: geoJson,
-  click: function(shape, detail, e) {
+  click: function(e, feature) {
     //do something when a shape is clicked
   }
 });
@@ -21,12 +21,10 @@ L.glify.shapes({
 L.glify.points({
   map: map,
   data: points,
-  click: function(point, detail, e) {
+  click: function(e, point, xy) {
     //do something when a point is clicked
   }
 });
 ```
 
-Soon to come, lines.
-
-more to come
+Soon to come, lines, and limitless styles.

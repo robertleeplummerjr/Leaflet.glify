@@ -166,7 +166,7 @@
         dim = feature.geometry.coordinates[0][0].length;
         for (i = 0, iMax = indices.length; i < iMax; i++) {
           index = indices[i];
-          triangles.push(flat.vertices[index * dim + 1], flat.vertices[index * dim]);
+          triangles.push(flat.vertices[index * dim + L.glify.longitudeKey], flat.vertices[index * dim + L.glify.latitudeKey]);
         }
 
         for (i = 0, iMax = triangles.length; i < iMax; i) {
@@ -300,7 +300,8 @@
   };
 
   Shapes.tryClick = function(e, map) {
-    var settings,
+    var result,
+        settings,
         feature;
 
     Shapes.instances.forEach(function (_instance) {
@@ -311,9 +312,11 @@
 
       feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
       if (feature !== undefined) {
-        settings.click(feature);
+        result = settings.click(e, feature);
       }
     });
+
+    return result !== undefined ? result : true;
   };
 
   return Shapes;

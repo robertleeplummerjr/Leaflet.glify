@@ -135,6 +135,8 @@
         i = 0,
         max = data.length,
         latLngLookup = this.latLngLookup,
+        latitudeKey = L.glify.latitudeKey,
+        longitudeKey = L.glify.longitudeKey,
         latLng,
         pixel,
         lookup,
@@ -155,9 +157,9 @@
 
       for(; i < max; i++) {
         latLng = data[i];
-        key = latLng[0].toFixed(2) + 'x' + latLng[1].toFixed(2);
+        key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
         lookup = latLngLookup[key];
-        pixel = L.glify.latLonToPixel(latLng[0], latLng[1]);
+        pixel = L.glify.latLonToPixel(latLng[latitudeKey], latLng[longitudeKey]);
 
         if (lookup === undefined) {
           lookup = latLngLookup[key] = [];
@@ -346,7 +348,8 @@
   };
 
   Points.tryClick = function(e, map) {
-    var settings,
+    var result,
+        settings,
         instance,
         closestFromEach = [],
         instancesLookup = {},
@@ -374,15 +377,13 @@
 
     instance = instancesLookup[found];
     if (!instance) return;
-    latLng = L.latLng(found[0], found[1]);
-    xy = map.latLngToLayerPoint(latLng);
-    if (L.glify.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
-      instance.settings.click(found, {
-        latLng: latLng,
-        xy: xy
-      }, e);
 
-      return true;
+    latLng = L.latLng(found[L.glify.latitudeKey], found[L.glify.longitudeKey]);
+    xy = map.latLngToLayerPoint(latLng);
+
+    if (L.glify.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
+      result = instance.settings.click(e, found, xy);
+      return result !== undefined ? result : true;
     }
   };
 
