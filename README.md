@@ -1,5 +1,6 @@
 # Leaflet.glify
 web gl renderer plugin for leaflet
+_Pronounced leaflet-G.L.-Ify, or leaflet-glify, or L.-G.L.-Ify, or L-glify, or elglify_
 
 inspired by http://bl.ocks.org/Sumbera/c6fed35c377a46ff74c3 & need.
 
@@ -64,5 +65,14 @@ L.glify.lines({
 * `size` {Number|Function} pixel size of point
 * `sensitivity` {Number} exagurates the size of the clickable area to make it easier to click a point
 
+## `L.glify` methods
+* `longitudeFirst()`
+* `latitudeFirst()`
+* `instances`
+* `points(options)`
+* `shapes(options)`
+* `flattenData(data)`
+* `latLonToPixel(lat, lon)`
 
+## Roadmap
 Soon to come, lines, and limitless styles.
