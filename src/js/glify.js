@@ -13,6 +13,16 @@
     return settings;
   }
 
+  function tryFunction(it, lookup) {
+    //see if it is actually a function
+    if (typeof it === 'function') return it;
+
+    //we know that it isn't a function, but lookup[it] might be, check that here
+    if (typeof lookup === 'undefined' || !lookup.hasOwnProperty(it)) return null;
+
+    return lookup[it];
+  }
+
   L.glify = {
     longitudeKey: 1,
     latitudeKey: 0,
@@ -86,6 +96,25 @@
     pointInCircle: function (centerPoint, checkPoint, radius) {
       var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
       return distanceSquared <= radius * radius;
+    },
+    attachShaderVars: function(size, gl, program, attributes) {
+      var name,
+          loc,
+          attribute,
+          bytes = 5;
+
+      for (name in attributes) if (attributes.hasOwnProperty(name)) {
+        attribute = attributes[name];
+        loc = gl.getAttribLocation(program, name);
+        if (loc < 0) {
+          console.log(name, attribute);
+          throw new Error('shader variable ' + name + ' not found');
+        }
+        gl.vertexAttribPointer(loc, attribute.size, gl[attribute.type], false, size * (attribute.bytes || bytes), size * attribute.start);
+        gl.enableVertexAttribArray(loc);
+      }
+
+      return this;
     },
     debugPoint: function (containerPoint) {
       var el = document.createElement('div'),
@@ -188,6 +217,7 @@
       fragment: {
         dot: null,
         point: null,
+        puck: null,
         simpleCircle: null,
         square: null,
         polygon: null
