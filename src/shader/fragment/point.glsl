@@ -1,13 +1,13 @@
 precision mediump float;
-varying vec4 vColor;
+varying vec4 _color;
 uniform float opacity;
 
-void main (void) {
+void main() {
   float border = 0.1;
   float radius = 0.5;
   vec2 center = vec2(0.5, 0.5);
 
-  vec4 color = vec4(vColor[0], vColor[1], vColor[2], opacity);
+  vec4 pointColor = vec4(_color[0], _color[1], _color[2], opacity);
 
   vec2 m = gl_PointCoord.xy - center;
   float dist1 = radius - sqrt(m.x * m.x + m.y * m.y);
@@ -37,5 +37,5 @@ void main (void) {
   float t2 = 1.0 + smoothstep(radius, radius + outerBorder, dist2)
                 - smoothstep(radius - innerBorder, radius, dist2);
  
-  gl_FragColor = mix(mix(borderColor, clearColor, t2), color, t1);
+  gl_FragColor = mix(mix(borderColor, clearColor, t2), pointColor, t1);
 }

@@ -57,12 +57,13 @@ readFiles([
 
     'src/shader/fragment/dot.glsl',
     'src/shader/fragment/point.glsl',
+    'src/shader/fragment/puck.glsl',
     'src/shader/fragment/simple-circle.glsl',
     'src/shader/fragment/square.glsl',
 
     'src/shader/fragment/polygon.glsl',
 
-    'src/shader/vertex.glsl',
+    'src/shader/vertex/default.glsl',
 
     //node dependencies
     'bower_components/earcut/src/earcut.js',
@@ -80,6 +81,7 @@ readFiles([
 
     dotSrc,
     pointSrc,
+    puckSrc,
     simpleCircleSrc,
     squareSrc,
 
@@ -105,6 +107,7 @@ please submit pull requests by first editing src/* and then running `node build.
 
       .replace('dot: null'         , 'dot: '          + glslMin(dotSrc))
       .replace('point: null'       , 'point: '        + glslMin(pointSrc))
+      .replace('puck: null'       , 'puck: '          + glslMin(puckSrc))
       .replace('simpleCircle: null', 'simpleCircle: ' + glslMin(simpleCircleSrc))
       .replace('square: null'      , 'square: '       + glslMin(squareSrc))
 
