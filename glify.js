@@ -14,6 +14,16 @@ please submit pull requests by first editing src/* and then running `node build.
     return settings;
   }
 
+  function tryFunction(it, lookup) {
+    //see if it is actually a function
+    if (typeof it === 'function') return it;
+
+    //we know that it isn't a function, but lookup[it] might be, check that here
+    if (typeof lookup === 'undefined' || !lookup.hasOwnProperty(it)) return null;
+
+    return lookup[it];
+  }
+
   L.glify = {
     longitudeKey: 1,
     latitudeKey: 0,
@@ -102,7 +112,7 @@ please submit pull requests by first editing src/* and then running `node build.
     this.vertexShader = null;
     this.fragmentShader = null;
     this.program = null;
-    this.uMatrix = null;
+    this.matrix = null;
     this.verts = null;
     this.latLngLookup = null;
 
@@ -116,12 +126,20 @@ please submit pull requests by first editing src/* and then running `node build.
     data: [],
     vertexShaderSource: function() { return L.glify.shader.vertex; },
     fragmentShaderSource: function() { return L.glify.shader.fragment.point; },
+    eachVertex: null,
     click: null,
     color: 'random',
     opacity: 0.8,
     size: null,
     className: '',
-    sensitivity: 2
+    sensitivity: 2,
+    shaderVars: {
+      color: {
+        type: 'FLOAT',
+        start: 2,
+        size: 3
+      }
+    }
   };
 
   //statics
@@ -155,33 +173,33 @@ please submit pull requests by first editing src/* and then running `node build.
 
       //look up the locations for the inputs to our shaders.
       var gl = this.gl,
+        settings = this.settings,
         canvas = this.canvas,
         program = this.program,
         glLayer = this.glLayer,
-        uMatrix = this.uMatrix = gl.getUniformLocation(program, 'uMatrix'),
+        matrix = this.matrix = gl.getUniformLocation(program, 'matrix'),
         opacity = gl.getUniformLocation(program, 'opacity'),
-        colorLocation = gl.getAttribLocation(program, 'aColor'),
-        vertexLocation = gl.getAttribLocation(program, 'aVertex'),
+        vertex = gl.getAttribLocation(program, 'vertex'),
         vertexBuffer = gl.createBuffer(),
         vertexArray = new Float32Array(this.verts),
-        fsize = vertexArray.BYTES_PER_ELEMENT;
+        size = vertexArray.BYTES_PER_ELEMENT;
 
-      gl.aPointSize = gl.getAttribLocation(program, 'aPointSize');
+      gl.pointSize = gl.getAttribLocation(program, 'pointSize');
 
       //set the matrix to some that makes 1 unit 1 pixel.
       this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
       gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.uniformMatrix4fv(uMatrix, false, this.pixelsToWebGLMatrix);
+      gl.uniformMatrix4fv(matrix, false, this.pixelsToWebGLMatrix);
       gl.uniform1f(opacity, this.settings.opacity);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(vertexLocation, 2, gl.FLOAT, false, fsize * 5, 0);
-      gl.enableVertexAttribArray(vertexLocation);
+      gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
+      gl.enableVertexAttribArray(vertex);
 
-      //offset for color buffer
-      gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, fsize * 5, fsize * 2);
-      gl.enableVertexAttribArray(colorLocation);
+      if (settings.shaderVars !== null) {
+        L.glify.attachShaderVars(size, gl, program, settings.shaderVars);
+      }
 
       glLayer.redraw();
 
@@ -196,9 +214,8 @@ please submit pull requests by first editing src/* and then running `node build.
       var verts = this.verts,
         settings = this.settings,
         data = settings.data,
-        colorKey = settings.color,
-        colorFn = null,
-        color,
+        colorFn,
+        color = tryFunction(settings.color, L.glify.color),
         i = 0,
         max = data.length,
         latLngLookup = this.latLngLookup,
@@ -209,17 +226,11 @@ please submit pull requests by first editing src/* and then running `node build.
         lookup,
         key;
 
-      //see if colorKey is actually a function
-      if (typeof colorKey === 'function') {
-        colorFn = colorKey;
-      }
-      //we know that colorKey isn't a function, but L.glify.color[key] might be, check that here
-      else {
-        color = L.glify.color[colorKey] || colorKey;
-
-        if (typeof color === 'function') {
-          colorFn = color;
-        }
+      if (color === null) {
+        throw new Error('color is not properly defined');
+      } else if (typeof color === 'function') {
+        colorFn = color;
+        color = undefined;
       }
 
       for(; i < max; i++) {
@@ -234,13 +245,15 @@ please submit pull requests by first editing src/* and then running `node build.
 
         lookup.push(latLng);
 
-        //use colorFn function here if it exists
         if (colorFn) {
           color = colorFn();
         }
 
         //-- 2 coord, 3 rgb colors interleaved buffer
         verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+        if (settings.eachVertex !== null) {
+          settings.eachVertex.call(this, latLng, pixel, color);
+        }
       }
 
       return this;
@@ -351,9 +364,9 @@ please submit pull requests by first editing src/* and then running `node build.
 
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.vertexAttrib1f(gl.aPointSize, this.pointSize());
+      gl.vertexAttrib1f(gl.pointSize, this.pointSize());
       // -- attach matrix value to 'mapMatrix' uniform in shader
-      gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
+      gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
       gl.drawArrays(gl.POINTS, 0, settings.data.length);
 
       return this;
@@ -487,7 +500,7 @@ please submit pull requests by first editing src/* and then running `node build.
     this.vertexShader = null;
     this.fragmentShader = null;
     this.program = null;
-    this.uMatrix = null;
+    this.matrix = null;
     this.verts = null;
     this.latLngLookup = null;
     this.polygonLookup = null;
@@ -504,7 +517,15 @@ please submit pull requests by first editing src/* and then running `node build.
     fragmentShaderSource: function() { return L.glify.shader.fragment.polygon; },
     click: null,
     color: 'random',
-    className: ''
+    className: '',
+    opacity: 0.5,
+    shaderVars: {
+      color: {
+        type: 'FLOAT',
+        start: 2,
+        size: 3
+      }
+    }
   };
 
   //statics
@@ -536,6 +557,7 @@ please submit pull requests by first editing src/* and then running `node build.
       // triangles or point count
 
       var pixelsToWebGLMatrix = this.pixelsToWebGLMatrix,
+        settings = this.settings,
         canvas = this.canvas,
         gl = this.gl,
         glLayer = this.glLayer,
@@ -544,33 +566,34 @@ please submit pull requests by first editing src/* and then running `node build.
         numPoints = verts.length / 5,
         vertexBuffer = gl.createBuffer(),
         vertArray = new Float32Array(verts),
-        fsize = vertArray.BYTES_PER_ELEMENT,
+        size = vertArray.BYTES_PER_ELEMENT,
         program = this.program,
-        vertLoc = gl.getAttribLocation(program, "aVertex"),
-
-      // -- offset for color buffer
-        colorLoc = gl.getAttribLocation(program, "aColor");
+        vertex = gl.getAttribLocation(program, 'vertex'),
+        opacity = gl.getUniformLocation(program, 'opacity');
 
       console.log("updated at  " + new Date().setTime(new Date().getTime() - start.getTime()) + " ms ");
 
+      gl.uniform1f(opacity, this.settings.opacity);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(vertLoc, 2, gl.FLOAT, false, fsize * 5, 0);
-      gl.enableVertexAttribArray(vertLoc);
-      gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, fsize * 5, fsize * 2);
-      gl.enableVertexAttribArray(colorLoc);
+      gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
+      gl.enableVertexAttribArray(vertex);
 
       //  gl.disable(gl.DEPTH_TEST);
       // ----------------------------
       // look up the locations for the inputs to our shaders.
-      this.uMatrix = gl.getUniformLocation(program, "uMatrix");
-      gl.aPointSize = gl.getAttribLocation(program, "aPointSize");
+      this.matrix = gl.getUniformLocation(program, 'matrix');
+      gl.aPointSize = gl.getAttribLocation(program, 'pointSize');
 
       // Set the matrix to some that makes 1 unit 1 pixel.
       pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
       gl.viewport(0, 0, canvas.width, canvas.height);
 
-      gl.uniformMatrix4fv(this.uMatrix, false, pixelsToWebGLMatrix);
+      gl.uniformMatrix4fv(this.matrix, false, pixelsToWebGLMatrix);
+
+      if (settings.shaderVars !== null) {
+        L.glify.attachShaderVars(size, gl, program, settings.shaderVars);
+      }
 
       glLayer.redraw();
 
@@ -593,32 +616,24 @@ please submit pull requests by first editing src/* and then running `node build.
         data = settings.data,
         features = data.features,
         feature,
-        colorKey = settings.color,
-        colorFn = null,
-        color,
+        colorFn,
+        color = tryFunction(settings.color, L.glify.color),
         featureIndex = 0,
         featureMax = features.length,
         triangles,
         indices,
         flat,
         dim,
-        pixel,
         iMax,
         i;
 
       polygonLookup.loadFeatureCollection(data);
 
-      //see if colorKey is actually a function
-      if (typeof colorKey === 'function') {
-        colorFn = colorKey;
-      }
-      //we know that colorKey isn't a function, but L.glify.color[key] might be, check that here
-      else {
-        color = L.glify.color[colorKey] || colorKey;
-
-        if (typeof color === 'function') {
-          colorFn = color;
-        }
+      if (color === null) {
+        throw new Error('color is not properly defined');
+      } else if (typeof color === 'function') {
+        colorFn = color;
+        color = undefined;
       }
 
       // -- data
@@ -742,7 +757,7 @@ please submit pull requests by first editing src/* and then running `node build.
 
       gl.vertexAttrib1f(gl.aPointSize, pointSize);
       // -- attach matrix value to 'mapMatrix' uniform in shader
-      gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
+      gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
 
       return this;
@@ -811,6 +826,25 @@ please submit pull requests by first editing src/* and then running `node build.
     pointInCircle: function (centerPoint, checkPoint, radius) {
       var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
       return distanceSquared <= radius * radius;
+    },
+    attachShaderVars: function(size, gl, program, attributes) {
+      var name,
+          loc,
+          attribute,
+          bytes = 5;
+
+      for (name in attributes) if (attributes.hasOwnProperty(name)) {
+        attribute = attributes[name];
+        loc = gl.getAttribLocation(program, name);
+        if (loc < 0) {
+          console.log(name, attribute);
+          throw new Error('shader variable ' + name + ' not found');
+        }
+        gl.vertexAttribPointer(loc, attribute.size, gl[attribute.type], false, size * (attribute.bytes || bytes), size * attribute.start);
+        gl.enableVertexAttribArray(loc);
+      }
+
+      return this;
     },
     debugPoint: function (containerPoint) {
       var el = document.createElement('div'),
@@ -958,13 +992,14 @@ please submit pull requests by first editing src/* and then running `node build.
   return mapMatrix;
 })(),
     shader: {
-      vertex: "uniform mat4 uMatrix;attribute vec4 aVertex;attribute float aPointSize;attribute vec4 aColor;varying vec4 vColor;void main() { gl_PointSize = aPointSize; gl_Position = uMatrix * aVertex; vColor = aColor;}",
+      vertex: "uniform mat4 matrix;attribute vec4 vertex;attribute float pointSize;attribute vec4 color;varying vec4 _color;void main() { gl_PointSize = pointSize; gl_Position = matrix * vertex; _color = color;}",
       fragment: {
-        dot: "precision mediump float;varying vec4 vColor;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec2 center = vec2(0.5, 0.5); vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - center; float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } gl_FragColor = mix(color0, color1, t);}",
-        point: "precision mediump float;varying vec4 vColor;uniform float opacity;void main (void) { float border = 0.1; float radius = 0.5; vec2 center = vec2(0.5, 0.5); vec4 color = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - center; float dist1 = radius - sqrt(m.x * m.x + m.y * m.y); float t1 = 0.0; if (dist1 > border) { t1 = 1.0; } else if (dist1 > 0.0) { t1 = dist1 / border; } float outerBorder = 0.05; float innerBorder = 0.8; vec4 borderColor = vec4(0, 0, 0, 0.4); vec2 uv = gl_PointCoord.xy; vec4 clearColor = vec4(0, 0, 0, 0); uv -= center; float dist2 = sqrt(dot(uv, uv)); float t2 = 1.0 + smoothstep(radius, radius + outerBorder, dist2) - smoothstep(radius - innerBorder, radius, dist2); gl_FragColor = mix(mix(borderColor, clearColor, t2), color, t1);}",
-        simpleCircle: "precision mediump float;varying vec4 vColor;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5); float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } float d = distance (gl_PointCoord, vec2(0.5, 0.5)); if (d < 0.5 ){ gl_FragColor = color1; } else { discard; }}",
-        square: "precision mediump float;varying vec4 vColor;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(vColor[0], vColor[1], vColor[2], opacity); vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5); float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } gl_FragColor = vColor; gl_FragColor = vec4(vColor[0], vColor[1], vColor[2], opacity); }",
-        polygon: "precision mediump float; varying vec4 vColor; void main() { gl_FragColor = vColor; gl_FragColor.a = 0.8; }"
+        dot: "precision mediump float;uniform vec4 color;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec2 center = vec2(0.5); vec4 color0 = vec4(0.0); vec4 color1 = vec4(color[0], color[1], color[2], opacity); vec2 m = gl_PointCoord.xy - center; float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } gl_FragColor = mix(color0, color1, t);}",
+        point: "precision mediump float;varying vec4 _color;uniform float opacity;void main() { float border = 0.1; float radius = 0.5; vec2 center = vec2(0.5, 0.5); vec4 pointColor = vec4(_color[0], _color[1], _color[2], opacity); vec2 m = gl_PointCoord.xy - center; float dist1 = radius - sqrt(m.x * m.x + m.y * m.y); float t1 = 0.0; if (dist1 > border) { t1 = 1.0; } else if (dist1 > 0.0) { t1 = dist1 / border; } float outerBorder = 0.05; float innerBorder = 0.8; vec4 borderColor = vec4(0, 0, 0, 0.4); vec2 uv = gl_PointCoord.xy; vec4 clearColor = vec4(0, 0, 0, 0); uv -= center; float dist2 = sqrt(dot(uv, uv)); float t2 = 1.0 + smoothstep(radius, radius + outerBorder, dist2) - smoothstep(radius - innerBorder, radius, dist2); gl_FragColor = mix(mix(borderColor, clearColor, t2), pointColor, t1);}",
+        puck: "precision mediump float;varying vec4 _color;uniform float opacity;void main() { vec2 center = vec2(0.5); vec2 uv = gl_PointCoord.xy - center; float smoothing = 0.005; vec4 _color1 = vec4(_color[0], _color[1], _color[2], opacity); float radius1 = 0.3; vec4 _color2 = vec4(_color[0], _color[1], _color[2], opacity); float radius2 = 0.5; float dist = length(uv); float gamma = 2.2; color1.rgb = pow(_color1.rgb, vec3(gamma)); color2.rgb = pow(_color2.rgb, vec3(gamma)); vec4 puck = mix( mix( _color1, _color2, smoothstep( radius1 - smoothing, radius1 + smoothing, dist ) ), vec4(0,0,0,0), smoothstep( radius2 - smoothing, radius2 + smoothing, dist ) ); puck.rgb = pow(puck.rgb, vec3(1.0 / gamma)); gl_FragColor = puck;}",
+        simpleCircle: "precision mediump float;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(color[0], color[1], color[2], opacity); vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5); float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } float d = distance (gl_PointCoord, vec2(0.5, 0.5)); if (d < 0.5 ){ gl_FragColor = color1; } else { discard; }}",
+        square: "precision mediump float;uniform float opacity;void main() { float border = 0.05; float radius = 0.5; vec4 color0 = vec4(0.0, 0.0, 0.0, 0.0); vec4 color1 = vec4(color[0], color[1], color[2], opacity); vec2 m = gl_PointCoord.xy - vec2(0.5, 0.5); float dist = radius - sqrt(m.x * m.x + m.y * m.y); float t = 0.0; if (dist > border) { t = 1.0; } else if (dist > 0.0) { t = dist / border; } gl_FragColor = vec4(color[0], color[1], color[2], opacity);}",
+        polygon: "precision mediump float;uniform float opacity;varying vec4 _color;void main() { gl_FragColor = vec4(_color[0], _color[1], _color[2], opacity);}"
       }
     }
   };
