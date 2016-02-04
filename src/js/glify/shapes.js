@@ -29,7 +29,7 @@
     this.vertexShader = null;
     this.fragmentShader = null;
     this.program = null;
-    this.uMatrix = null;
+    this.matrix = null;
     this.verts = null;
     this.latLngLookup = null;
     this.polygonLookup = null;
@@ -46,7 +46,15 @@
     fragmentShaderSource: function() { return L.glify.shader.fragment.polygon; },
     click: null,
     color: 'random',
-    className: ''
+    className: '',
+    opacity: 0.5,
+    shaderVars: {
+      color: {
+        type: 'FLOAT',
+        start: 2,
+        size: 3
+      }
+    }
   };
 
   //statics
@@ -78,6 +86,7 @@
       // triangles or point count
 
       var pixelsToWebGLMatrix = this.pixelsToWebGLMatrix,
+        settings = this.settings,
         canvas = this.canvas,
         gl = this.gl,
         glLayer = this.glLayer,
@@ -86,33 +95,34 @@
         numPoints = verts.length / 5,
         vertexBuffer = gl.createBuffer(),
         vertArray = new Float32Array(verts),
-        fsize = vertArray.BYTES_PER_ELEMENT,
+        size = vertArray.BYTES_PER_ELEMENT,
         program = this.program,
-        vertLoc = gl.getAttribLocation(program, "aVertex"),
-
-      // -- offset for color buffer
-        colorLoc = gl.getAttribLocation(program, "aColor");
+        vertex = gl.getAttribLocation(program, 'vertex'),
+        opacity = gl.getUniformLocation(program, 'opacity');
 
       console.log("updated at  " + new Date().setTime(new Date().getTime() - start.getTime()) + " ms ");
 
+      gl.uniform1f(opacity, this.settings.opacity);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(vertLoc, 2, gl.FLOAT, false, fsize * 5, 0);
-      gl.enableVertexAttribArray(vertLoc);
-      gl.vertexAttribPointer(colorLoc, 3, gl.FLOAT, false, fsize * 5, fsize * 2);
-      gl.enableVertexAttribArray(colorLoc);
+      gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
+      gl.enableVertexAttribArray(vertex);
 
       //  gl.disable(gl.DEPTH_TEST);
       // ----------------------------
       // look up the locations for the inputs to our shaders.
-      this.uMatrix = gl.getUniformLocation(program, "uMatrix");
-      gl.aPointSize = gl.getAttribLocation(program, "aPointSize");
+      this.matrix = gl.getUniformLocation(program, 'matrix');
+      gl.aPointSize = gl.getAttribLocation(program, 'pointSize');
 
       // Set the matrix to some that makes 1 unit 1 pixel.
       pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
       gl.viewport(0, 0, canvas.width, canvas.height);
 
-      gl.uniformMatrix4fv(this.uMatrix, false, pixelsToWebGLMatrix);
+      gl.uniformMatrix4fv(this.matrix, false, pixelsToWebGLMatrix);
+
+      if (settings.shaderVars !== null) {
+        L.glify.attachShaderVars(size, gl, program, settings.shaderVars);
+      }
 
       glLayer.redraw();
 
@@ -135,32 +145,24 @@
         data = settings.data,
         features = data.features,
         feature,
-        colorKey = settings.color,
-        colorFn = null,
-        color,
+        colorFn,
+        color = tryFunction(settings.color, L.glify.color),
         featureIndex = 0,
         featureMax = features.length,
         triangles,
         indices,
         flat,
         dim,
-        pixel,
         iMax,
         i;
 
       polygonLookup.loadFeatureCollection(data);
 
-      //see if colorKey is actually a function
-      if (typeof colorKey === 'function') {
-        colorFn = colorKey;
-      }
-      //we know that colorKey isn't a function, but L.glify.color[key] might be, check that here
-      else {
-        color = L.glify.color[colorKey] || colorKey;
-
-        if (typeof color === 'function') {
-          colorFn = color;
-        }
+      if (color === null) {
+        throw new Error('color is not properly defined');
+      } else if (typeof color === 'function') {
+        colorFn = color;
+        color = undefined;
       }
 
       // -- data
@@ -284,7 +286,7 @@
 
       gl.vertexAttrib1f(gl.aPointSize, pointSize);
       // -- attach matrix value to 'mapMatrix' uniform in shader
-      gl.uniformMatrix4fv(this.uMatrix, false, mapMatrix);
+      gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
       gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
 
       return this;
