@@ -1,0 +1,13 @@
+{
+  "name": "polygon-lookup",
+  "homepage": "https://github.com/pelias/polygon-lookup",
+  "_release": "4c0c03c143",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "4c0c03c143cf01b7fbfebcf95989bf5e32cb7633"
+  },
+  "_source": "https://github.com/pelias/polygon-lookup.git",
+  "_target": "*",
+  "_originalSource": "https://github.com/pelias/polygon-lookup.git"
+}

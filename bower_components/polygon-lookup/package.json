@@ -1,0 +1,42 @@
+{
+  "name": "polygon-lookup",
+  "author": "mapzen",
+  "version": "1.0.2",
+  "description": "Fast point-in-polygon intersection for large numbers of polygons.",
+  "homepage": "https://github.com/pelias/polygon-lookup",
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/test.js | tap-spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/pelias/polygon-lookup.git"
+  },
+  "keywords": [
+    "polygon",
+    "lookup",
+    "intersection",
+    "coarse",
+    "reverse-geocode"
+  ],
+  "bugs": {
+    "url": "https://github.com/pelias/polygon-lookup/issues"
+  },
+  "engines": {
+    "node": ">=0.10.26",
+    "npm": ">=1.4.3",
+    "elasticsearch": ">=1.1.1"
+  },
+  "dependencies": {
+    "point-in-polygon": "0.0.0",
+    "rbush": "1.3.4",
+    "through2": "^0.6.3"
+  },
+  "devDependencies": {
+    "tape": "^2.13.4",
+    "tap-spec": "^0.2.0",
+    "precommit-hook": "1.0.7",
+    "jshint": "2.5.11"
+  }
+}

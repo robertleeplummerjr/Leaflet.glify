@@ -1,0 +1,14 @@
+{
+  "name": "earcut",
+  "homepage": "https://github.com/mapbox/earcut",
+  "version": "2.0.7",
+  "_release": "2.0.7",
+  "_resolution": {
+    "type": "version",
+    "tag": "v2.0.7",
+    "commit": "b2ca4d1c2543ee6dc81b013adca8c3ab3e2cba2d"
+  },
+  "_source": "https://github.com/mapbox/earcut.git",
+  "_target": "*",
+  "_originalSource": "https://github.com/mapbox/earcut.git"
+}

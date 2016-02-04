@@ -1,0 +1,33 @@
+{
+  "name": "leaflet",
+  "version": "0.7.7",
+  "description": "JavaScript library for mobile-friendly interactive maps",
+  "main": [
+    "dist/leaflet.css",
+    "dist/leaflet-src.js",
+    "dist/images/layers-2x.png",
+    "dist/images/layers.png",
+    "dist/images/marker-icon-2x.png",
+    "dist/images/marker-icon.png",
+    "dist/images/marker-shadow.png"
+  ],
+  "ignore": [
+    ".*",
+    "CHANGELOG.json",
+    "FAQ.md",
+    "debug",
+    "spec",
+    "src",
+    "build"
+  ],
+  "homepage": "https://github.com/Leaflet/Leaflet",
+  "_release": "0.7.7",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.7.7",
+    "commit": "197f9d43b7bbc73c0492bf62cd666a5a98038098"
+  },
+  "_source": "git://github.com/Leaflet/Leaflet.git",
+  "_target": "~0.7.5",
+  "_originalSource": "leaflet"
+}
