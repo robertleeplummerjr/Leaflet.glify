@@ -1015,7 +1015,7 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
 
-L.CanvasOverlay = L.Class.extend({
+L.CanvasOverlay = (L.Layer || L.Class).extend({
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
