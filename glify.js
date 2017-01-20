@@ -1400,23 +1400,19 @@ function findHoleBridge(hole, outerNode) {
 
     if (!m) return null;
 
-    if (hole.x === m.x) return m.prev; // hole touches outer segment; pick lower endpoint
-
     // look for points inside the triangle of hole point, segment intersection and endpoint;
     // if there are no points found, we have a valid connection;
     // otherwise choose the point of the minimum angle with the ray as connection point
 
     var stop = m,
-        mx = m.x,
-        my = m.y,
         tanMin = Infinity,
         tan;
 
     p = m.next;
 
     while (p !== stop) {
-        if (hx >= p.x && p.x >= mx &&
-                pointInTriangle(hy < my ? hx : qx, hy, mx, my, hy < my ? qx : hx, hy, p.x, p.y)) {
+        if (hx >= p.x && p.x >= m.x &&
+                pointInTriangle(hy < m.y ? hx : qx, hy, m.x, m.y, hy < m.y ? qx : hx, hy, p.x, p.y)) {
 
             tan = Math.abs(hy - p.y) / (hx - p.x); // tangential
 
@@ -1685,6 +1681,8 @@ function Node(i, x, y) {
 'use strict';
 
 function rbush(maxEntries, format) {
+
+    // jshint newcap: false, validthis: true
     if (!(this instanceof rbush)) return new rbush(maxEntries, format);
 
     // max entries in a node is 9 by default; min node fill is 40% for best performance
@@ -1975,7 +1973,7 @@ rbush.prototype = {
                 }
             }
 
-            node = targetNode || node.children[0];
+            node = targetNode;
         }
 
         return node;
@@ -2142,6 +2140,8 @@ rbush.prototype = {
         // uses eval-type function compilation instead of just accepting a toBBox function
         // because the algorithms are very sensitive to sorting functions performance,
         // so they should be dead simple and without inner calls
+
+        // jshint evil: true
 
         var compareArr = ['return a', ' - b', ';'];
 
@@ -2327,29 +2327,29 @@ window.polygonUtils = (function() {
  *    `minX, minY, maxX, maxY` format.
  */
 function getBoundingBox( poly ){
-  var firstPt = poly[0];
-  var bbox = {
-    minX: firstPt[0],
-    minY: firstPt[1],
-    maxX: firstPt[0],
-    maxY: firstPt[1]
-  };
+  var firstPt = poly[ 0 ];
+  var bbox = [
+    firstPt[ 0 ], firstPt[ 1 ],
+    firstPt[ 0 ], firstPt[ 1 ]
+  ];
 
   for( var ind = 1; ind < poly.length; ind++ ){
-    var pt = poly[ind];
+    var pt = poly[ ind ];
 
-    var x = pt[0];
-    if( x < bbox.minX ){
-      bbox.minX = x;
-    } else if( x > bbox.maxX ){
-      bbox.maxX = x;
+    var x = pt[ 0 ];
+    if( x < bbox[ 0 ] ){
+      bbox[ 0 ] = x;
+    }
+    else if( x > bbox[ 2 ] ){
+      bbox[ 2 ] = x;
     }
 
-    var y = pt[1];
-    if( y < bbox.minY ){
-      bbox.minY = y;
-    } else if( y > bbox.maxY ){
-      bbox.maxY = y;
+    var y = pt[ 1 ];
+    if( y < bbox[ 1 ] ){
+      bbox[ 1 ] = y;
+    }
+    else if( y > bbox[ 3 ] ){
+      bbox[ 3 ] = y;
     }
   }
 
@@ -2383,100 +2383,36 @@ function PolygonLookup( featureCollection ){
   }
 }
 
-// Calculate point in polygon intersection, accounting for any holes
-function pointInPolygonWithHoles(point, polygons) {
-  var mainPolygon = polygons.geometry.coordinates[0];
-  if( pointInPolygon( point, mainPolygon ) ){
-    for( var subPolyInd = 1; subPolyInd < polygons.geometry.coordinates.length; subPolyInd++ ){
-      if( pointInPolygon( point, polygons.geometry.coordinates[ subPolyInd ] ) ){
-        return false;
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
-
-/*
- * Internal helper method to return a single matching polygon
- */
-PolygonLookup.prototype.searchForOnePolygon = function searchForOnePolygon( x, y ) {
-  // find which bboxes contain the search point. their polygons _may_ intersect that point
-  var bboxes = this.rtree.search( { minX: x, minY: y, maxX: x, maxY: y } );
-
-  var point = [ x, y ];
-
-  // get the polygon for each possibly matching polygon based on the searched bboxes
-  var polygons = bboxes.map(function(bbox, index) {
-    return this.polygons[ bboxes[index].polyId ];
-  // find the first polygon that actually intersects and return it
-  }, this);
-
-  return _.find(polygons, function(polyObj) {
-    return pointInPolygonWithHoles(point, polyObj);
-  });
-};
-
-/*
- * Internal helper method to return multiple matching polygons, up to a given limit.
- * A limit of -1 means unlimited
- */
-PolygonLookup.prototype.searchForMultiplePolygons = function searchForMultiplePolygons( x, y, limit ) {
-  if (limit === -1) {
-    limit = Number.MAX_SAFE_INTEGER;
-  }
-
-  var point = [ x, y ];
-  var bboxes = this.rtree.search( { minX: x, minY: y, maxX: x, maxY: y } );
-
-  // get the polygon for each possibly matching polygon based on the searched bboxes
-  var polygons = bboxes.map(function(bbox, index) {
-    return this.polygons[ bboxes[index].polyId ];
-  }, this);
-
-  // keep track of matches to avoid extra expensive calculations if limit reached
-  var matchesFound = 0;
-
-  // filter matching polygons, up to the limit
-  polygons = polygons.filter(function(polygon) {
-    // short circuit if limit reached
-    if (matchesFound >= limit) {
-      return false;
-    }
-
-    var intersects = pointInPolygonWithHoles(point, polygon);
-    if (intersects) {
-      matchesFound++;
-      return true;
-    }
-    return false;
-  });
-
-  // return all matching polygons as a GeoJSON FeatureCollection
-  return {
-    type : 'FeatureCollection',
-    features : polygons,
-  };
-};
-
 /**
- * Find polygon(s) that a point intersects. Execute a bounding-box search to
+ * Find the polygon that a point intersects. Execute a bounding-box search to
  * narrow down the candidate polygons to a small subset, and then perform
  * additional point-in-polygon intersections to resolve any ambiguities.
  *
  * @param {number} x The x-coordinate of the point.
  * @param {number} y The y-coordinate of the point.
- * @param {number} [limit] Number of results to return (-1 to return all the results).
  * @return {undefined|object} If one or more bounding box intersections are
- *    found and limit is undefined, return the first polygon that intersects (`x`, `y`); otherwise,
- *    `undefined`. If a limit is passed in, return intercecting polygons as a GeoJSON FeatureCollection.
+ *    found, return the first polygon that intersects (`x`, `y`); otherwise,
+ *    `undefined`.
  */
-PolygonLookup.prototype.search = function search( x, y, limit ){
-  if (limit === undefined) {
-    return this.searchForOnePolygon( x, y );
-  } else {
-    return this.searchForMultiplePolygons( x, y, limit );
+PolygonLookup.prototype.search = function search( x, y ){
+  var bboxes = this.rtree.search( [ x, y, x, y ] );
+  var pt = [ x, y ];
+  for( var ind = 0; ind < bboxes.length; ind++ ){
+    var polyObj = this.polygons[ bboxes[ ind ].polyId ];
+    var polyCoords = polyObj.geometry.coordinates[ 0 ];
+    if( pointInPolygon( pt, polyCoords ) ){
+      var inHole = false;
+      for( var subPolyInd = 1; subPolyInd < polyObj.geometry.coordinates.length; subPolyInd++ ){
+        if( pointInPolygon( pt, polyObj.geometry.coordinates[ subPolyInd ] ) ){
+          inHole = true;
+          break;
+        }
+      }
+
+      if( !inHole ){
+        return polyObj;
+      }
+    }
   }
 };
 
@@ -2499,8 +2435,7 @@ PolygonLookup.prototype.loadFeatureCollection = function loadFeatureCollection( 
   }
 
   function indexFeature( poly ){
-    if( poly.geometry &&
-        poly.geometry.coordinates[ 0 ] !== undefined &&
+    if( poly.geometry.coordinates[ 0 ] !== undefined &&
         poly.geometry.coordinates[ 0 ].length > 0){
       switch( poly.geometry.type ){
         case 'Polygon':
@@ -2526,7 +2461,7 @@ PolygonLookup.prototype.loadFeatureCollection = function loadFeatureCollection( 
   }
 
   collection.features.forEach( indexFeature );
-  this.rtree = new Rbush().load( bboxes );
+  this.rtree = new rbush().load( bboxes );
   this.polygons = polygons;
 };
 
