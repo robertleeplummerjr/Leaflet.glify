@@ -9,7 +9,7 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
 
-L.CanvasOverlay = L.Class.extend({
+L.CanvasOverlay = (L.Layer || L.Class).extend({
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
@@ -119,7 +119,11 @@ L.CanvasOverlay = L.Class.extend({
       , offset = this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos())
       ;
 
-    this.canvas.style[L.DomUtil.TRANSFORM] = L.DomUtil.getTranslateString(offset) + ' scale(' + scale + ')';
+    if(L.DomUtil.getTranslateString) {
+        this.canvas.style[L.DomUtil.TRANSFORM] = L.DomUtil.getTranslateString(offset) + ' scale(' + scale + ')';
+    } else {
+        L.DomUtil.setTransform(this.canvas, offset, scale);
+    } 
   }
 });
 
