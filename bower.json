@@ -1,12 +1,12 @@
 {
   "name": "Leaflet.glify",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "homepage": "https://github.com/robertleeplummerjr/Leaflet.glify",
   "authors": [
     "Robert Plummer <robertleeplummerjr@gmail.com>"
   ],
   "description": "web gl renderer plugin for leaflet",
-  "main": "leaflet.glify.js",
+  "main": "glify.js",
   "keywords": [
     "leaflet",
     "gpu",
@@ -27,7 +27,7 @@
     "tests"
   ],
   "dependencies": {
-    "leaflet": "~0.7.5"
+    "leaflet": "~1.3.4"
   },
   "devDependencies": {
     "earcut": "https://github.com/mapbox/earcut.git",

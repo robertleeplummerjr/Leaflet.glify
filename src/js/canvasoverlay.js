@@ -8,8 +8,8 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  - fixed resize map bug
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
-
-L.CanvasOverlay = L.Class.extend({
+var L = require('leaflet');
+var CanvasOverlay = L.Layer.extend({
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
@@ -118,11 +118,25 @@ L.CanvasOverlay = L.Class.extend({
     var scale = this._map.getZoomScale(e.zoom)
       , offset = this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos())
       ;
+    // this.canvas.style[L.DomUtil.TRANSFORM] = this.getTranslateString(offset) + ' scale(' + scale + ')';
+  },
+  getTranslateString: function(point) {
+    // on WebKit browsers (Chrome/Safari/iOS Safari/Android) using translate3d instead of translate
+    // makes animation smoother as it ensures HW accel is used. Firefox 13 doesn't care
+    // (same speed either way), Opera 12 doesn't support translate3d
 
-    this.canvas.style[L.DomUtil.TRANSFORM] = L.DomUtil.getTranslateString(offset) + ' scale(' + scale + ')';
+    var is3d = L.Browser.webkit3d,
+      open = 'translate' + ( is3d ? '3d' : '') + '(',
+      close = (is3d ? ',0' : '') + ')';
+    return open + point.x + 'px,' + point.y + 'px' + close;
   }
 });
 
-L.canvasOverlay = function (userDrawFunc, options) {
-  return new L.CanvasOverlay(userDrawFunc, options);
+canvasOverlay = function (userDrawFunc, options) {
+  return new CanvasOverlay(userDrawFunc, options);
+};
+
+module.exports = {
+  canvasOverlay,
+  CanvasOverlay
 };
