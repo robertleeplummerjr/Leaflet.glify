@@ -1,4 +1,4 @@
-var L = require('leaflet');
+var L = typeof window !== 'undefined' ? window.L : require('leaflet');
 var earcut = require('earcut');
 var PolygonLookup = require('polygon-lookup');
 var utils = require('./utils');

@@ -20661,7 +20661,7 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  - fixed resize map bug
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
-var L = require('leaflet');
+var L = typeof window !== 'undefined' ? window.L : require('leaflet');
 var CanvasOverlay = L.Layer.extend({
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
@@ -21056,8 +21056,8 @@ module.exports = function mapMatrix() {
 }
 
 },{}],14:[function(require,module,exports){
-var L = require('leaflet');
 var utils = require('./utils');
+var L = typeof window !== 'undefined' ? window.L : require('leaflet');
 var mapMatrix = require('./map-matrix');
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
@@ -21459,7 +21459,7 @@ Points.tryClick = function(e, map) {
 
 module.exports = Points;
 },{"./canvasoverlay":11,"./map-matrix":13,"./utils":16,"leaflet":"leaflet"}],15:[function(require,module,exports){
-var L = require('leaflet');
+var L = typeof window !== 'undefined' ? window.L : require('leaflet');
 var earcut = require('earcut');
 var PolygonLookup = require('polygon-lookup');
 var utils = require('./utils');

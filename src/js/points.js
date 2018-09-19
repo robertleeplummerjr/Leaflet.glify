@@ -1,5 +1,5 @@
-var L = require('leaflet');
 var utils = require('./utils');
+var L = typeof window !== 'undefined' ? window.L : require('leaflet');
 var mapMatrix = require('./map-matrix');
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
