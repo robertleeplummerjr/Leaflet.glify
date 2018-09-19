@@ -8,8 +8,8 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  - fixed resize map bug
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
-
-L.CanvasOverlay = L.Class.extend({
+var L = typeof window !== 'undefined' ? window.L : require('leaflet');
+var CanvasOverlay = L.Layer.extend({
   initialize: function (userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
@@ -116,13 +116,30 @@ L.CanvasOverlay = L.Class.extend({
 
   _animateZoom: function (e) {
     var scale = this._map.getZoomScale(e.zoom)
-      , offset = this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos())
+      , offset = L.Layer
+        ? this._map._latLngBoundsToNewLayerBounds(this._map.getBounds(), e.zoom, e.center).min
+        : this._map._getCenterOffset(e.center)
+            ._multiplyBy(-scale)
+            .subtract(this._map._getMapPanePos())
       ;
 
-    this.canvas.style[L.DomUtil.TRANSFORM] = L.DomUtil.getTranslateString(offset) + ' scale(' + scale + ')';
+    L.DomUtil.setTransform(this.canvas, offset, scale);
+  },
+  setTransform: function(el, offset, scale) {
+    var pos = offset || new L.Point(0, 0);
+    el.style[L.DomUtil.TRANSFORM] =
+      (L.Browser.ie3d ?
+        'translate(' + pos.x + 'px,' + pos.y + 'px)' :
+        'translate3d(' + pos.x + 'px,' + pos.y + 'px,0)') +
+      (scale ? ' scale(' + scale + ')' : '');
   }
 });
 
-L.canvasOverlay = function (userDrawFunc, options) {
-  return new L.CanvasOverlay(userDrawFunc, options);
+canvasOverlay = function (userDrawFunc, options) {
+  return new CanvasOverlay(userDrawFunc, options);
+};
+
+module.exports = {
+  canvasOverlay,
+  CanvasOverlay
 };
