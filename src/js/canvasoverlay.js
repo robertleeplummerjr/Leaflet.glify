@@ -116,19 +116,22 @@ var CanvasOverlay = L.Layer.extend({
 
   _animateZoom: function (e) {
     var scale = this._map.getZoomScale(e.zoom)
-      , offset = this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos())
+      , offset = L.Layer
+        ? this._map._latLngBoundsToNewLayerBounds(this._map.getBounds(), e.zoom, e.center).min
+        : this._map._getCenterOffset(e.center)
+            ._multiplyBy(-scale)
+            .subtract(this._map._getMapPanePos())
       ;
-    // this.canvas.style[L.DomUtil.TRANSFORM] = this.getTranslateString(offset) + ' scale(' + scale + ')';
-  },
-  getTranslateString: function(point) {
-    // on WebKit browsers (Chrome/Safari/iOS Safari/Android) using translate3d instead of translate
-    // makes animation smoother as it ensures HW accel is used. Firefox 13 doesn't care
-    // (same speed either way), Opera 12 doesn't support translate3d
 
-    var is3d = L.Browser.webkit3d,
-      open = 'translate' + ( is3d ? '3d' : '') + '(',
-      close = (is3d ? ',0' : '') + ')';
-    return open + point.x + 'px,' + point.y + 'px' + close;
+    L.DomUtil.setTransform(this.canvas, offset, scale);
+  },
+  setTransform: function(el, offset, scale) {
+    var pos = offset || new L.Point(0, 0);
+    el.style[L.DomUtil.TRANSFORM] =
+      (L.Browser.ie3d ?
+        'translate(' + pos.x + 'px,' + pos.y + 'px)' :
+        'translate3d(' + pos.x + 'px,' + pos.y + 'px,0)') +
+      (scale ? ' scale(' + scale + ')' : '');
   }
 });
 
