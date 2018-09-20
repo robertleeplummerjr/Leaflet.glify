@@ -177,7 +177,7 @@ Points.prototype = {
       lookup.push(latLng);
 
       if (colorFn) {
-        color = colorFn();
+        color = colorFn(i, latLng);
       }
 
       //-- 2 coord, 3 rgb colors interleaved buffer
