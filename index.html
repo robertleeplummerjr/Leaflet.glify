@@ -35,13 +35,44 @@
 <script src="glify.js"></script>
 <script>
   var map = L.map('map')
-          .setView([50.00, 14.44], 8);
+          .setView([50.00, 14.44], 7);
 
   L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png")
     //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
     .addTo(map);
 
-  wget(['86T.json', 'CZDistricts.json'], function(points, districts) {
+  wget(['86T.json', 'CZDistricts.json', 'lines.json', 'separatepolygons.json'], function(points, districts, lines, separatepolygons) {
+    L.glify.lines({
+      map: map,
+      latitudeKey: 1,
+      longitudeKey: 0,
+      click: function (e, feature) {
+        L.popup()
+          .setLatLng(e.latlng)
+          .setContent("You clicked on " + feature.properties.NAZKR_ENG)
+          .openOn(map);
+
+        console.log(feature);
+        console.log(e);
+      },
+      data: JSON.parse(lines)
+    });
+
+    L.glify.shapes({
+      map: map,
+      click: function (e, feature) {
+        L.popup()
+          .setLatLng(e.latlng)
+          .setContent("You clicked on " + feature.properties.NAZKR_ENG)
+          .openOn(map);
+
+        console.log(feature);
+        console.log(e);
+      },
+      data: JSON.parse(separatepolygons)
+    });
+
+    /*
     L.glify.shapes({
       map: map,
       click: function (e, feature) {
@@ -55,7 +86,8 @@
       },
       data: JSON.parse(districts)
     });
-
+    
+    
     L.glify.points({
       map: map,
       click: function (e, point, xy) {
@@ -69,6 +101,7 @@
       },
       data: JSON.parse(points)
     });
+    */
   });
 
   function wget(urls, fn) {
