@@ -1,13 +1,11 @@
 var L = typeof window !== 'undefined' ? window.L : require('leaflet');
-var earcut = require('earcut');
-var PolygonLookup = require('polygon-lookup');
 var utils = require('./utils');
 var mapMatrix = require('./map-matrix');
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
-var Shapes = function Shapes(settings) {
-  Shapes.instances.push(this);
-  this.settings = utils.defaults(settings, Shapes.defaults);
+var Lines = function Lines(settings) {
+    Lines.instances.push(this);
+  this.settings = utils.defaults(settings, Lines.defaults);
 
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
@@ -38,14 +36,13 @@ var Shapes = function Shapes(settings) {
   this.matrix = null;
   this.verts = null;
   this.latLngLookup = null;
-  this.polygonLookup = null;
 
   this
     .setup()
     .render();
 };
 
-Shapes.defaults = {
+Lines.defaults = {
   map: null,
   data: [],
   longitudeKey: null,
@@ -68,13 +65,13 @@ Shapes.defaults = {
 };
 
 //statics
-Shapes.instances = [];
+Lines.instances = [];
 
-Shapes.prototype = {
+Lines.prototype = {
   maps: [],
   /**
    *
-   * @returns {Shapes}
+   * @returns {Lines}
    */
   setup: function () {
     var settings = this.settings;
@@ -89,28 +86,52 @@ Shapes.prototype = {
   },
   /**
    *
-   * @returns {Shapes}
+   * @returns {Lines}
    */
   render: function () {
     this.resetVertices();
-    // triangles or point count
 
     var pixelsToWebGLMatrix = this.pixelsToWebGLMatrix,
       settings = this.settings,
       canvas = this.canvas,
       gl = this.gl,
       glLayer = this.glLayer,
-      start = new Date(),
       verts = this.verts,
-      numPoints = verts.length / 5,
       vertexBuffer = gl.createBuffer(),
-      vertArray = new Float32Array(verts),
-      size = vertArray.BYTES_PER_ELEMENT,
       program = this.program,
       vertex = gl.getAttribLocation(program, 'vertex'),
       opacity = gl.getUniformLocation(program, 'opacity');
+
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    /*
+    Transforming lines according to the rule:
+    1. Take one line (single feature)
+    [[0,0],[1,1],[2,2]]
+    2. Split the line in segments, duplicating all coordinates except first and last one
+    [[0,0],[1,1],[2,2]] => [[0,0],[1,1],[1,1],[2,2]]
+    3. Do this for all lines and put all coordinates in array
+    */
+    var size = 0;
+    var allVertices = [];
+    verts.map(function (vertices) {
+      var verticesDuplicated = [];
+      for (var i = 0; i < vertices.length / 5; i++) {
+        if (i !== 0 && i !== (vertices.length / 5 - 1)) {
+          verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+        }
+
+        verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+      }
+
+      allVertices = allVertices.concat(verticesDuplicated); 
+    });
+
+    this.verts = allVertices;
+
+    var vertArray = new Float32Array(allVertices);
+    size = vertArray.BYTES_PER_ELEMENT;
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
     gl.enableVertexAttribArray(vertex);
@@ -138,32 +159,24 @@ Shapes.prototype = {
 
   /**
    *
-   * @returns {Shapes}
+   * @returns {Lines}
    */
   resetVertices: function () {
     this.verts = [];
-    this.polygonLookup = new PolygonLookup();
 
     var pixel,
       verts = this.verts,
-      polygonLookup = this.polygonLookup,
-      index,
       settings = this.settings,
       data = settings.data,
       features = data.features,
       feature,
       colorFn,
       color = settings.color,
+      latitudeKey = settings.latitudeKey,
+      longitudeKey = settings.longitudeKey,
       featureIndex = 0,
       featureMax = features.length,
-      triangles,
-      indices,
-      flat,
-      dim,
-      iMax,
       i;
-
-    polygonLookup.loadFeatureCollection(data);
 
     if (color === null) {
       throw new Error('color is not properly defined');
@@ -175,35 +188,26 @@ Shapes.prototype = {
     // -- data
     for (; featureIndex < featureMax; featureIndex++) {
       feature = features[featureIndex];
-      //***
-      triangles = [];
+      var featureVerts = [];
 
       //use colorFn function here if it exists
       if (colorFn) {
         color = colorFn(featureIndex, feature);
       }
 
-      flat = utils.flattenData(feature.geometry.coordinates);
-
-      indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-
-      dim = feature.geometry.coordinates[0][0].length;
-      for (i = 0, iMax = indices.length; i < iMax; i++) {
-        index = indices[i];
-        triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
+      for (i = 0; i < feature.geometry.coordinates.length; i++) {
+        pixel = utils.latLonToPixel(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]);
+        featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
 
-      for (i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = utils.latLonToPixel(triangles[i++],triangles[i++]);
-        verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
-      }
+      verts.push(featureVerts);
     }
 
     return this;
   },
   /**
    *
-   * @returns {Shapes}
+   * @returns {Lines}
    */
   setupVertexShader: function () {
     var gl = this.gl,
@@ -221,7 +225,7 @@ Shapes.prototype = {
 
   /**
    *
-   * @returns {Shapes}
+   * @returns {Lines}
    */
   setupFragmentShader: function () {
     var gl = this.gl,
@@ -239,7 +243,7 @@ Shapes.prototype = {
 
   /**
    *
-   * @returns {Shapes}
+   * @returns {Lines}
    */
   setupProgram: function () {
     // link shaders to create our program
@@ -260,7 +264,7 @@ Shapes.prototype = {
 
   /**
    *
-   * @return Shapes
+   * @return Lines
    */
   drawOnCanvas: function () {
     if (this.gl == null) return this;
@@ -269,7 +273,7 @@ Shapes.prototype = {
       settings = this.settings,
       canvas = this.canvas,
       map = settings.map,
-      pointSize = Math.max(map.getZoom() - 4.0, 1.0),
+      pointSize = Math.max(map.getZoom() - 4.0, 4.0),
       bounds = map.getBounds(),
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
     // -- Scale to current zoom
@@ -292,7 +296,8 @@ Shapes.prototype = {
     gl.vertexAttrib1f(gl.aPointSize, pointSize);
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-    gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
+
+    gl.drawArrays(gl.LINES, 0, this.verts.length / 5);
 
     return this;
   },
@@ -300,7 +305,7 @@ Shapes.prototype = {
   /**
    *
    * @param {L.Map} [map]
-   * @returns {Shapes}
+   * @returns {Lines}
    */
   addTo: function(map) {
     this.glLayer.addTo(map || this.settings.map);
@@ -310,7 +315,7 @@ Shapes.prototype = {
 
   /**
    *
-   * @returns {Shapes}
+   * @returns {Lines}
    */
   remove: function() {
     this.settings.map.removeLayer(this.glLayer);
@@ -319,24 +324,68 @@ Shapes.prototype = {
   }
 };
 
-Shapes.tryClick = function(e, map) {
-  var result,
-      settings,
-      feature;
+Lines.tryClick = function(e, map) {
+  function pDistance(x, y, x1, y1, x2, y2) {
+    var A = x - x1;
+    var B = y - y1;
+    var C = x2 - x1;
+    var D = y2 - y1;
 
-  Shapes.instances.forEach(function (_instance) {
+    var dot = A * C + B * D;
+    var len_sq = C * C + D * D;
+    var param = -1;
+    if (len_sq != 0) //in case of 0 length line
+        param = dot / len_sq;
+
+    var xx, yy;
+
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    }
+    else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    }
+    else {
+      xx = x1 + param * C;
+      yy = y1 + param * D;
+    }
+
+    var dx = x - xx;
+    var dy = y - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  var foundFeature = false;
+  var instance = false;
+  var record = 0.1;
+  var settings;
+  Lines.instances.forEach(function (_instance) {
     settings = _instance.settings;
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
 
-    feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
-    if (feature !== undefined) {
-      result = settings.click(e, feature);
-    }
+    settings.data.features.map(feature => {
+      for (var i = 1; i < feature.geometry.coordinates.length; i++) {
+        var distance = pDistance(e.latlng.lng, e.latlng.lat,
+          feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
+          feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+        if (distance < record) {
+          record = distance;
+          foundFeature = feature;
+          instance = _instance;
+        }
+      }
+    });
   });
 
-  return result !== undefined ? result : true;
+  if (instance) {
+    instance.settings.click(e, foundFeature);
+  } else {
+    return false;
+  }
 };
 
-module.exports = Shapes;
+module.exports = Lines;

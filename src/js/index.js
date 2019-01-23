@@ -1,6 +1,7 @@
 var fs = require('fs');
 var Points = require('./points');
 var Shapes = require('./shapes');
+var Lines = require('./lines');
 var mapMatrix = require('./map-matrix');
 var glify = {
   longitudeKey: 1,
@@ -52,8 +53,25 @@ var glify = {
     }
     return new Shapes(extendedSettings);
   },
+  lines: function(settings) {
+    var extendedSettings = {
+      setupClick: glify.setupClick.bind(this),
+      attachShaderVars: glify.attachShaderVars.bind(this),
+      latitudeKey: glify.latitudeKey,
+      longitudeKey: glify.longitudeKey,
+      vertexShaderSource: function() { return glify.shader.vertex; },
+      fragmentShaderSource: function() { return glify.shader.fragment.polygon; },
+      color: glify.color.random,
+      closest: glify.closest.bind(this)
+    };
+    for (var p in settings) {
+      extendedSettings[p] = settings[p];
+    }
+    return new Lines(extendedSettings);
+  },
   Points: Points,
   Shapes: Shapes,
+  Lines: Lines,
   maps: [],
   setupClick: function(map) {
     if (this.maps.indexOf(map) < 0) {
@@ -63,7 +81,8 @@ var glify = {
         hit = Points.tryClick(e, map);
         if (hit !== undefined) return hit;
 
-        //todo: handle lines
+        hit = Lines.tryClick(e, map);
+        if (hit !== undefined) return hit;
 
         hit = Shapes.tryClick(e, map);
         if (hit !== undefined) return hit;
