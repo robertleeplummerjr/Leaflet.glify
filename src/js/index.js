@@ -81,7 +81,8 @@ var glify = {
         hit = Points.tryClick(e, map);
         if (hit !== undefined) return hit;
 
-        //todo: handle lines
+        hit = Lines.tryClick(e, map);
+        if (hit !== undefined) return hit;
 
         hit = Shapes.tryClick(e, map);
         if (hit !== undefined) return hit;

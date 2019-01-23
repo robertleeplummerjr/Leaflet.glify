@@ -1,6 +1,4 @@
 var L = typeof window !== 'undefined' ? window.L : require('leaflet');
-var earcut = require('earcut');
-var PolygonLookup = require('polygon-lookup');
 var utils = require('./utils');
 var mapMatrix = require('./map-matrix');
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
@@ -117,7 +115,7 @@ Lines.prototype = {
     */
     var size = 0;
     var allVertices = [];
-    verts.map(function (vertices, index) {
+    verts.map(function (vertices) {
       var verticesDuplicated = [];
       for (var i = 0; i < vertices.length / 5; i++) {
         if (i !== 0 && i !== (vertices.length / 5 - 1)) {
@@ -327,18 +325,67 @@ Lines.prototype = {
 };
 
 Lines.tryClick = function(e, map) {
-  var result,
-      settings,
-      feature;
+  function pDistance(x, y, x1, y1, x2, y2) {
+    var A = x - x1;
+    var B = y - y1;
+    var C = x2 - x1;
+    var D = y2 - y1;
 
-      Lines.instances.forEach(function (_instance) {
+    var dot = A * C + B * D;
+    var len_sq = C * C + D * D;
+    var param = -1;
+    if (len_sq != 0) //in case of 0 length line
+        param = dot / len_sq;
+
+    var xx, yy;
+
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    }
+    else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    }
+    else {
+      xx = x1 + param * C;
+      yy = y1 + param * D;
+    }
+
+    var dx = x - xx;
+    var dy = y - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  var foundFeature = false;
+  var instance = false;
+  var record = 0.1;
+  var settings;
+  Lines.instances.forEach(function (_instance) {
     settings = _instance.settings;
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
+
+    settings.data.features.map(feature => {
+      for (var i = 1; i < feature.geometry.coordinates.length; i++) {
+        var distance = pDistance(e.latlng.lng, e.latlng.lat,
+          feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
+          feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+        if (distance < record) {
+          record = distance;
+          foundFeature = feature;
+          instance = _instance;
+        }
+      }
+    });
   });
 
-  return result !== undefined ? result : true;
+  if (instance) {
+    instance.settings.click(e, foundFeature);
+  } else {
+    return false;
+  }
 };
 
 module.exports = Lines;
