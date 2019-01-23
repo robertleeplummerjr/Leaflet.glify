@@ -33,11 +33,11 @@ L.glify.points({
 });
 ```
 
-## (Planned) Simple Lines Usage
+## Simple Lines Usage
 ```javascript
 L.glify.lines({
   map: map,
-  data:geojson,
+  data: geojson,
   click: function(e, feature, xy) {
     //do something when a line is clicked
   }
@@ -78,4 +78,4 @@ L.glify.lines({
 
 
 ## Roadmap
-Soon to come, lines, and limitless styles.
+Soon to come: limitless styles.
