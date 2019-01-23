@@ -33,11 +33,11 @@ L.glify.points({
 });
 ```
 
-## (Planned) Simple Lines Usage
+## Simple Lines Usage
 ```javascript
 L.glify.lines({
   map: map,
-  data:geojson,
+  data: geojson,
   click: function(e, feature, xy) {
     //do something when a line is clicked
   }
@@ -51,8 +51,8 @@ L.glify.lines({
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.polygon`
 * `click` `{Function}` optional event handler for clicking a shape
 * `color` `{Function|Object|String}` optional, default is 'random'
+  * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being colored
 * `className` {String} a class name applied to canvas, default is ''
-
 
 ## `L.glify.points` Options
 * `map` `{Object}` required leaflet map
@@ -61,6 +61,7 @@ L.glify.lines({
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.point`
 * `click` `{Function}` optional event handler for clicking a point
 * `color` `{Function|Object|String}` optional, default is 'random'
+  * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `point`:`array` that is being colored 
 * `opacity` {Number} a value from 0 to 1, default is 0.8
 * `className` {String} a class name applied to canvas, default is ''
 * `size` {Number|Function} pixel size of point
@@ -75,5 +76,6 @@ L.glify.lines({
 * `flattenData(data)`
 * `latLonToPixel(lat, lon)`
 
+
 ## Roadmap
-Soon to come, lines, and limitless styles.
+Soon to come: limitless styles.

@@ -109,9 +109,6 @@ Shapes.prototype = {
       program = this.program,
       vertex = gl.getAttribLocation(program, 'vertex'),
       opacity = gl.getUniformLocation(program, 'opacity');
-
-    console.log("updated at  " + new Date().setTime(new Date().getTime() - start.getTime()) + " ms ");
-
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
@@ -183,7 +180,7 @@ Shapes.prototype = {
 
       //use colorFn function here if it exists
       if (colorFn) {
-        color = colorFn();
+        color = colorFn(featureIndex, feature);
       }
 
       flat = utils.flattenData(feature.geometry.coordinates);
@@ -201,8 +198,6 @@ Shapes.prototype = {
         verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
     }
-
-    console.log("num points:   " + (verts.length / 5));
 
     return this;
   },

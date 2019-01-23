@@ -1,16 +1,11 @@
-var utils = require('./utils');
 var L = typeof window !== 'undefined' ? window.L : require('leaflet');
+var utils = require('./utils');
 var mapMatrix = require('./map-matrix');
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
-/**
-   *
-   * @param settings
-   * @constructor
-   */
-var Points = function Points(settings) {
-  Points.instances.push(this);
-  this.settings = utils.defaults(settings, Points.defaults);
+var Lines = function Lines(settings) {
+    Lines.instances.push(this);
+  this.settings = utils.defaults(settings, Lines.defaults);
 
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
@@ -47,23 +42,19 @@ var Points = function Points(settings) {
     .render();
 };
 
-Points.defaults = {
+Lines.defaults = {
   map: null,
   data: [],
   longitudeKey: null,
   latitudeKey: null,
-  closest: null,
   attachShaderVars: null,
   setupClick: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
-  eachVertex: null,
   click: null,
   color: 'random',
-  opacity: 0.8,
-  size: null,
   className: '',
-  sensitivity: 2,
+  opacity: 0.5,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -74,18 +65,18 @@ Points.defaults = {
 };
 
 //statics
-Points.instances = [];
+Lines.instances = [];
 
-Points.prototype = {
+Lines.prototype = {
   maps: [],
   /**
    *
-   * @returns {Points}
+   * @returns {Lines}
    */
   setup: function () {
     var settings = this.settings;
     if (settings.click) {
-      this.settings.setupClick(settings.map);
+      settings.setupClick(settings.map);
     }
 
     return this
@@ -93,69 +84,99 @@ Points.prototype = {
       .setupFragmentShader()
       .setupProgram();
   },
-
   /**
    *
-   * @returns {Points}
+   * @returns {Lines}
    */
   render: function () {
-
     this.resetVertices();
 
-    //look up the locations for the inputs to our shaders.
-    var gl = this.gl,
+    var pixelsToWebGLMatrix = this.pixelsToWebGLMatrix,
       settings = this.settings,
       canvas = this.canvas,
-      program = this.program,
+      gl = this.gl,
       glLayer = this.glLayer,
-      matrix = this.matrix = gl.getUniformLocation(program, 'matrix'),
-      opacity = gl.getUniformLocation(program, 'opacity'),
-      vertex = gl.getAttribLocation(program, 'vertex'),
+      verts = this.verts,
       vertexBuffer = gl.createBuffer(),
-      vertexArray = new Float32Array(this.verts),
-      size = vertexArray.BYTES_PER_ELEMENT;
+      program = this.program,
+      vertex = gl.getAttribLocation(program, 'vertex'),
+      opacity = gl.getUniformLocation(program, 'opacity');
 
-    gl.pointSize = gl.getAttribLocation(program, 'pointSize');
-
-    //set the matrix to some that makes 1 unit 1 pixel.
-    this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
-
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniformMatrix4fv(matrix, false, this.pixelsToWebGLMatrix);
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
+
+    /*
+    Transforming lines according to the rule:
+    1. Take one line (single feature)
+    [[0,0],[1,1],[2,2]]
+    2. Split the line in segments, duplicating all coordinates except first and last one
+    [[0,0],[1,1],[2,2]] => [[0,0],[1,1],[1,1],[2,2]]
+    3. Do this for all lines and put all coordinates in array
+    */
+    var size = 0;
+    var allVertices = [];
+    verts.map(function (vertices) {
+      var verticesDuplicated = [];
+      for (var i = 0; i < vertices.length / 5; i++) {
+        if (i !== 0 && i !== (vertices.length / 5 - 1)) {
+          verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+        }
+
+        verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+      }
+
+      allVertices = allVertices.concat(verticesDuplicated); 
+    });
+
+    this.verts = allVertices;
+
+    var vertArray = new Float32Array(allVertices);
+    size = vertArray.BYTES_PER_ELEMENT;
+    gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
     gl.enableVertexAttribArray(vertex);
 
+    //  gl.disable(gl.DEPTH_TEST);
+    // ----------------------------
+    // look up the locations for the inputs to our shaders.
+    this.matrix = gl.getUniformLocation(program, 'matrix');
+    gl.aPointSize = gl.getAttribLocation(program, 'pointSize');
+
+    // Set the matrix to some that makes 1 unit 1 pixel.
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+
+    gl.uniformMatrix4fv(this.matrix, false, pixelsToWebGLMatrix);
+
     if (settings.shaderVars !== null) {
-      this.settings.attachShaderVars(size, gl, program, settings.shaderVars);
+      settings.attachShaderVars(size, gl, program, settings.shaderVars);
     }
 
     glLayer.redraw();
 
     return this;
   },
+
+  /**
+   *
+   * @returns {Lines}
+   */
   resetVertices: function () {
-    //empty verts and repopulate
-    this.latLngLookup = {};
     this.verts = [];
 
-    // -- data
-    var verts = this.verts,
+    var pixel,
+      verts = this.verts,
       settings = this.settings,
       data = settings.data,
+      features = data.features,
+      feature,
       colorFn,
       color = settings.color,
-      i = 0,
-      max = data.length,
-      latLngLookup = this.latLngLookup,
       latitudeKey = settings.latitudeKey,
       longitudeKey = settings.longitudeKey,
-      latLng,
-      pixel,
-      lookup,
-      key;
+      featureIndex = 0,
+      featureMax = features.length,
+      i;
 
     if (color === null) {
       throw new Error('color is not properly defined');
@@ -164,44 +185,29 @@ Points.prototype = {
       color = undefined;
     }
 
-    for(; i < max; i++) {
-      latLng = data[i];
-      key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
-      lookup = latLngLookup[key];
-      pixel = utils.latLonToPixel(latLng[latitudeKey], latLng[longitudeKey]);
+    // -- data
+    for (; featureIndex < featureMax; featureIndex++) {
+      feature = features[featureIndex];
+      var featureVerts = [];
 
-      if (lookup === undefined) {
-        lookup = latLngLookup[key] = [];
-      }
-
-      lookup.push(latLng);
-
+      //use colorFn function here if it exists
       if (colorFn) {
-        color = colorFn(i, latLng);
+        color = colorFn(featureIndex, feature);
       }
 
-      //-- 2 coord, 3 rgb colors interleaved buffer
-      verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
-      if (settings.eachVertex !== null) {
-        settings.eachVertex.call(this, latLng, pixel, color);
+      for (i = 0; i < feature.geometry.coordinates.length; i++) {
+        pixel = utils.latLonToPixel(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]);
+        featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
+
+      verts.push(featureVerts);
     }
 
     return this;
   },
   /**
    *
-   * @param data
-   * @returns {Points}
-   */
-  setData: function (data) {
-    this.settings.data = data;
-    return this;
-  },
-
-  /**
-   *
-   * @returns {Points}
+   * @returns {Lines}
    */
   setupVertexShader: function () {
     var gl = this.gl,
@@ -219,7 +225,7 @@ Points.prototype = {
 
   /**
    *
-   * @returns {Points}
+   * @returns {Lines}
    */
   setupFragmentShader: function () {
     var gl = this.gl,
@@ -237,7 +243,7 @@ Points.prototype = {
 
   /**
    *
-   * @returns {Points}
+   * @returns {Lines}
    */
   setupProgram: function () {
     // link shaders to create our program
@@ -256,38 +262,29 @@ Points.prototype = {
     return this;
   },
 
-  pointSize: function() {
-    var settings = this.settings,
-      map = settings.map,
-      pointSize = settings.size,
-      // -- Scale to current zoom
-      zoom = map.getZoom();
-
-    return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize
-  },
-
   /**
    *
-   * @returns {Points}
+   * @return Lines
    */
   drawOnCanvas: function () {
     if (this.gl == null) return this;
 
     var gl = this.gl,
-      canvas = this.canvas,
       settings = this.settings,
+      canvas = this.canvas,
       map = settings.map,
+      pointSize = Math.max(map.getZoom() - 4.0, 4.0),
       bounds = map.getBounds(),
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
+    // -- Scale to current zoom
+      scale = Math.pow(2, map.getZoom()),
       offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
-      zoom = map.getZoom(),
-      scale = Math.pow(2, zoom),
       mapMatrix = this.mapMatrix,
       pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
-    //set base matrix to translate canvas pixel coordinates -> webgl coordinates
+    // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
       .set(pixelsToWebGLMatrix)
       .scaleMatrix(scale)
@@ -295,62 +292,31 @@ Points.prototype = {
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.vertexAttrib1f(gl.pointSize, this.pointSize());
+
+    gl.vertexAttrib1f(gl.aPointSize, pointSize);
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-    gl.drawArrays(gl.POINTS, 0, settings.data.length);
+
+    gl.drawArrays(gl.LINES, 0, this.verts.length / 5);
 
     return this;
   },
 
   /**
    *
-   * @param map
-   * @returns {Points}
+   * @param {L.Map} [map]
+   * @returns {Lines}
    */
-  addTo: function (map) {
+  addTo: function(map) {
     this.glLayer.addTo(map || this.settings.map);
     this.active = true;
     return this.render();
   },
 
   /**
-   * Iterates through a small area around the
-   * @param {L.LatLng} coords
-   * @returns {*}
+   *
+   * @returns {Lines}
    */
-  lookup: function (coords) {
-    var x = coords.lat - 0.03,
-      y,
-
-      xMax = coords.lat + 0.03,
-      yMax = coords.lng + 0.03,
-
-      foundI,
-      foundMax,
-
-      matches = [],
-      found,
-      key;
-
-    for (; x <= xMax; x += 0.01) {
-      y = coords.lng - 0.03;
-      for (; y <= yMax; y += 0.01) {
-        key = x.toFixed(2) + 'x' + y.toFixed(2);
-        found = this.latLngLookup[key];
-        if (found) {
-          foundI = 0;
-          foundMax = found.length;
-          for (; foundI < foundMax; foundI++) {
-            matches.push(found[foundI]);
-          }
-        }
-      }
-    }
-
-    //try matches first, if it is empty, try the data, and hope it isn't too big
-    return this.settings.closest(coords, matches.length === 0 ? this.settings.data.slice(0) : matches, this.settings.map);
-  },
   remove: function() {
     this.settings.map.removeLayer(this.glLayer);
     this.active = false;
@@ -358,45 +324,68 @@ Points.prototype = {
   }
 };
 
-Points.tryClick = function(e, map) {
-  var result,
-      settings,
-      instance,
-      closestFromEach = [],
-      instancesLookup = {},
-      point,
-      xy,
-      found,
-      latLng;
+Lines.tryClick = function(e, map) {
+  function pDistance(x, y, x1, y1, x2, y2) {
+    var A = x - x1;
+    var B = y - y1;
+    var C = x2 - x1;
+    var D = y2 - y1;
 
-  Points.instances.forEach(function (_instance) {
+    var dot = A * C + B * D;
+    var len_sq = C * C + D * D;
+    var param = -1;
+    if (len_sq != 0) //in case of 0 length line
+        param = dot / len_sq;
+
+    var xx, yy;
+
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    }
+    else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    }
+    else {
+      xx = x1 + param * C;
+      yy = y1 + param * D;
+    }
+
+    var dx = x - xx;
+    var dy = y - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  var foundFeature = false;
+  var instance = false;
+  var record = 0.1;
+  var settings;
+  Lines.instances.forEach(function (_instance) {
     settings = _instance.settings;
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
 
-    point = _instance.lookup(e.latlng);
-    instancesLookup[point] = _instance;
-    closestFromEach.push(point);
+    settings.data.features.map(feature => {
+      for (var i = 1; i < feature.geometry.coordinates.length; i++) {
+        var distance = pDistance(e.latlng.lng, e.latlng.lat,
+          feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
+          feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+        if (distance < record) {
+          record = distance;
+          foundFeature = feature;
+          instance = _instance;
+        }
+      }
+    });
   });
 
-  if (closestFromEach.length < 1) return;
-  if (!settings) return;
-
-  found = settings.closest(e.latlng, closestFromEach, map);
-
-  if (found === null) return;
-
-  instance = instancesLookup[found];
-  if (!instance) return;
-
-  latLng = L.latLng(found[settings.latitudeKey], found[settings.longitudeKey]);
-  xy = map.latLngToLayerPoint(latLng);
-
-  if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
-    result = instance.settings.click(e, found, xy);
-    return result !== undefined ? result : true;
+  if (instance) {
+    instance.settings.click(e, foundFeature);
+  } else {
+    return false;
   }
 };
 
-module.exports = Points;
+module.exports = Lines;
