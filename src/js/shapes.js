@@ -109,7 +109,6 @@ Shapes.prototype = {
       program = this.program,
       vertex = gl.getAttribLocation(program, 'vertex'),
       opacity = gl.getUniformLocation(program, 'opacity');
-console.log('###', vertArray);
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);

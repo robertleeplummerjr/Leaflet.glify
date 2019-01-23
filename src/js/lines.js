@@ -107,13 +107,34 @@ Lines.prototype = {
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 
+    /*
+    Transforming lines according to the rule:
+    1. Take one line (single feature)
+    [[0,0],[1,1],[2,2]]
+    2. Split the line in segments, duplicating all coordinates except first and last one
+    [[0,0],[1,1],[2,2]] => [[0,0],[1,1],[1,1],[2,2]]
+    3. Do this for all lines and put all coordinates in array
+    */
     var size = 0;
-    this.verts.map(function (featureVerts) {
-        var vertArray = new Float32Array(featureVerts);
-        size = vertArray.BYTES_PER_ELEMENT;
-        gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
+    var allVertices = [];
+    verts.map(function (vertices, index) {
+      var verticesDuplicated = [];
+      for (var i = 0; i < vertices.length / 5; i++) {
+        if (i !== 0 && i !== (vertices.length / 5 - 1)) {
+          verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+        }
+
+        verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+      }
+
+      allVertices = allVertices.concat(verticesDuplicated); 
     });
 
+    this.verts = allVertices;
+
+    var vertArray = new Float32Array(allVertices);
+    size = vertArray.BYTES_PER_ELEMENT;
+    gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
     gl.enableVertexAttribArray(vertex);
 
@@ -278,12 +299,7 @@ Lines.prototype = {
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
 
-    var accumulatedOffset = 0;
-    for (var i = 0; i < this.verts.length; i++) {
-        var localFeatureVerts = this.verts[i];
-        gl.drawArrays(gl.LINE_STRIP, 0, localFeatureVerts.length / 5);
-        accumulatedOffset = (accumulatedOffset + localFeatureVerts.length);
-    }
+    gl.drawArrays(gl.LINES, 0, this.verts.length / 5);
 
     return this;
   },
