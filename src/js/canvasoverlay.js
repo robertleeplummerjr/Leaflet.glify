@@ -135,7 +135,7 @@ var CanvasOverlay = L.Layer.extend({
   }
 });
 
-canvasOverlay = function (userDrawFunc, options) {
+var canvasOverlay = function (userDrawFunc, options) {
   return new CanvasOverlay(userDrawFunc, options);
 };
 

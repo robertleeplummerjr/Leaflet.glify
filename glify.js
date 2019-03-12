@@ -152,6 +152,7 @@ function fromByteArray (uint8) {
 }
 
 },{}],2:[function(require,module,exports){
+(function (Buffer){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -1930,7 +1931,8 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":1,"ieee754":4}],3:[function(require,module,exports){
+}).call(this,require("buffer").Buffer)
+},{"base64-js":1,"buffer":2,"ieee754":4}],3:[function(require,module,exports){
 'use strict';
 
 module.exports = earcut;
@@ -1945,7 +1947,7 @@ function earcut(data, holeIndices, dim) {
         outerNode = linkedList(data, 0, outerLen, dim, true),
         triangles = [];
 
-    if (!outerNode) return triangles;
+    if (!outerNode || outerNode.next === outerNode.prev) return triangles;
 
     var minX, minY, maxX, maxY, x, y, invSize;
 
@@ -2040,7 +2042,7 @@ function earcutLinked(ear, triangles, dim, minX, minY, invSize, pass) {
 
             removeNode(ear);
 
-            // skipping the next vertice leads to less sliver triangles
+            // skipping the next vertex leads to less sliver triangles
             ear = next.next;
             stop = next.next;
 
@@ -2382,7 +2384,7 @@ function getLeftmost(start) {
     var p = start,
         leftmost = start;
     do {
-        if (p.x < leftmost.x) leftmost = p;
+        if (p.x < leftmost.x || (p.x === leftmost.x && p.y < leftmost.y)) leftmost = p;
         p = p.next;
     } while (p !== start);
 
@@ -2504,14 +2506,14 @@ function removeNode(p) {
 }
 
 function Node(i, x, y) {
-    // vertice index in coordinates array
+    // vertex index in coordinates array
     this.i = i;
 
     // vertex coordinates
     this.x = x;
     this.y = y;
 
-    // previous and next vertice nodes in a polygon ring
+    // previous and next vertex nodes in a polygon ring
     this.prev = null;
     this.next = null;
 
@@ -20651,6 +20653,8 @@ function multiSelect(arr, left, right, n, compare) {
 }
 
 },{"quickselect":9}],11:[function(require,module,exports){
+"use strict";
+
 /*
 originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOverlay.js, added and customized as part of this lib because of need from library
  Generic  Canvas Overlay for leaflet,
@@ -20663,50 +20667,46 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  */
 var L = typeof window !== 'undefined' ? window.L : require('leaflet');
 var CanvasOverlay = L.Layer.extend({
-  initialize: function (userDrawFunc, options) {
+  initialize: function initialize(userDrawFunc, options) {
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
     this._redrawCallbacks = [];
     L.setOptions(this, options);
   },
-
-  drawing: function (userDrawFunc) {
+  drawing: function drawing(userDrawFunc) {
     this._userDrawFunc = userDrawFunc;
     return this;
   },
-
-  params:function(options){
+  params: function params(options) {
     L.setOptions(this, options);
     return this;
   },
-
-  redraw: function (callback) {
+  redraw: function redraw(callback) {
     if (typeof callback === 'function') {
       this._redrawCallbacks.push(callback);
     }
+
     if (this._frame === null) {
       this._frame = L.Util.requestAnimFrame(this._redraw, this);
     }
+
     return this;
   },
-
-  onAdd: function (map) {
+  onAdd: function onAdd(map) {
     this._map = map;
     this.canvas = this.canvas || document.createElement('canvas');
 
-    var size = this._map.getSize()
-      , animated = this._map.options.zoomAnimation && L.Browser.any3d
-      ;
+    var size = this._map.getSize(),
+        animated = this._map.options.zoomAnimation && L.Browser.any3d;
 
     this.canvas.width = size.x;
     this.canvas.height = size.y;
-
     this.canvas.className = 'leaflet-zoom-' + (animated ? 'animated' : 'hide');
 
     map._panes.overlayPane.appendChild(this.canvas);
 
     map.on('moveend', this._reset, this);
-    map.on('resize',  this._resize, this);
+    map.on('resize', this._resize, this);
 
     if (map.options.zoomAnimation && L.Browser.any3d) {
       map.on('zoomanim', this._animateZoom, this);
@@ -20714,10 +20714,8 @@ var CanvasOverlay = L.Layer.extend({
 
     this._reset();
   },
-
-  onRemove: function (map) {
+  onRemove: function onRemove(map) {
     map.getPanes().overlayPane.removeChild(this.canvas);
-
     map.off('moveend', this._reset, this);
     map.off('resize', this._resize, this);
 
@@ -20725,38 +20723,36 @@ var CanvasOverlay = L.Layer.extend({
       map.off('zoomanim', this._animateZoom, this);
     }
   },
-
-  addTo: function (map) {
+  addTo: function addTo(map) {
     map.addLayer(this);
     return this;
   },
-
-  _resize: function (resizeEvent) {
-    this.canvas.width  = resizeEvent.newSize.x;
+  _resize: function _resize(resizeEvent) {
+    this.canvas.width = resizeEvent.newSize.x;
     this.canvas.height = resizeEvent.newSize.y;
   },
-
-  _reset: function () {
+  _reset: function _reset() {
     var topLeft = this._map.containerPointToLayerPoint([0, 0]);
+
     L.DomUtil.setPosition(this.canvas, topLeft);
+
     this._redraw();
   },
-
-  _redraw: function () {
-    var size      = this._map.getSize()
-      , bounds    = this._map.getBounds()
-      , zoomScale = (size.x * 180) / (20037508.34  * (bounds.getEast() - bounds.getWest())) // resolution = 1/zoomScale
-      , zoom      = this._map.getZoom()
-      ;
+  _redraw: function _redraw() {
+    var size = this._map.getSize(),
+        bounds = this._map.getBounds(),
+        zoomScale = size.x * 180 / (20037508.34 * (bounds.getEast() - bounds.getWest())) // resolution = 1/zoomScale
+    ,
+        zoom = this._map.getZoom();
 
     if (this._userDrawFunc) {
       this._userDrawFunc(this, {
-        canvas   :this.canvas,
-        bounds   : bounds,
-        size     : size,
+        canvas: this.canvas,
+        bounds: bounds,
+        size: size,
         zoomScale: zoomScale,
-        zoom     : zoom,
-        options  : this.options
+        zoom: zoom,
+        options: this.options
       });
     }
 
@@ -20766,169 +20762,183 @@ var CanvasOverlay = L.Layer.extend({
 
     this._frame = null;
   },
-
-  _animateZoom: function (e) {
-    var scale = this._map.getZoomScale(e.zoom)
-      , offset = L.Layer
-        ? this._map._latLngBoundsToNewLayerBounds(this._map.getBounds(), e.zoom, e.center).min
-        : this._map._getCenterOffset(e.center)
-            ._multiplyBy(-scale)
-            .subtract(this._map._getMapPanePos())
-      ;
+  _animateZoom: function _animateZoom(e) {
+    var scale = this._map.getZoomScale(e.zoom),
+        offset = L.Layer ? this._map._latLngBoundsToNewLayerBounds(this._map.getBounds(), e.zoom, e.center).min : this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos());
 
     L.DomUtil.setTransform(this.canvas, offset, scale);
   },
-  setTransform: function(el, offset, scale) {
+  setTransform: function setTransform(el, offset, scale) {
     var pos = offset || new L.Point(0, 0);
-    el.style[L.DomUtil.TRANSFORM] =
-      (L.Browser.ie3d ?
-        'translate(' + pos.x + 'px,' + pos.y + 'px)' :
-        'translate3d(' + pos.x + 'px,' + pos.y + 'px,0)') +
-      (scale ? ' scale(' + scale + ')' : '');
+    el.style[L.DomUtil.TRANSFORM] = (L.Browser.ie3d ? 'translate(' + pos.x + 'px,' + pos.y + 'px)' : 'translate3d(' + pos.x + 'px,' + pos.y + 'px,0)') + (scale ? ' scale(' + scale + ')' : '');
   }
 });
 
-canvasOverlay = function (userDrawFunc, options) {
+var canvasOverlay = function canvasOverlay(userDrawFunc, options) {
   return new CanvasOverlay(userDrawFunc, options);
 };
 
 module.exports = {
-  canvasOverlay,
-  CanvasOverlay
+  canvasOverlay: canvasOverlay,
+  CanvasOverlay: CanvasOverlay
 };
+
 },{"leaflet":"leaflet"}],12:[function(require,module,exports){
 (function (Buffer){
+"use strict";
 
 var Points = require('./points');
+
 var Shapes = require('./shapes');
+
 var Lines = require('./lines');
+
 var mapMatrix = require('./map-matrix');
+
 var glify = {
   longitudeKey: 1,
   latitudeKey: 0,
-  longitudeFirst: function() {
+  longitudeFirst: function longitudeFirst() {
     glify.longitudeKey = 0;
     glify.latitudeKey = 1;
     return glify;
   },
-  latitudeFirst: function() {
+  latitudeFirst: function latitudeFirst() {
     glify.latitudeKey = 0;
     glify.longitudeKey = 1;
     return glify;
   },
+
   get instances() {
-    return []
-      .concat(Points.instances)
-      .concat(Shapes.instances);
+    return [].concat(Points.instances).concat(Shapes.instances);
   },
-  points: function(settings) {
+
+  points: function points(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
-      vertexShaderSource: function() { return glify.shader.vertex; },
-      fragmentShaderSource: function() { return glify.shader.fragment.point; },
+      vertexShaderSource: function vertexShaderSource() {
+        return glify.shader.vertex;
+      },
+      fragmentShaderSource: function fragmentShaderSource() {
+        return glify.shader.fragment.point;
+      },
       color: glify.color.random,
       closest: glify.closest.bind(this)
     };
+
     for (var p in settings) {
       extendedSettings[p] = settings[p];
     }
+
     return new Points(extendedSettings);
   },
-  shapes: function(settings) {
+  shapes: function shapes(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
-      vertexShaderSource: function() { return glify.shader.vertex; },
-      fragmentShaderSource: function() { return glify.shader.fragment.polygon; },
+      vertexShaderSource: function vertexShaderSource() {
+        return glify.shader.vertex;
+      },
+      fragmentShaderSource: function fragmentShaderSource() {
+        return glify.shader.fragment.polygon;
+      },
       color: glify.color.random,
       closest: glify.closest.bind(this)
     };
+
     for (var p in settings) {
       extendedSettings[p] = settings[p];
     }
+
     return new Shapes(extendedSettings);
   },
-  lines: function(settings) {
+  lines: function lines(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
-      vertexShaderSource: function() { return glify.shader.vertex; },
-      fragmentShaderSource: function() { return glify.shader.fragment.polygon; },
+      vertexShaderSource: function vertexShaderSource() {
+        return glify.shader.vertex;
+      },
+      fragmentShaderSource: function fragmentShaderSource() {
+        return glify.shader.fragment.polygon;
+      },
       color: glify.color.random,
       closest: glify.closest.bind(this)
     };
+
     for (var p in settings) {
       extendedSettings[p] = settings[p];
     }
+
     return new Lines(extendedSettings);
   },
   Points: Points,
   Shapes: Shapes,
   Lines: Lines,
   maps: [],
-  setupClick: function(map) {
+  setupClick: function setupClick(map) {
     if (this.maps.indexOf(map) < 0) {
       this.maps.push(map);
       map.on('click', function (e) {
         var hit;
         hit = Points.tryClick(e, map);
         if (hit !== undefined) return hit;
-
         hit = Lines.tryClick(e, map);
         if (hit !== undefined) return hit;
-
         hit = Shapes.tryClick(e, map);
         if (hit !== undefined) return hit;
       });
     }
   },
-  pointInCircle: function (centerPoint, checkPoint, radius) {
+  pointInCircle: function pointInCircle(centerPoint, checkPoint, radius) {
     var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
     return distanceSquared <= radius * radius;
   },
-  attachShaderVars: function(size, gl, program, attributes) {
+  attachShaderVars: function attachShaderVars(size, gl, program, attributes) {
     var name,
         loc,
         attribute,
         bytes = 5;
 
-    for (name in attributes) if (attributes.hasOwnProperty(name)) {
-      attribute = attributes[name];
-      loc = gl.getAttribLocation(program, name);
-      if (loc < 0) {
-        console.log(name, attribute);
-        throw new Error('shader variable ' + name + ' not found');
+    for (name in attributes) {
+      if (attributes.hasOwnProperty(name)) {
+        attribute = attributes[name];
+        loc = gl.getAttribLocation(program, name);
+
+        if (loc < 0) {
+          console.log(name, attribute);
+          throw new Error('shader variable ' + name + ' not found');
+        }
+
+        gl.vertexAttribPointer(loc, attribute.size, gl[attribute.type], false, size * (attribute.bytes || bytes), size * attribute.start);
+        gl.enableVertexAttribArray(loc);
       }
-      gl.vertexAttribPointer(loc, attribute.size, gl[attribute.type], false, size * (attribute.bytes || bytes), size * attribute.start);
-      gl.enableVertexAttribArray(loc);
     }
 
     return this;
   },
-  debugPoint: function (containerPoint) {
+  debugPoint: function debugPoint(containerPoint) {
     var el = document.createElement('div'),
         s = el.style,
         x = containerPoint.x,
         y = containerPoint.y;
-
     s.left = x + 'px';
     s.top = y + 'px';
     s.width = '10px';
     s.height = '10px';
     s.position = 'absolute';
     s.backgroundColor = '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
-
     document.body.appendChild(el);
-
     return this;
   },
+
   /**
    *
    * @param targetLocation
@@ -20936,72 +20946,109 @@ var glify = {
    * @param map
    * @returns {*}
    */
-  closest: function (targetLocation, points, map) {
+  closest: function closest(targetLocation, points, map) {
     var self = this;
     if (points.length < 1) return null;
     return points.reduce(function (prev, curr) {
       var prevDistance = self.locationDistance(targetLocation, prev, map),
           currDistance = self.locationDistance(targetLocation, curr, map);
-      return (prevDistance < currDistance) ? prev : curr;
+      return prevDistance < currDistance ? prev : curr;
     });
   },
-  vectorDistance: function (dx, dy) {
+  vectorDistance: function vectorDistance(dx, dy) {
     return Math.sqrt(dx * dx + dy * dy);
   },
-  locationDistance: function (location1, location2, map) {
+  locationDistance: function locationDistance(location1, location2, map) {
     var point1 = map.latLngToLayerPoint(location1),
         point2 = map.latLngToLayerPoint(location2),
-
         dx = point1.x - point2.x,
         dy = point1.y - point2.y;
-
     return this.vectorDistance(dx, dy);
   },
   color: {
-    fromHex: function(hex) {
+    fromHex: function fromHex(hex) {
       if (hex.length < 6) return null;
       hex = hex.toLowerCase();
 
       if (hex[0] === '#') {
         hex = hex.substring(1, hex.length);
       }
+
       var r = parseInt(hex[0] + hex[1], 16),
-        g = parseInt(hex[2] + hex[3], 16),
-        b = parseInt(hex[4] + hex[5], 16);
-
-      return {r: r / 255, g: g / 255, b: b / 255};
+          g = parseInt(hex[2] + hex[3], 16),
+          b = parseInt(hex[4] + hex[5], 16);
+      return {
+        r: r / 255,
+        g: g / 255,
+        b: b / 255
+      };
     },
-    green: {r: 0, g: 1, b: 0},
-    red: {r: 1, g: 0, b: 0},
-    blue: {r: 0, g: 0, b: 1},
-    teal: {r: 0, g: 1, b: 1},
-    yellow: {r: 1, g: 1, b: 0},
-
-    white: {r: 1, g: 1, b: 1},
-    black: {r: 0, g: 0, b: 0},
-
-    gray: {r: 0.5, g: 0.5, b: 0.5},
+    green: {
+      r: 0,
+      g: 1,
+      b: 0
+    },
+    red: {
+      r: 1,
+      g: 0,
+      b: 0
+    },
+    blue: {
+      r: 0,
+      g: 0,
+      b: 1
+    },
+    teal: {
+      r: 0,
+      g: 1,
+      b: 1
+    },
+    yellow: {
+      r: 1,
+      g: 1,
+      b: 0
+    },
+    white: {
+      r: 1,
+      g: 1,
+      b: 1
+    },
+    black: {
+      r: 0,
+      g: 0,
+      b: 0
+    },
+    gray: {
+      r: 0.5,
+      g: 0.5,
+      b: 0.5
+    },
 
     get grey() {
       return glify.color.gray;
     },
-    random: function () {
+
+    random: function random() {
       return {
         r: Math.random(),
         g: Math.random(),
         b: Math.random()
       };
     },
-    pallet: function () {
+    pallet: function pallet() {
       switch (Math.round(Math.random() * 4)) {
         case 0:
           return glify.color.green;
+
         case 1:
           return glify.color.red;
+
         case 2:
           return glify.color.blue;
+
         case 3:
           return glify.color.teal;
+
         case 4:
           return glify.color.yellow;
       }
@@ -21009,54 +21056,55 @@ var glify = {
   },
   mapMatrix: mapMatrix,
   shader: {
-    vertex: Buffer("dW5pZm9ybSBtYXQ0IG1hdHJpeDsKYXR0cmlidXRlIHZlYzQgdmVydGV4OwphdHRyaWJ1dGUgZmxvYXQgcG9pbnRTaXplOwphdHRyaWJ1dGUgdmVjNCBjb2xvcjsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICAvL3NldCB0aGUgc2l6ZSBvZiB0aGUgcG9pbnQKICBnbF9Qb2ludFNpemUgPSBwb2ludFNpemU7CgogIC8vbXVsdGlwbHkgZWFjaCB2ZXJ0ZXggYnkgYSBtYXRyaXguCiAgZ2xfUG9zaXRpb24gPSBtYXRyaXggKiB2ZXJ0ZXg7CgogIC8vcGFzcyB0aGUgY29sb3IgdG8gdGhlIGZyYWdtZW50IHNoYWRlcgogIF9jb2xvciA9IGNvbG9yOwp9","base64"),
+    vertex: Buffer("dW5pZm9ybSBtYXQ0IG1hdHJpeDsKYXR0cmlidXRlIHZlYzQgdmVydGV4OwphdHRyaWJ1dGUgZmxvYXQgcG9pbnRTaXplOwphdHRyaWJ1dGUgdmVjNCBjb2xvcjsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICAvL3NldCB0aGUgc2l6ZSBvZiB0aGUgcG9pbnQKICBnbF9Qb2ludFNpemUgPSBwb2ludFNpemU7CgogIC8vbXVsdGlwbHkgZWFjaCB2ZXJ0ZXggYnkgYSBtYXRyaXguCiAgZ2xfUG9zaXRpb24gPSBtYXRyaXggKiB2ZXJ0ZXg7CgogIC8vcGFzcyB0aGUgY29sb3IgdG8gdGhlIGZyYWdtZW50IHNoYWRlcgogIF9jb2xvciA9IGNvbG9yOwp9", "base64"),
     fragment: {
-      dot: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gdmVjNCBjb2xvcjsKdW5pZm9ybSBmbG9hdCBvcGFjaXR5OwoKdm9pZCBtYWluKCkgewogICAgZmxvYXQgYm9yZGVyID0gMC4wNTsKICAgIGZsb2F0IHJhZGl1cyA9IDAuNTsKICAgIHZlYzIgY2VudGVyID0gdmVjMigwLjUpOwoKICAgIHZlYzQgY29sb3IwID0gdmVjNCgwLjApOwogICAgdmVjNCBjb2xvcjEgPSB2ZWM0KGNvbG9yWzBdLCBjb2xvclsxXSwgY29sb3JbMl0sIG9wYWNpdHkpOwoKICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgICBmbG9hdCBkaXN0ID0gcmFkaXVzIC0gc3FydChtLnggKiBtLnggKyBtLnkgKiBtLnkpOwoKICAgIGZsb2F0IHQgPSAwLjA7CiAgICBpZiAoZGlzdCA+IGJvcmRlcikgewogICAgICAgIHQgPSAxLjA7CiAgICB9IGVsc2UgaWYgKGRpc3QgPiAwLjApIHsKICAgICAgICB0ID0gZGlzdCAvIGJvcmRlcjsKICAgIH0KCiAgICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAgIGdsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7Cn0=","base64"),
-      point: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICBmbG9hdCBib3JkZXIgPSAwLjE7CiAgZmxvYXQgcmFkaXVzID0gMC41OwogIHZlYzIgY2VudGVyID0gdmVjMigwLjUsIDAuNSk7CgogIHZlYzQgcG9pbnRDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7CgogIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgZmxvYXQgZGlzdDEgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogIGZsb2F0IHQxID0gMC4wOwogIGlmIChkaXN0MSA+IGJvcmRlcikgewogICAgICB0MSA9IDEuMDsKICB9IGVsc2UgaWYgKGRpc3QxID4gMC4wKSB7CiAgICAgIHQxID0gZGlzdDEgLyBib3JkZXI7CiAgfQoKICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAvL2dsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7CgogIC8vYm9yZGVyCiAgZmxvYXQgb3V0ZXJCb3JkZXIgPSAwLjA1OwogIGZsb2F0IGlubmVyQm9yZGVyID0gMC44OwogIHZlYzQgYm9yZGVyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDAuNCk7CiAgdmVjMiB1diA9IGdsX1BvaW50Q29vcmQueHk7CiAgdmVjNCBjbGVhckNvbG9yID0gdmVjNCgwLCAwLCAwLCAwKTsKICAKICAvLyBPZmZzZXQgdXYgd2l0aCB0aGUgY2VudGVyIG9mIHRoZSBjaXJjbGUuCiAgdXYgLT0gY2VudGVyOwogIAogIGZsb2F0IGRpc3QyID0gIHNxcnQoZG90KHV2LCB1dikpOwogCiAgZmxvYXQgdDIgPSAxLjAgKyBzbW9vdGhzdGVwKHJhZGl1cywgcmFkaXVzICsgb3V0ZXJCb3JkZXIsIGRpc3QyKQogICAgICAgICAgICAgICAgLSBzbW9vdGhzdGVwKHJhZGl1cyAtIGlubmVyQm9yZGVyLCByYWRpdXMsIGRpc3QyKTsKIAogIGdsX0ZyYWdDb2xvciA9IG1peChtaXgoYm9yZGVyQ29sb3IsIGNsZWFyQ29sb3IsIHQyKSwgcG9pbnRDb2xvciwgdDEpOwp9","base64"),
-      puck: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41KTsKICB2ZWMyIHV2ID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsKICBmbG9hdCBzbW9vdGhpbmcgPSAwLjAwNTsKICB2ZWM0IF9jb2xvcjEgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwogIGZsb2F0IHJhZGl1czEgPSAwLjM7CiAgdmVjNCBfY29sb3IyID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKICBmbG9hdCByYWRpdXMyID0gMC41OwogIGZsb2F0IGRpc3QgPSBsZW5ndGgodXYpOwoKICAvL1NNT09USAogIGZsb2F0IGdhbW1hID0gMi4yOwogIGNvbG9yMS5yZ2IgPSBwb3coX2NvbG9yMS5yZ2IsIHZlYzMoZ2FtbWEpKTsKICBjb2xvcjIucmdiID0gcG93KF9jb2xvcjIucmdiLCB2ZWMzKGdhbW1hKSk7CgogIHZlYzQgcHVjayA9IG1peCgKICAgIG1peCgKICAgICAgX2NvbG9yMSwKICAgICAgX2NvbG9yMiwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMxIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czEgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgICApCiAgICApLAogICAgdmVjNCgwLDAsMCwwKSwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMyIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czIgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgKQogICk7CgogIC8vR2FtbWEgY29ycmVjdGlvbiAocHJldmVudHMgY29sb3IgZnJpbmdlcykKICBwdWNrLnJnYiA9IHBvdyhwdWNrLnJnYiwgdmVjMygxLjAgLyBnYW1tYSkpOwogIGdsX0ZyYWdDb2xvciA9IHB1Y2s7Cn0=","base64"),
-      simpleCircle: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKCiAgICBmbG9hdCBib3JkZXIgPSAwLjA1OwogICAgZmxvYXQgcmFkaXVzID0gMC41OwogICAgdmVjNCBjb2xvcjAgPSB2ZWM0KDAuMCwgMC4wLCAwLjAsIDAuMCk7CiAgICB2ZWM0IGNvbG9yMSA9IHZlYzQoY29sb3JbMF0sIGNvbG9yWzFdLCBjb2xvclsyXSwgb3BhY2l0eSk7CgogICAgdmVjMiBtID0gZ2xfUG9pbnRDb29yZC54eSAtIHZlYzIoMC41LCAwLjUpOwogICAgZmxvYXQgZGlzdCA9IHJhZGl1cyAtIHNxcnQobS54ICogbS54ICsgbS55ICogbS55KTsKCiAgICBmbG9hdCB0ID0gMC4wOwogICAgaWYgKGRpc3QgPiBib3JkZXIpIHsKICAgICAgICB0ID0gMS4wOwogICAgfSBlbHNlIGlmIChkaXN0ID4gMC4wKSB7CiAgICAgICAgdCA9IGRpc3QgLyBib3JkZXI7CiAgICB9CgogICAgLy9zaW1wbGUgY2lyY2xlcwogICAgZmxvYXQgZCA9IGRpc3RhbmNlIChnbF9Qb2ludENvb3JkLCB2ZWMyKDAuNSwgMC41KSk7CiAgICBpZiAoZCA8IDAuNSApewogICAgICAgIGdsX0ZyYWdDb2xvciA9IGNvbG9yMTsKICAgIH0gZWxzZSB7CiAgICAgICAgZGlzY2FyZDsKICAgIH0KfQ==","base64"),
-      square: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIGZsb2F0IGJvcmRlciA9IDAuMDU7CiAgICBmbG9hdCByYWRpdXMgPSAwLjU7CiAgICB2ZWM0IGNvbG9yMCA9IHZlYzQoMC4wLCAwLjAsIDAuMCwgMC4wKTsKICAgIHZlYzQgY29sb3IxID0gdmVjNChjb2xvclswXSwgY29sb3JbMV0sIGNvbG9yWzJdLCBvcGFjaXR5KTsKICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSB2ZWMyKDAuNSwgMC41KTsKICAgIGZsb2F0IGRpc3QgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogICAgZmxvYXQgdCA9IDAuMDsKICAgIGlmIChkaXN0ID4gYm9yZGVyKSB7CiAgICAgICAgdCA9IDEuMDsKICAgIH0gZWxzZSBpZiAoZGlzdCA+IDAuMCkgewogICAgICAgIHQgPSBkaXN0IC8gYm9yZGVyOwogICAgfQoKICAgIC8vc3F1YXJlcwogICAgZ2xfRnJhZ0NvbG9yID0gdmVjNChjb2xvclswXSwgY29sb3JbMV0sIGNvbG9yWzJdLCBvcGFjaXR5KTsKfQ==","base64"),
-      polygon: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICBnbF9GcmFnQ29sb3IgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwp9","base64")
+      dot: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gdmVjNCBjb2xvcjsKdW5pZm9ybSBmbG9hdCBvcGFjaXR5OwoKdm9pZCBtYWluKCkgewogICAgZmxvYXQgYm9yZGVyID0gMC4wNTsKICAgIGZsb2F0IHJhZGl1cyA9IDAuNTsKICAgIHZlYzIgY2VudGVyID0gdmVjMigwLjUpOwoKICAgIHZlYzQgY29sb3IwID0gdmVjNCgwLjApOwogICAgdmVjNCBjb2xvcjEgPSB2ZWM0KGNvbG9yWzBdLCBjb2xvclsxXSwgY29sb3JbMl0sIG9wYWNpdHkpOwoKICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgICBmbG9hdCBkaXN0ID0gcmFkaXVzIC0gc3FydChtLnggKiBtLnggKyBtLnkgKiBtLnkpOwoKICAgIGZsb2F0IHQgPSAwLjA7CiAgICBpZiAoZGlzdCA+IGJvcmRlcikgewogICAgICAgIHQgPSAxLjA7CiAgICB9IGVsc2UgaWYgKGRpc3QgPiAwLjApIHsKICAgICAgICB0ID0gZGlzdCAvIGJvcmRlcjsKICAgIH0KCiAgICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAgIGdsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7Cn0=", "base64"),
+      point: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICBmbG9hdCBib3JkZXIgPSAwLjE7CiAgZmxvYXQgcmFkaXVzID0gMC41OwogIHZlYzIgY2VudGVyID0gdmVjMigwLjUsIDAuNSk7CgogIHZlYzQgcG9pbnRDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7CgogIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgZmxvYXQgZGlzdDEgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogIGZsb2F0IHQxID0gMC4wOwogIGlmIChkaXN0MSA+IGJvcmRlcikgewogICAgICB0MSA9IDEuMDsKICB9IGVsc2UgaWYgKGRpc3QxID4gMC4wKSB7CiAgICAgIHQxID0gZGlzdDEgLyBib3JkZXI7CiAgfQoKICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAvL2dsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7CgogIC8vYm9yZGVyCiAgZmxvYXQgb3V0ZXJCb3JkZXIgPSAwLjA1OwogIGZsb2F0IGlubmVyQm9yZGVyID0gMC44OwogIHZlYzQgYm9yZGVyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDAuNCk7CiAgdmVjMiB1diA9IGdsX1BvaW50Q29vcmQueHk7CiAgdmVjNCBjbGVhckNvbG9yID0gdmVjNCgwLCAwLCAwLCAwKTsKICAKICAvLyBPZmZzZXQgdXYgd2l0aCB0aGUgY2VudGVyIG9mIHRoZSBjaXJjbGUuCiAgdXYgLT0gY2VudGVyOwogIAogIGZsb2F0IGRpc3QyID0gIHNxcnQoZG90KHV2LCB1dikpOwogCiAgZmxvYXQgdDIgPSAxLjAgKyBzbW9vdGhzdGVwKHJhZGl1cywgcmFkaXVzICsgb3V0ZXJCb3JkZXIsIGRpc3QyKQogICAgICAgICAgICAgICAgLSBzbW9vdGhzdGVwKHJhZGl1cyAtIGlubmVyQm9yZGVyLCByYWRpdXMsIGRpc3QyKTsKIAogIGdsX0ZyYWdDb2xvciA9IG1peChtaXgoYm9yZGVyQ29sb3IsIGNsZWFyQ29sb3IsIHQyKSwgcG9pbnRDb2xvciwgdDEpOwp9", "base64"),
+      puck: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41KTsKICB2ZWMyIHV2ID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsKICBmbG9hdCBzbW9vdGhpbmcgPSAwLjAwNTsKICB2ZWM0IF9jb2xvcjEgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwogIGZsb2F0IHJhZGl1czEgPSAwLjM7CiAgdmVjNCBfY29sb3IyID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKICBmbG9hdCByYWRpdXMyID0gMC41OwogIGZsb2F0IGRpc3QgPSBsZW5ndGgodXYpOwoKICAvL1NNT09USAogIGZsb2F0IGdhbW1hID0gMi4yOwogIGNvbG9yMS5yZ2IgPSBwb3coX2NvbG9yMS5yZ2IsIHZlYzMoZ2FtbWEpKTsKICBjb2xvcjIucmdiID0gcG93KF9jb2xvcjIucmdiLCB2ZWMzKGdhbW1hKSk7CgogIHZlYzQgcHVjayA9IG1peCgKICAgIG1peCgKICAgICAgX2NvbG9yMSwKICAgICAgX2NvbG9yMiwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMxIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czEgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgICApCiAgICApLAogICAgdmVjNCgwLDAsMCwwKSwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMyIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czIgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgKQogICk7CgogIC8vR2FtbWEgY29ycmVjdGlvbiAocHJldmVudHMgY29sb3IgZnJpbmdlcykKICBwdWNrLnJnYiA9IHBvdyhwdWNrLnJnYiwgdmVjMygxLjAgLyBnYW1tYSkpOwogIGdsX0ZyYWdDb2xvciA9IHB1Y2s7Cn0=", "base64"),
+      simpleCircle: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKCiAgICBmbG9hdCBib3JkZXIgPSAwLjA1OwogICAgZmxvYXQgcmFkaXVzID0gMC41OwogICAgdmVjNCBjb2xvcjAgPSB2ZWM0KDAuMCwgMC4wLCAwLjAsIDAuMCk7CiAgICB2ZWM0IGNvbG9yMSA9IHZlYzQoY29sb3JbMF0sIGNvbG9yWzFdLCBjb2xvclsyXSwgb3BhY2l0eSk7CgogICAgdmVjMiBtID0gZ2xfUG9pbnRDb29yZC54eSAtIHZlYzIoMC41LCAwLjUpOwogICAgZmxvYXQgZGlzdCA9IHJhZGl1cyAtIHNxcnQobS54ICogbS54ICsgbS55ICogbS55KTsKCiAgICBmbG9hdCB0ID0gMC4wOwogICAgaWYgKGRpc3QgPiBib3JkZXIpIHsKICAgICAgICB0ID0gMS4wOwogICAgfSBlbHNlIGlmIChkaXN0ID4gMC4wKSB7CiAgICAgICAgdCA9IGRpc3QgLyBib3JkZXI7CiAgICB9CgogICAgLy9zaW1wbGUgY2lyY2xlcwogICAgZmxvYXQgZCA9IGRpc3RhbmNlIChnbF9Qb2ludENvb3JkLCB2ZWMyKDAuNSwgMC41KSk7CiAgICBpZiAoZCA8IDAuNSApewogICAgICAgIGdsX0ZyYWdDb2xvciA9IGNvbG9yMTsKICAgIH0gZWxzZSB7CiAgICAgICAgZGlzY2FyZDsKICAgIH0KfQ==", "base64"),
+      square: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIGZsb2F0IGJvcmRlciA9IDAuMDU7CiAgICBmbG9hdCByYWRpdXMgPSAwLjU7CiAgICB2ZWM0IGNvbG9yMCA9IHZlYzQoMC4wLCAwLjAsIDAuMCwgMC4wKTsKICAgIHZlYzQgY29sb3IxID0gdmVjNChjb2xvclswXSwgY29sb3JbMV0sIGNvbG9yWzJdLCBvcGFjaXR5KTsKICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSB2ZWMyKDAuNSwgMC41KTsKICAgIGZsb2F0IGRpc3QgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogICAgZmxvYXQgdCA9IDAuMDsKICAgIGlmIChkaXN0ID4gYm9yZGVyKSB7CiAgICAgICAgdCA9IDEuMDsKICAgIH0gZWxzZSBpZiAoZGlzdCA+IDAuMCkgewogICAgICAgIHQgPSBkaXN0IC8gYm9yZGVyOwogICAgfQoKICAgIC8vc3F1YXJlcwogICAgZ2xfRnJhZ0NvbG9yID0gdmVjNChjb2xvclswXSwgY29sb3JbMV0sIGNvbG9yWzJdLCBvcGFjaXR5KTsKfQ==", "base64"),
+      polygon: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICBnbF9GcmFnQ29sb3IgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwp9", "base64")
     }
   }
 };
-
 module.exports = glify;
+
 if (typeof window !== 'undefined' && window.L) {
   window.L.glify = glify;
 }
+
 }).call(this,require("buffer").Buffer)
 },{"./lines":13,"./map-matrix":14,"./points":15,"./shapes":16,"buffer":2}],13:[function(require,module,exports){
+"use strict";
+
 var L = typeof window !== 'undefined' ? window.L : require('leaflet');
+
 var utils = require('./utils');
+
 var mapMatrix = require('./map-matrix');
+
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
 var Lines = function Lines(settings) {
-    Lines.instances.push(this);
+  Lines.instances.push(this);
   this.settings = utils.defaults(settings, Lines.defaults);
-
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
-
   this.active = true;
-
   var self = this,
-    glLayer = this.glLayer = canvasOverlay(function() {
-        self.drawOnCanvas();
-      })
-      .addTo(settings.map),
-    canvas = this.canvas = glLayer.canvas;
-
+      glLayer = this.glLayer = canvasOverlay(function () {
+    self.drawOnCanvas();
+  }).addTo(settings.map),
+      canvas = this.canvas = glLayer.canvas;
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
   canvas.style.position = 'absolute';
+
   if (settings.className) {
     canvas.className += ' ' + settings.className;
   }
 
   this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
   this.vertexShader = null;
@@ -21065,10 +21113,7 @@ var Lines = function Lines(settings) {
   this.matrix = null;
   this.verts = null;
   this.latLngLookup = null;
-
-  this
-    .setup()
-    .render();
+  this.setup().render();
 };
 
 Lines.defaults = {
@@ -21091,49 +21136,44 @@ Lines.defaults = {
       size: 3
     }
   }
-};
+}; //statics
 
-//statics
 Lines.instances = [];
-
 Lines.prototype = {
   maps: [],
+
   /**
    *
    * @returns {Lines}
    */
-  setup: function () {
+  setup: function setup() {
     var settings = this.settings;
+
     if (settings.click) {
       settings.setupClick(settings.map);
     }
 
-    return this
-      .setupVertexShader()
-      .setupFragmentShader()
-      .setupProgram();
+    return this.setupVertexShader().setupFragmentShader().setupProgram();
   },
+
   /**
    *
    * @returns {Lines}
    */
-  render: function () {
+  render: function render() {
     this.resetVertices();
-
     var pixelsToWebGLMatrix = this.pixelsToWebGLMatrix,
-      settings = this.settings,
-      canvas = this.canvas,
-      gl = this.gl,
-      glLayer = this.glLayer,
-      verts = this.verts,
-      vertexBuffer = gl.createBuffer(),
-      program = this.program,
-      vertex = gl.getAttribLocation(program, 'vertex'),
-      opacity = gl.getUniformLocation(program, 'opacity');
-
+        settings = this.settings,
+        canvas = this.canvas,
+        gl = this.gl,
+        glLayer = this.glLayer,
+        verts = this.verts,
+        vertexBuffer = gl.createBuffer(),
+        program = this.program,
+        vertex = gl.getAttribLocation(program, 'vertex'),
+        opacity = gl.getUniformLocation(program, 'opacity');
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-
     /*
     Transforming lines according to the rule:
     1. Take one line (single feature)
@@ -21142,39 +21182,36 @@ Lines.prototype = {
     [[0,0],[1,1],[2,2]] => [[0,0],[1,1],[1,1],[2,2]]
     3. Do this for all lines and put all coordinates in array
     */
+
     var size = 0;
     var allVertices = [];
     verts.map(function (vertices) {
       var verticesDuplicated = [];
+
       for (var i = 0; i < vertices.length / 5; i++) {
-        if (i !== 0 && i !== (vertices.length / 5 - 1)) {
+        if (i !== 0 && i !== vertices.length / 5 - 1) {
           verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
         }
 
         verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
       }
 
-      allVertices = allVertices.concat(verticesDuplicated); 
+      allVertices = allVertices.concat(verticesDuplicated);
     });
-
     this.verts = allVertices;
-
     var vertArray = new Float32Array(allVertices);
     size = vertArray.BYTES_PER_ELEMENT;
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
-    gl.enableVertexAttribArray(vertex);
-
-    //  gl.disable(gl.DEPTH_TEST);
+    gl.enableVertexAttribArray(vertex); //  gl.disable(gl.DEPTH_TEST);
     // ----------------------------
     // look up the locations for the inputs to our shaders.
-    this.matrix = gl.getUniformLocation(program, 'matrix');
-    gl.aPointSize = gl.getAttribLocation(program, 'pointSize');
 
-    // Set the matrix to some that makes 1 unit 1 pixel.
+    this.matrix = gl.getUniformLocation(program, 'matrix');
+    gl.aPointSize = gl.getAttribLocation(program, 'pointSize'); // Set the matrix to some that makes 1 unit 1 pixel.
+
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
     gl.viewport(0, 0, canvas.width, canvas.height);
-
     gl.uniformMatrix4fv(this.matrix, false, pixelsToWebGLMatrix);
 
     if (settings.shaderVars !== null) {
@@ -21182,7 +21219,6 @@ Lines.prototype = {
     }
 
     glLayer.redraw();
-
     return this;
   },
 
@@ -21190,36 +21226,34 @@ Lines.prototype = {
    *
    * @returns {Lines}
    */
-  resetVertices: function () {
+  resetVertices: function resetVertices() {
     this.verts = [];
-
     var pixel,
-      verts = this.verts,
-      settings = this.settings,
-      data = settings.data,
-      features = data.features,
-      feature,
-      colorFn,
-      color = settings.color,
-      latitudeKey = settings.latitudeKey,
-      longitudeKey = settings.longitudeKey,
-      featureIndex = 0,
-      featureMax = features.length,
-      i;
+        verts = this.verts,
+        settings = this.settings,
+        data = settings.data,
+        features = data.features,
+        feature,
+        colorFn,
+        color = settings.color,
+        latitudeKey = settings.latitudeKey,
+        longitudeKey = settings.longitudeKey,
+        featureIndex = 0,
+        featureMax = features.length,
+        i;
 
     if (color === null) {
       throw new Error('color is not properly defined');
     } else if (typeof color === 'function') {
       colorFn = color;
       color = undefined;
-    }
+    } // -- data
 
-    // -- data
+
     for (; featureIndex < featureMax; featureIndex++) {
       feature = features[featureIndex];
-      var featureVerts = [];
+      var featureVerts = []; //use colorFn function here if it exists
 
-      //use colorFn function here if it exists
       if (colorFn) {
         color = colorFn(featureIndex, feature);
       }
@@ -21234,21 +21268,19 @@ Lines.prototype = {
 
     return this;
   },
+
   /**
    *
    * @returns {Lines}
    */
-  setupVertexShader: function () {
+  setupVertexShader: function setupVertexShader() {
     var gl = this.gl,
-      settings = this.settings,
-      vertexShaderSource = typeof settings.vertexShaderSource === 'function' ? settings.vertexShaderSource() : settings.vertexShaderSource,
-      vertexShader = gl.createShader(gl.VERTEX_SHADER);
-
+        settings = this.settings,
+        vertexShaderSource = typeof settings.vertexShaderSource === 'function' ? settings.vertexShaderSource() : settings.vertexShaderSource,
+        vertexShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
-
     this.vertexShader = vertexShader;
-
     return this;
   },
 
@@ -21256,17 +21288,14 @@ Lines.prototype = {
    *
    * @returns {Lines}
    */
-  setupFragmentShader: function () {
+  setupFragmentShader: function setupFragmentShader() {
     var gl = this.gl,
-      settings = this.settings,
-      fragmentShaderSource = typeof settings.fragmentShaderSource === 'function' ? settings.fragmentShaderSource() : settings.fragmentShaderSource,
-      fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-
+        settings = this.settings,
+        fragmentShaderSource = typeof settings.fragmentShaderSource === 'function' ? settings.fragmentShaderSource() : settings.fragmentShaderSource,
+        fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragmentShader, fragmentShaderSource);
     gl.compileShader(fragmentShader);
-
     this.fragmentShader = fragmentShader;
-
     return this;
   },
 
@@ -21274,20 +21303,17 @@ Lines.prototype = {
    *
    * @returns {Lines}
    */
-  setupProgram: function () {
+  setupProgram: function setupProgram() {
     // link shaders to create our program
     var gl = this.gl,
-      program = gl.createProgram();
-
+        program = gl.createProgram();
     gl.attachShader(program, this.vertexShader);
     gl.attachShader(program, this.fragmentShader);
     gl.linkProgram(program);
     gl.useProgram(program);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
-
     this.program = program;
-
     return this;
   },
 
@@ -21295,39 +21321,29 @@ Lines.prototype = {
    *
    * @return Lines
    */
-  drawOnCanvas: function () {
+  drawOnCanvas: function drawOnCanvas() {
     if (this.gl == null) return this;
-
     var gl = this.gl,
-      settings = this.settings,
-      canvas = this.canvas,
-      map = settings.map,
-      pointSize = Math.max(map.getZoom() - 4.0, 4.0),
-      bounds = map.getBounds(),
-      topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-    // -- Scale to current zoom
-      scale = Math.pow(2, map.getZoom()),
-      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
-      mapMatrix = this.mapMatrix,
-      pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
+        settings = this.settings,
+        canvas = this.canvas,
+        map = settings.map,
+        pointSize = Math.max(map.getZoom() - 4.0, 4.0),
+        bounds = map.getBounds(),
+        topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
+        // -- Scale to current zoom
+    scale = Math.pow(2, map.getZoom()),
+        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+        mapMatrix = this.mapMatrix,
+        pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
 
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
-
-    // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-    mapMatrix
-      .set(pixelsToWebGLMatrix)
-      .scaleMatrix(scale)
-      .translateMatrix(-offset.x, -offset.y);
-
+    mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.vertexAttrib1f(gl.aPointSize, pointSize); // -- attach matrix value to 'mapMatrix' uniform in shader
 
-    gl.vertexAttrib1f(gl.aPointSize, pointSize);
-    // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-
     gl.drawArrays(gl.LINES, 0, this.verts.length / 5);
-
     return this;
   },
 
@@ -21336,7 +21352,7 @@ Lines.prototype = {
    * @param {L.Map} [map]
    * @returns {Lines}
    */
-  addTo: function(map) {
+  addTo: function addTo(map) {
     this.glLayer.addTo(map || this.settings.map);
     this.active = true;
     return this.render();
@@ -21346,37 +21362,33 @@ Lines.prototype = {
    *
    * @returns {Lines}
    */
-  remove: function() {
+  remove: function remove() {
     this.settings.map.removeLayer(this.glLayer);
     this.active = false;
     return this;
   }
 };
 
-Lines.tryClick = function(e, map) {
+Lines.tryClick = function (e, map) {
   function pDistance(x, y, x1, y1, x2, y2) {
     var A = x - x1;
     var B = y - y1;
     var C = x2 - x1;
     var D = y2 - y1;
-
     var dot = A * C + B * D;
     var len_sq = C * C + D * D;
     var param = -1;
     if (len_sq != 0) //in case of 0 length line
-        param = dot / len_sq;
-
+      param = dot / len_sq;
     var xx, yy;
 
     if (param < 0) {
       xx = x1;
       yy = y1;
-    }
-    else if (param > 1) {
+    } else if (param > 1) {
       xx = x2;
       yy = y2;
-    }
-    else {
+    } else {
       xx = x1 + param * C;
       yy = y1 + param * D;
     }
@@ -21395,12 +21407,10 @@ Lines.tryClick = function(e, map) {
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
-
-    settings.data.features.map(feature => {
+    settings.data.features.map(function (feature) {
       for (var i = 1; i < feature.geometry.coordinates.length; i++) {
-        var distance = pDistance(e.latlng.lng, e.latlng.lat,
-          feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
-          feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+        var distance = pDistance(e.latlng.lng, e.latlng.lat, feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1], feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+
         if (distance < record) {
           record = distance;
           foundFeature = feature;
@@ -21418,13 +21428,18 @@ Lines.tryClick = function(e, map) {
 };
 
 module.exports = Lines;
+
 },{"./canvasoverlay":11,"./map-matrix":14,"./utils":17,"leaflet":"leaflet"}],14:[function(require,module,exports){
+"use strict";
+
 module.exports = function mapMatrix() {
   var _mapMatrix = new Float32Array(16);
 
   _mapMatrix._set = _mapMatrix.set;
-  _mapMatrix.set = function() {
+
+  _mapMatrix.set = function () {
     _mapMatrix._set.apply(this, arguments);
+
     return this;
   };
   /**
@@ -21433,75 +21448,76 @@ module.exports = function mapMatrix() {
    * @param ty
    * @returns {mapMatrix}
    */
+
+
   _mapMatrix.translateMatrix = function (tx, ty) {
     // translation is in last column of matrix
     this[12] += this[0] * tx + this[4] * ty;
     this[13] += this[1] * tx + this[5] * ty;
     this[14] += this[2] * tx + this[6] * ty;
     this[15] += this[3] * tx + this[7] * ty;
-
     return this;
   };
-
   /**
    *
    * @param scale
    * @returns {mapMatrix}
    */
+
+
   _mapMatrix.scaleMatrix = function (scale) {
     // scaling x and y, which is just scaling first two columns of matrix
     this[0] *= scale;
     this[1] *= scale;
     this[2] *= scale;
     this[3] *= scale;
-
     this[4] *= scale;
     this[5] *= scale;
     this[6] *= scale;
     this[7] *= scale;
-
     return this;
   };
 
   return _mapMatrix;
-}
+};
 
 },{}],15:[function(require,module,exports){
-var utils = require('./utils');
-var L = typeof window !== 'undefined' ? window.L : require('leaflet');
-var mapMatrix = require('./map-matrix');
-var canvasOverlay = require('./canvasoverlay').canvasOverlay;
+"use strict";
 
+var utils = require('./utils');
+
+var L = typeof window !== 'undefined' ? window.L : require('leaflet');
+
+var mapMatrix = require('./map-matrix');
+
+var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 /**
    *
    * @param settings
    * @constructor
    */
+
+
 var Points = function Points(settings) {
   Points.instances.push(this);
   this.settings = utils.defaults(settings, Points.defaults);
-
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
-
   this.active = true;
-
   var self = this,
-    glLayer = this.glLayer = canvasOverlay(function() {
-        self.drawOnCanvas();
-      })
-      .addTo(settings.map),
-    canvas = this.canvas = glLayer.canvas;
-
+      glLayer = this.glLayer = canvasOverlay(function () {
+    self.drawOnCanvas();
+  }).addTo(settings.map),
+      canvas = this.canvas = glLayer.canvas;
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
   canvas.style.position = 'absolute';
+
   if (settings.className) {
     canvas.className += ' ' + settings.className;
   }
 
   this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
   this.vertexShader = null;
@@ -21510,10 +21526,7 @@ var Points = function Points(settings) {
   this.matrix = null;
   this.verts = null;
   this.latLngLookup = null;
-
-  this
-    .setup()
-    .render();
+  this.setup().render();
 };
 
 Points.defaults = {
@@ -21540,55 +21553,47 @@ Points.defaults = {
       size: 3
     }
   }
-};
+}; //statics
 
-//statics
 Points.instances = [];
-
 Points.prototype = {
   maps: [],
+
   /**
    *
    * @returns {Points}
    */
-  setup: function () {
+  setup: function setup() {
     var settings = this.settings;
+
     if (settings.click) {
       this.settings.setupClick(settings.map);
     }
 
-    return this
-      .setupVertexShader()
-      .setupFragmentShader()
-      .setupProgram();
+    return this.setupVertexShader().setupFragmentShader().setupProgram();
   },
 
   /**
    *
    * @returns {Points}
    */
-  render: function () {
+  render: function render() {
+    this.resetVertices(); //look up the locations for the inputs to our shaders.
 
-    this.resetVertices();
-
-    //look up the locations for the inputs to our shaders.
     var gl = this.gl,
-      settings = this.settings,
-      canvas = this.canvas,
-      program = this.program,
-      glLayer = this.glLayer,
-      matrix = this.matrix = gl.getUniformLocation(program, 'matrix'),
-      opacity = gl.getUniformLocation(program, 'opacity'),
-      vertex = gl.getAttribLocation(program, 'vertex'),
-      vertexBuffer = gl.createBuffer(),
-      vertexArray = new Float32Array(this.verts),
-      size = vertexArray.BYTES_PER_ELEMENT;
+        settings = this.settings,
+        canvas = this.canvas,
+        program = this.program,
+        glLayer = this.glLayer,
+        matrix = this.matrix = gl.getUniformLocation(program, 'matrix'),
+        opacity = gl.getUniformLocation(program, 'opacity'),
+        vertex = gl.getAttribLocation(program, 'vertex'),
+        vertexBuffer = gl.createBuffer(),
+        vertexArray = new Float32Array(this.verts),
+        size = vertexArray.BYTES_PER_ELEMENT;
+    gl.pointSize = gl.getAttribLocation(program, 'pointSize'); //set the matrix to some that makes 1 unit 1 pixel.
 
-    gl.pointSize = gl.getAttribLocation(program, 'pointSize');
-
-    //set the matrix to some that makes 1 unit 1 pixel.
     this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
-
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniformMatrix4fv(matrix, false, this.pixelsToWebGLMatrix);
     gl.uniform1f(opacity, this.settings.opacity);
@@ -21602,29 +21607,27 @@ Points.prototype = {
     }
 
     glLayer.redraw();
-
     return this;
   },
-  resetVertices: function () {
+  resetVertices: function resetVertices() {
     //empty verts and repopulate
     this.latLngLookup = {};
-    this.verts = [];
+    this.verts = []; // -- data
 
-    // -- data
     var verts = this.verts,
-      settings = this.settings,
-      data = settings.data,
-      colorFn,
-      color = settings.color,
-      i = 0,
-      max = data.length,
-      latLngLookup = this.latLngLookup,
-      latitudeKey = settings.latitudeKey,
-      longitudeKey = settings.longitudeKey,
-      latLng,
-      pixel,
-      lookup,
-      key;
+        settings = this.settings,
+        data = settings.data,
+        colorFn,
+        color = settings.color,
+        i = 0,
+        max = data.length,
+        latLngLookup = this.latLngLookup,
+        latitudeKey = settings.latitudeKey,
+        longitudeKey = settings.longitudeKey,
+        latLng,
+        pixel,
+        lookup,
+        key;
 
     if (color === null) {
       throw new Error('color is not properly defined');
@@ -21633,7 +21636,7 @@ Points.prototype = {
       color = undefined;
     }
 
-    for(; i < max; i++) {
+    for (; i < max; i++) {
       latLng = data[i];
       key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
       lookup = latLngLookup[key];
@@ -21647,10 +21650,11 @@ Points.prototype = {
 
       if (colorFn) {
         color = colorFn(i, latLng);
-      }
+      } //-- 2 coord, 3 rgb colors interleaved buffer
 
-      //-- 2 coord, 3 rgb colors interleaved buffer
+
       verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+
       if (settings.eachVertex !== null) {
         settings.eachVertex.call(this, latLng, pixel, color);
       }
@@ -21658,12 +21662,13 @@ Points.prototype = {
 
     return this;
   },
+
   /**
    *
    * @param data
    * @returns {Points}
    */
-  setData: function (data) {
+  setData: function setData(data) {
     this.settings.data = data;
     return this;
   },
@@ -21672,17 +21677,14 @@ Points.prototype = {
    *
    * @returns {Points}
    */
-  setupVertexShader: function () {
+  setupVertexShader: function setupVertexShader() {
     var gl = this.gl,
-      settings = this.settings,
-      vertexShaderSource = typeof settings.vertexShaderSource === 'function' ? settings.vertexShaderSource() : settings.vertexShaderSource,
-      vertexShader = gl.createShader(gl.VERTEX_SHADER);
-
+        settings = this.settings,
+        vertexShaderSource = typeof settings.vertexShaderSource === 'function' ? settings.vertexShaderSource() : settings.vertexShaderSource,
+        vertexShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
-
     this.vertexShader = vertexShader;
-
     return this;
   },
 
@@ -21690,17 +21692,14 @@ Points.prototype = {
    *
    * @returns {Points}
    */
-  setupFragmentShader: function () {
+  setupFragmentShader: function setupFragmentShader() {
     var gl = this.gl,
-      settings = this.settings,
-      fragmentShaderSource = typeof settings.fragmentShaderSource === 'function' ? settings.fragmentShaderSource() : settings.fragmentShaderSource,
-      fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-
+        settings = this.settings,
+        fragmentShaderSource = typeof settings.fragmentShaderSource === 'function' ? settings.fragmentShaderSource() : settings.fragmentShaderSource,
+        fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragmentShader, fragmentShaderSource);
     gl.compileShader(fragmentShader);
-
     this.fragmentShader = fragmentShader;
-
     return this;
   },
 
@@ -21708,67 +21707,54 @@ Points.prototype = {
    *
    * @returns {Points}
    */
-  setupProgram: function () {
+  setupProgram: function setupProgram() {
     // link shaders to create our program
     var gl = this.gl,
-      program = gl.createProgram();
-
+        program = gl.createProgram();
     gl.attachShader(program, this.vertexShader);
     gl.attachShader(program, this.fragmentShader);
     gl.linkProgram(program);
     gl.useProgram(program);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
-
     this.program = program;
-
     return this;
   },
-
-  pointSize: function() {
+  pointSize: function pointSize() {
     var settings = this.settings,
-      map = settings.map,
-      pointSize = settings.size,
-      // -- Scale to current zoom
-      zoom = map.getZoom();
-
-    return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize
+        map = settings.map,
+        pointSize = settings.size,
+        // -- Scale to current zoom
+    zoom = map.getZoom();
+    return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize;
   },
 
   /**
    *
    * @returns {Points}
    */
-  drawOnCanvas: function () {
+  drawOnCanvas: function drawOnCanvas() {
     if (this.gl == null) return this;
-
     var gl = this.gl,
-      canvas = this.canvas,
-      settings = this.settings,
-      map = settings.map,
-      bounds = map.getBounds(),
-      topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
-      zoom = map.getZoom(),
-      scale = Math.pow(2, zoom),
-      mapMatrix = this.mapMatrix,
-      pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
+        canvas = this.canvas,
+        settings = this.settings,
+        map = settings.map,
+        bounds = map.getBounds(),
+        topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
+        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+        zoom = map.getZoom(),
+        scale = Math.pow(2, zoom),
+        mapMatrix = this.mapMatrix,
+        pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); //set base matrix to translate canvas pixel coordinates -> webgl coordinates
 
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
-
-    //set base matrix to translate canvas pixel coordinates -> webgl coordinates
-    mapMatrix
-      .set(pixelsToWebGLMatrix)
-      .scaleMatrix(scale)
-      .translateMatrix(-offset.x, -offset.y);
-
+    mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.vertexAttrib1f(gl.pointSize, this.pointSize());
-    // -- attach matrix value to 'mapMatrix' uniform in shader
+    gl.vertexAttrib1f(gl.pointSize, this.pointSize()); // -- attach matrix value to 'mapMatrix' uniform in shader
+
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
     gl.drawArrays(gl.POINTS, 0, settings.data.length);
-
     return this;
   },
 
@@ -21777,7 +21763,7 @@ Points.prototype = {
    * @param map
    * @returns {Points}
    */
-  addTo: function (map) {
+  addTo: function addTo(map) {
     this.glLayer.addTo(map || this.settings.map);
     this.active = true;
     return this.render();
@@ -21788,46 +21774,46 @@ Points.prototype = {
    * @param {L.LatLng} coords
    * @returns {*}
    */
-  lookup: function (coords) {
+  lookup: function lookup(coords) {
     var x = coords.lat - 0.03,
-      y,
-
-      xMax = coords.lat + 0.03,
-      yMax = coords.lng + 0.03,
-
-      foundI,
-      foundMax,
-
-      matches = [],
-      found,
-      key;
+        y,
+        xMax = coords.lat + 0.03,
+        yMax = coords.lng + 0.03,
+        foundI,
+        foundMax,
+        matches = [],
+        found,
+        key;
 
     for (; x <= xMax; x += 0.01) {
       y = coords.lng - 0.03;
+
       for (; y <= yMax; y += 0.01) {
         key = x.toFixed(2) + 'x' + y.toFixed(2);
         found = this.latLngLookup[key];
+
         if (found) {
           foundI = 0;
           foundMax = found.length;
+
           for (; foundI < foundMax; foundI++) {
             matches.push(found[foundI]);
           }
         }
       }
-    }
+    } //try matches first, if it is empty, try the data, and hope it isn't too big
 
-    //try matches first, if it is empty, try the data, and hope it isn't too big
+
     return this.settings.closest(coords, matches.length === 0 ? this.settings.data.slice(0) : matches, this.settings.map);
   },
-  remove: function() {
+  remove: function remove() {
     this.settings.map.removeLayer(this.glLayer);
     this.active = false;
     return this;
   }
 };
 
-Points.tryClick = function(e, map) {
+Points.tryClick = function (e, map) {
   var result,
       settings,
       instance,
@@ -21837,28 +21823,21 @@ Points.tryClick = function(e, map) {
       xy,
       found,
       latLng;
-
   Points.instances.forEach(function (_instance) {
     settings = _instance.settings;
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
-
     point = _instance.lookup(e.latlng);
     instancesLookup[point] = _instance;
     closestFromEach.push(point);
   });
-
   if (closestFromEach.length < 1) return;
   if (!settings) return;
-
   found = settings.closest(e.latlng, closestFromEach, map);
-
   if (found === null) return;
-
   instance = instancesLookup[found];
   if (!instance) return;
-
   latLng = L.latLng(found[settings.latitudeKey], found[settings.longitudeKey]);
   xy = map.latLngToLayerPoint(latLng);
 
@@ -21869,39 +21848,42 @@ Points.tryClick = function(e, map) {
 };
 
 module.exports = Points;
+
 },{"./canvasoverlay":11,"./map-matrix":14,"./utils":17,"leaflet":"leaflet"}],16:[function(require,module,exports){
+"use strict";
+
 var L = typeof window !== 'undefined' ? window.L : require('leaflet');
+
 var earcut = require('earcut');
+
 var PolygonLookup = require('polygon-lookup');
+
 var utils = require('./utils');
+
 var mapMatrix = require('./map-matrix');
+
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
 var Shapes = function Shapes(settings) {
   Shapes.instances.push(this);
   this.settings = utils.defaults(settings, Shapes.defaults);
-
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
-
   this.active = true;
-
   var self = this,
-    glLayer = this.glLayer = canvasOverlay(function() {
-        self.drawOnCanvas();
-      })
-      .addTo(settings.map),
-    canvas = this.canvas = glLayer.canvas;
-
+      glLayer = this.glLayer = canvasOverlay(function () {
+    self.drawOnCanvas();
+  }).addTo(settings.map),
+      canvas = this.canvas = glLayer.canvas;
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
   canvas.style.position = 'absolute';
+
   if (settings.className) {
     canvas.className += ' ' + settings.className;
   }
 
   this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
   this.vertexShader = null;
@@ -21911,10 +21893,7 @@ var Shapes = function Shapes(settings) {
   this.verts = null;
   this.latLngLookup = null;
   this.polygonLookup = null;
-
-  this
-    .setup()
-    .render();
+  this.setup().render();
 };
 
 Shapes.defaults = {
@@ -21937,66 +21916,60 @@ Shapes.defaults = {
       size: 3
     }
   }
-};
+}; //statics
 
-//statics
 Shapes.instances = [];
-
 Shapes.prototype = {
   maps: [],
+
   /**
    *
    * @returns {Shapes}
    */
-  setup: function () {
+  setup: function setup() {
     var settings = this.settings;
+
     if (settings.click) {
       settings.setupClick(settings.map);
     }
 
-    return this
-      .setupVertexShader()
-      .setupFragmentShader()
-      .setupProgram();
+    return this.setupVertexShader().setupFragmentShader().setupProgram();
   },
+
   /**
    *
    * @returns {Shapes}
    */
-  render: function () {
-    this.resetVertices();
-    // triangles or point count
+  render: function render() {
+    this.resetVertices(); // triangles or point count
 
     var pixelsToWebGLMatrix = this.pixelsToWebGLMatrix,
-      settings = this.settings,
-      canvas = this.canvas,
-      gl = this.gl,
-      glLayer = this.glLayer,
-      start = new Date(),
-      verts = this.verts,
-      numPoints = verts.length / 5,
-      vertexBuffer = gl.createBuffer(),
-      vertArray = new Float32Array(verts),
-      size = vertArray.BYTES_PER_ELEMENT,
-      program = this.program,
-      vertex = gl.getAttribLocation(program, 'vertex'),
-      opacity = gl.getUniformLocation(program, 'opacity');
+        settings = this.settings,
+        canvas = this.canvas,
+        gl = this.gl,
+        glLayer = this.glLayer,
+        start = new Date(),
+        verts = this.verts,
+        numPoints = verts.length / 5,
+        vertexBuffer = gl.createBuffer(),
+        vertArray = new Float32Array(verts),
+        size = vertArray.BYTES_PER_ELEMENT,
+        program = this.program,
+        vertex = gl.getAttribLocation(program, 'vertex'),
+        opacity = gl.getUniformLocation(program, 'opacity');
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
     gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
-    gl.enableVertexAttribArray(vertex);
-
-    //  gl.disable(gl.DEPTH_TEST);
+    gl.enableVertexAttribArray(vertex); //  gl.disable(gl.DEPTH_TEST);
     // ----------------------------
     // look up the locations for the inputs to our shaders.
-    this.matrix = gl.getUniformLocation(program, 'matrix');
-    gl.aPointSize = gl.getAttribLocation(program, 'pointSize');
 
-    // Set the matrix to some that makes 1 unit 1 pixel.
+    this.matrix = gl.getUniformLocation(program, 'matrix');
+    gl.aPointSize = gl.getAttribLocation(program, 'pointSize'); // Set the matrix to some that makes 1 unit 1 pixel.
+
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
     gl.viewport(0, 0, canvas.width, canvas.height);
-
     gl.uniformMatrix4fv(this.matrix, false, pixelsToWebGLMatrix);
 
     if (settings.shaderVars !== null) {
@@ -22004,7 +21977,6 @@ Shapes.prototype = {
     }
 
     glLayer.redraw();
-
     return this;
   },
 
@@ -22012,29 +21984,27 @@ Shapes.prototype = {
    *
    * @returns {Shapes}
    */
-  resetVertices: function () {
+  resetVertices: function resetVertices() {
     this.verts = [];
     this.polygonLookup = new PolygonLookup();
-
     var pixel,
-      verts = this.verts,
-      polygonLookup = this.polygonLookup,
-      index,
-      settings = this.settings,
-      data = settings.data,
-      features = data.features,
-      feature,
-      colorFn,
-      color = settings.color,
-      featureIndex = 0,
-      featureMax = features.length,
-      triangles,
-      indices,
-      flat,
-      dim,
-      iMax,
-      i;
-
+        verts = this.verts,
+        polygonLookup = this.polygonLookup,
+        index,
+        settings = this.settings,
+        data = settings.data,
+        features = data.features,
+        feature,
+        colorFn,
+        color = settings.color,
+        featureIndex = 0,
+        featureMax = features.length,
+        triangles,
+        indices,
+        flat,
+        dim,
+        iMax,
+        i;
     polygonLookup.loadFeatureCollection(data);
 
     if (color === null) {
@@ -22042,52 +22012,48 @@ Shapes.prototype = {
     } else if (typeof color === 'function') {
       colorFn = color;
       color = undefined;
-    }
+    } // -- data
 
-    // -- data
+
     for (; featureIndex < featureMax; featureIndex++) {
-      feature = features[featureIndex];
-      //***
-      triangles = [];
+      feature = features[featureIndex]; //***
 
-      //use colorFn function here if it exists
+      triangles = []; //use colorFn function here if it exists
+
       if (colorFn) {
         color = colorFn(featureIndex, feature);
       }
 
       flat = utils.flattenData(feature.geometry.coordinates);
-
       indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-
       dim = feature.geometry.coordinates[0][0].length;
+
       for (i = 0, iMax = indices.length; i < iMax; i++) {
         index = indices[i];
         triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
       }
 
       for (i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = utils.latLonToPixel(triangles[i++],triangles[i++]);
+        pixel = utils.latLonToPixel(triangles[i++], triangles[i++]);
         verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
     }
 
     return this;
   },
+
   /**
    *
    * @returns {Shapes}
    */
-  setupVertexShader: function () {
+  setupVertexShader: function setupVertexShader() {
     var gl = this.gl,
-      settings = this.settings,
-      vertexShaderSource = typeof settings.vertexShaderSource === 'function' ? settings.vertexShaderSource() : settings.vertexShaderSource,
-      vertexShader = gl.createShader(gl.VERTEX_SHADER);
-
+        settings = this.settings,
+        vertexShaderSource = typeof settings.vertexShaderSource === 'function' ? settings.vertexShaderSource() : settings.vertexShaderSource,
+        vertexShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
-
     this.vertexShader = vertexShader;
-
     return this;
   },
 
@@ -22095,17 +22061,14 @@ Shapes.prototype = {
    *
    * @returns {Shapes}
    */
-  setupFragmentShader: function () {
+  setupFragmentShader: function setupFragmentShader() {
     var gl = this.gl,
-      settings = this.settings,
-      fragmentShaderSource = typeof settings.fragmentShaderSource === 'function' ? settings.fragmentShaderSource() : settings.fragmentShaderSource,
-      fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-
+        settings = this.settings,
+        fragmentShaderSource = typeof settings.fragmentShaderSource === 'function' ? settings.fragmentShaderSource() : settings.fragmentShaderSource,
+        fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
     gl.shaderSource(fragmentShader, fragmentShaderSource);
     gl.compileShader(fragmentShader);
-
     this.fragmentShader = fragmentShader;
-
     return this;
   },
 
@@ -22113,20 +22076,17 @@ Shapes.prototype = {
    *
    * @returns {Shapes}
    */
-  setupProgram: function () {
+  setupProgram: function setupProgram() {
     // link shaders to create our program
     var gl = this.gl,
-      program = gl.createProgram();
-
+        program = gl.createProgram();
     gl.attachShader(program, this.vertexShader);
     gl.attachShader(program, this.fragmentShader);
     gl.linkProgram(program);
     gl.useProgram(program);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
-
     this.program = program;
-
     return this;
   },
 
@@ -22134,38 +22094,29 @@ Shapes.prototype = {
    *
    * @return Shapes
    */
-  drawOnCanvas: function () {
+  drawOnCanvas: function drawOnCanvas() {
     if (this.gl == null) return this;
-
     var gl = this.gl,
-      settings = this.settings,
-      canvas = this.canvas,
-      map = settings.map,
-      pointSize = Math.max(map.getZoom() - 4.0, 1.0),
-      bounds = map.getBounds(),
-      topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-    // -- Scale to current zoom
-      scale = Math.pow(2, map.getZoom()),
-      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
-      mapMatrix = this.mapMatrix,
-      pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
+        settings = this.settings,
+        canvas = this.canvas,
+        map = settings.map,
+        pointSize = Math.max(map.getZoom() - 4.0, 1.0),
+        bounds = map.getBounds(),
+        topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
+        // -- Scale to current zoom
+    scale = Math.pow(2, map.getZoom()),
+        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+        mapMatrix = this.mapMatrix,
+        pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
 
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
-
-    // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-    mapMatrix
-      .set(pixelsToWebGLMatrix)
-      .scaleMatrix(scale)
-      .translateMatrix(-offset.x, -offset.y);
-
+    mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.vertexAttrib1f(gl.aPointSize, pointSize); // -- attach matrix value to 'mapMatrix' uniform in shader
 
-    gl.vertexAttrib1f(gl.aPointSize, pointSize);
-    // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
     gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
-
     return this;
   },
 
@@ -22174,7 +22125,7 @@ Shapes.prototype = {
    * @param {L.Map} [map]
    * @returns {Shapes}
    */
-  addTo: function(map) {
+  addTo: function addTo(map) {
     this.glLayer.addTo(map || this.settings.map);
     this.active = true;
     return this.render();
@@ -22184,41 +22135,42 @@ Shapes.prototype = {
    *
    * @returns {Shapes}
    */
-  remove: function() {
+  remove: function remove() {
     this.settings.map.removeLayer(this.glLayer);
     this.active = false;
     return this;
   }
 };
 
-Shapes.tryClick = function(e, map) {
-  var result,
-      settings,
-      feature;
-
+Shapes.tryClick = function (e, map) {
+  var result, settings, feature;
   Shapes.instances.forEach(function (_instance) {
     settings = _instance.settings;
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
-
     feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+
     if (feature !== undefined) {
       result = settings.click(e, feature);
     }
   });
-
   return result !== undefined ? result : true;
 };
 
 module.exports = Shapes;
+
 },{"./canvasoverlay":11,"./map-matrix":14,"./utils":17,"earcut":3,"leaflet":"leaflet","polygon-lookup":7}],17:[function(require,module,exports){
+"use strict";
+
 function defaults(userSettings, defaults) {
   var settings = {},
-    i;
+      i;
 
-  for (i in defaults) if (defaults.hasOwnProperty(i)) {
-    settings[i] = (userSettings.hasOwnProperty(i) ? userSettings[i] : defaults[i]);
+  for (i in defaults) {
+    if (defaults.hasOwnProperty(i)) {
+      settings[i] = userSettings.hasOwnProperty(i) ? userSettings[i] : defaults[i];
+    }
   }
 
   return settings;
@@ -22226,23 +22178,28 @@ function defaults(userSettings, defaults) {
 
 function tryFunction(it, lookup) {
   //see if it is actually a function
-  if (typeof it === 'function') return it;
+  if (typeof it === 'function') return it; //we know that it isn't a function, but lookup[it] might be, check that here
 
-  //we know that it isn't a function, but lookup[it] might be, check that here
   if (typeof lookup === 'undefined' || !lookup.hasOwnProperty(it)) return null;
-
   return lookup[it];
 }
 
 function flattenData(data) {
   var dim = data[0][0].length,
-    result = {vertices: [], holes: [], dimensions: dim},
-    holeIndex = 0;
+      result = {
+    vertices: [],
+    holes: [],
+    dimensions: dim
+  },
+      holeIndex = 0;
 
   for (var i = 0; i < data.length; i++) {
     for (var j = 0; j < data[i].length; j++) {
-      for (var d = 0; d < dim; d++) result.vertices.push(data[i][j][d]);
+      for (var d = 0; d < dim; d++) {
+        result.vertices.push(data[i][j][d]);
+      }
     }
+
     if (i > 0) {
       holeIndex += data[i - 1].length;
       result.holes.push(holeIndex);
@@ -22250,36 +22207,29 @@ function flattenData(data) {
   }
 
   return result;
-}
-
-
-// -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
+} // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
 // -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
+
+
 function latLonToPixel(latitude, longitude) {
   var pi180 = Math.PI / 180.0,
-    pi4 = Math.PI * 4,
-    sinLatitude = Math.sin(latitude * pi180),
-    pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
-    pixelX = ((longitude + 180) / 360) * 256;
-
-  return {x: pixelX, y: pixelY};
+      pi4 = Math.PI * 4,
+      sinLatitude = Math.sin(latitude * pi180),
+      pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / pi4) * 256,
+      pixelX = (longitude + 180) / 360 * 256;
+  return {
+    x: pixelX,
+    y: pixelY
+  };
 }
 
 function glslMin(src) {
-  return '"' +
-    src
-    //remove possible pointless windows character
-      .replace(/\r/g, '')
-      //remove comments
-      .replace(/[/][/].*\n/g, '')
-      //remove line breaks
-      .replace(/\n/g, '')
-      //remove tabs
-      .replace(/\t+/g, ' ')
-      //remove big spaces
-      .replace(/\s\s+|\t/g, ' ')
-
-    + '"';
+  return '"' + src //remove possible pointless windows character
+  .replace(/\r/g, '') //remove comments
+  .replace(/[/][/].*\n/g, '') //remove line breaks
+  .replace(/\n/g, '') //remove tabs
+  .replace(/\t+/g, ' ') //remove big spaces
+  .replace(/\s\s+|\t/g, ' ') + '"';
 }
 
 function pointInCircle(centerPoint, checkPoint, radius) {
@@ -22288,11 +22238,12 @@ function pointInCircle(centerPoint, checkPoint, radius) {
 }
 
 module.exports = {
-  defaults,
-  tryFunction,
-  glslMin,
-  pointInCircle,
-  flattenData,
-  latLonToPixel
+  defaults: defaults,
+  tryFunction: tryFunction,
+  glslMin: glslMin,
+  pointInCircle: pointInCircle,
+  flattenData: flattenData,
+  latLonToPixel: latLonToPixel
 };
+
 },{}]},{},[12]);
