@@ -31,7 +31,8 @@ var Points = function Points(settings) {
     canvas.className += ' ' + settings.className;
   }
 
-  this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
+  this.gl = canvas.getContext('webgl',{preserveDrawingBuffer}) || canvas.getContext('experimental-webgl',{preserveDrawingBuffer});
 
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
