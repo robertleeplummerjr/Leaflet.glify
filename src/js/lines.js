@@ -26,7 +26,7 @@ var Lines = function Lines(settings) {
     canvas.className += ' ' + settings.className;
   }
 
-  this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  this.gl = canvas.getContext('webgl',{preserveDrawingBuffer: settings.preserveDrawingBuffer}) || canvas.getContext('experimental-webgl',{preserveDrawingBuffer: settings.preserveDrawingBuffer});
 
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
