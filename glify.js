@@ -21104,7 +21104,12 @@ var Lines = function Lines(settings) {
     canvas.className += ' ' + settings.className;
   }
 
-  this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
+  this.gl = canvas.getContext('webgl', {
+    preserveDrawingBuffer: preserveDrawingBuffer
+  }) || canvas.getContext('experimental-webgl', {
+    preserveDrawingBuffer: preserveDrawingBuffer
+  });
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
   this.vertexShader = null;
@@ -21517,7 +21522,12 @@ var Points = function Points(settings) {
     canvas.className += ' ' + settings.className;
   }
 
-  this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
+  this.gl = canvas.getContext('webgl', {
+    preserveDrawingBuffer: preserveDrawingBuffer
+  }) || canvas.getContext('experimental-webgl', {
+    preserveDrawingBuffer: preserveDrawingBuffer
+  });
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
   this.vertexShader = null;
@@ -21883,7 +21893,12 @@ var Shapes = function Shapes(settings) {
     canvas.className += ' ' + settings.className;
   }
 
-  this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
+  this.gl = canvas.getContext('webgl', {
+    preserveDrawingBuffer: preserveDrawingBuffer
+  }) || canvas.getContext('experimental-webgl', {
+    preserveDrawingBuffer: preserveDrawingBuffer
+  });
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
   this.vertexShader = null;

@@ -1,6 +1,6 @@
 {
   "name": "leaflet.glify",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "web gl renderer plugin for leaflet",
   "main": "src/js/index.js",
   "files": ["/src"],

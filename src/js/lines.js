@@ -26,7 +26,8 @@ var Lines = function Lines(settings) {
     canvas.className += ' ' + settings.className;
   }
 
-  this.gl = canvas.getContext('webgl',{preserveDrawingBuffer: settings.preserveDrawingBuffer}) || canvas.getContext('experimental-webgl',{preserveDrawingBuffer: settings.preserveDrawingBuffer});
+  var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
+  this.gl = canvas.getContext('webgl',{preserveDrawingBuffer}) || canvas.getContext('experimental-webgl',{preserveDrawingBuffer});
 
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
@@ -125,7 +126,7 @@ Lines.prototype = {
         verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
       }
 
-      allVertices = allVertices.concat(verticesDuplicated); 
+      allVertices = allVertices.concat(verticesDuplicated);
     });
 
     this.verts = allVertices;

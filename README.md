@@ -52,7 +52,10 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a shape
 * `color` `{Function|Object|String}` optional, default is 'random'
   * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being colored
+* `opacity` {Number} a value from 0 to 1, default is 0.5
 * `className` {String} a class name applied to canvas, default is ''
+* `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
+  * CAUTION: May cause performance issue with large data sets.
 
 ## `L.glify.points` Options
 * `map` `{Object}` required leaflet map
@@ -65,7 +68,22 @@ L.glify.lines({
 * `opacity` {Number} a value from 0 to 1, default is 0.8
 * `className` {String} a class name applied to canvas, default is ''
 * `size` {Number|Function} pixel size of point
-* `sensitivity` {Number} exagurates the size of the clickable area to make it easier to click a point
+* `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a point
+* `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
+  * CAUTION: May cause performance issue with large data sets.
+
+## `L.glify.lines` Options
+* `map` `{Object}` required leaflet map
+* `data` `{Object}` required geojson data
+* `vertexShaderSource` `{String|Function}` optional glsl vertex shader source, defaults to use `L.glify.shader.vertex`
+* `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.point`
+* `click` `{Function}` optional event handler for clicking a point
+* `color` `{Function|Object|String}` optional, default is 'random'
+  * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `point`:`array` that is being colored 
+* `opacity` {Number} a value from 0 to 1, default is 0.5
+* `className` {String} a class name applied to canvas, default is ''
+* `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
+  * CAUTION: May cause performance issue with large data sets. 
 
 ## `L.glify` methods
 * `longitudeFirst()`
