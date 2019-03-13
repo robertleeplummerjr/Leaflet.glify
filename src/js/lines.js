@@ -385,7 +385,7 @@ Lines.tryClick = function(e, map) {
   if (instance) {
     instance.settings.click(e, foundFeature);
   } else {
-    return false;
+    return;
   }
 };
 
