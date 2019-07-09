@@ -6,8 +6,8 @@ var mapMatrix = require('./map-matrix');
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
 var Shapes = function Shapes(settings) {
-  Shapes.instances.push(this);
-  this.settings = utils.defaults(settings, Shapes.defaults);
+  Shapes.instances.push(this); // manages shapes instances
+  this.settings = utils.defaults(settings, Shapes.defaults); // sets setting andfilters out uneeded settings
 
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
@@ -15,11 +15,11 @@ var Shapes = function Shapes(settings) {
   this.active = true;
 
   var self = this,
-    glLayer = this.glLayer = canvasOverlay(function() {
+    glLayer = this.glLayer = canvasOverlay(function() { // creates gl  layr
         self.drawOnCanvas();
       })
-      .addTo(settings.map),
-    canvas = this.canvas = glLayer.canvas;
+      .addTo(settings.map), // then adds this layer to the settings map
+    canvas = this.canvas = glLayer.canvas; 
 
   canvas.width = canvas.clientWidth;
   canvas.height = canvas.clientHeight;
@@ -29,6 +29,8 @@ var Shapes = function Shapes(settings) {
   }
 
   var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
+
+  //this creates a webgl context for the canvas that was initiated before
   this.gl = canvas.getContext('webgl',{preserveDrawingBuffer}) || canvas.getContext('experimental-webgl',{preserveDrawingBuffer});
 
   this.pixelsToWebGLMatrix = new Float32Array(16);
@@ -38,6 +40,7 @@ var Shapes = function Shapes(settings) {
   this.program = null;
   this.matrix = null;
   this.verts = null;
+  //this.vertLines = null;
   this.latLngLookup = null;
   this.polygonLookup = null;
 
@@ -80,12 +83,12 @@ Shapes.prototype = {
   setup: function () {
     var settings = this.settings;
     if (settings.click) {
-      settings.setupClick(settings.map);
+      settings.setupClick(settings.map); // not sure hat this does
     }
 
     return this
-      .setupVertexShader()
-      .setupFragmentShader()
+      .setupVertexShader() 
+      .setupFragmentShader() 
       .setupProgram();
   },
   /**
@@ -117,7 +120,8 @@ Shapes.prototype = {
     gl.enableVertexAttribArray(vertex);
 
     //  gl.disable(gl.DEPTH_TEST);
-    // ----------------------------
+
+8    // ----------------------------
     // look up the locations for the inputs to our shaders.
     this.matrix = gl.getUniformLocation(program, 'matrix');
     gl.aPointSize = gl.getAttribLocation(program, 'pointSize');
@@ -143,10 +147,12 @@ Shapes.prototype = {
    */
   resetVertices: function () {
     this.verts = [];
+    this.vertsLines = new Array;
     this.polygonLookup = new PolygonLookup();
 
     var pixel,
       verts = this.verts,
+      vertsLines = this.vertLines,
       polygonLookup = this.polygonLookup,
       index,
       settings = this.settings,
@@ -165,7 +171,7 @@ Shapes.prototype = {
       i;
 
     polygonLookup.loadFeatureCollection(data);
-
+    
     if (color === null) {
       throw new Error('color is not properly defined');
     } else if (typeof color === 'function') {
@@ -176,7 +182,7 @@ Shapes.prototype = {
     // -- data
     for (; featureIndex < featureMax; featureIndex++) {
       feature = features[featureIndex];
-      //***
+      //*** -- Plot each Polygon into several triangles for drawing
       triangles = [];
 
       //use colorFn function here if it exists
@@ -184,21 +190,61 @@ Shapes.prototype = {
         color = colorFn(featureIndex, feature);
       }
 
-      flat = utils.flattenData(feature.geometry.coordinates);
+      if(feature.geometry.type === "MultiPolygon"){
+        flat = utils.flattenMultiPolyData(feature.geometry.coordinates);
 
-      indices = earcut(flat.vertices, flat.holes, flat.dimensions);
+      }else if(feature.geometry.type === "Polygon"){
+        flat = utils.flattenData(feature.geometry.coordinates);
+        flat.vertices = [flat.vertices];
+        flat.holes = [flat.holes];
 
-      dim = feature.geometry.coordinates[0][0].length;
-      for (i = 0, iMax = indices.length; i < iMax; i++) {
-        index = indices[i];
-        triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
+      }else {
+        console.log("Geometry Type not yet supported by Shapes for feaure, skipping: " + JSON.stringify(feature));
+        continue;
       }
 
-      for (i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = utils.latLonToPixel(triangles[i++],triangles[i++]);
-        verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+      // if(flat.vertices.length > 1){ // log all parcels that have multiple polygons
+      //   console.log("Parcel with multiple polygons found: " + feature.properties.parcelpin); // this is specific to our data
+      //   console.log("Vertices: " + JSON.stringify(flat.vertices));
+      //   console.log("Holes: " + JSON.stringify(flat.holes));
+      //   console.log("Dim: " + flat.dimensions);
+      //   console.log("indices: " + JSON.stringify(indices));  // earcut
+      // }
+
+      for(var j = 0; j < flat.vertices.length; j++ ){ // this is based on number of polygons in a multipolygon
+
+        indices = earcut(flat.vertices[j], flat.holes[j], flat.dimensions);
+
+        dim = feature.geometry.coordinates[0][0][0].length;
+
+        for (i = 0, iMax = indices.length; i < iMax; i++) {
+          index = indices[i];
+          triangles.push(flat.vertices[j][index * dim + settings.longitudeKey], flat.vertices[j][index * dim + settings.latitudeKey]);
+        }
+        for (i = 0, iMax = triangles.length; i < iMax; i) {
+          pixel = utils.latLonToPixel(triangles[i++],triangles[i++]);
+          verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+        }
+
+        // get line coordinates again according to the original latitude and lng info
+        lines = [];
+
+        for(i = 1, iMax = flat.vertices[j].length; i < iMax; i = i + 2){
+          lines.push(flat.vertices[j][i], flat.vertices[j][i-1]);
+          lines.push(flat.vertices[j][i+2], flat.vertices[j][i+1]);
+        }
+
+        for(i=0, iMax=lines.length; i < iMax; i){
+          pixel = utils.latLonToPixel(lines[i++],lines[i++]);
+          this.vertsLines.push(pixel.x, pixel.y, color.r, color.g, color.b);
+        }
       }
     }
+
+    // console.log("num points: " + (this.vertsLines.length/5));
+    // console.log("verts : " + JSON.stringify(verts));
+    // console.log("vertlines : " + JSON.stringify(this.vertsLines));
+    // console.log("lines : " + JSON.stringify(lines));
 
     return this;
   },
@@ -206,16 +252,17 @@ Shapes.prototype = {
    *
    * @returns {Shapes}
    */
-  setupVertexShader: function () {
+  setupVertexShader: function () {  // self explanatory. A vertex shader 
     var gl = this.gl,
       settings = this.settings,
+      //hmm i guess the vertex shader can be a function, so you could pass a string into it
       vertexShaderSource = typeof settings.vertexShaderSource === 'function' ? settings.vertexShaderSource() : settings.vertexShaderSource,
       vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
     gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
 
-    this.vertexShader = vertexShader;
+    this.vertexShader = vertexShader; // the vertex shader is created 
 
     return this;
   },
@@ -293,8 +340,61 @@ Shapes.prototype = {
     gl.vertexAttrib1f(gl.aPointSize, pointSize);
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-    gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
 
+    // gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
+
+    // LINES LINE_LOOP LINE_STRIP TRIANGLES TRIANGE_FAN
+
+    //================ DRAW LINE =================
+    var vertsLines = this.vertsLines,
+        vertexBuffer = gl.createBuffer(),
+        vertArray = new Float32Array(vertsLines),
+        size = vertArray.BYTES_PER_ELEMENT,
+        program = this.program,
+        vertex = gl.getAttribLocation(program, 'vertex'),
+        opacity = gl.getUniformLocation(program, 'opacity');
+
+    gl.uniform1f(opacity, 1);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
+
+    if (settings.shaderVars !== null) {
+      settings.attachShaderVars(size, gl, program, settings.shaderVars);
+    }
+
+    gl.vertexAttribPointer(vertex, 3, gl.FLOAT, false, size *5, 0);
+    gl.enableVertexAttribArray(vertex);
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.viewport(0,0,canvas.width, canvas.height);
+    //console.log("this is verLines: "  + this.vertsLines);
+    gl.drawArrays(gl.LINES, 0, this.vertsLines.length/5);
+
+    //================Now draw the Triangles ================
+    var verts = this.verts,
+        vertexBuffer = gl.createBuffer(),
+        vertArray = new Float32Array(verts),
+        size = vertArray.BYTES_PER_ELEMENT,
+        program = this.program,
+        vertex = gl.getAttribLocation(program, 'vertex'),
+        opacity = gl.getUniformLocation(program, 'opacity');
+    gl.uniform1f(opacity, this.settings.opacity);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
+
+    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size *5, 0);
+    gl.enableVertexAttribArray(vertex);
+
+    if (settings.shaderVars !== null) {
+      settings.attachShaderVars(size, gl, program, settings.shaderVars);
+    }
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.viewport(0,0,canvas.width, canvas.height);
+
+    gl.drawArrays(gl.TRIANGLES, 0, this.verts.length/5);
     return this;
   },
 
@@ -332,6 +432,7 @@ Shapes.tryClick = function(e, map) {
     if (!settings.click) return;
 
     feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+    //console.log("lng: " + e.latlng.lng + " lat: " + e.latlng.lat);
     if (feature !== undefined) {
       result = settings.click(e, feature);
     }

@@ -19,6 +19,29 @@ function tryFunction(it, lookup) {
   return lookup[it];
 }
 
+function flattenMultiPolyData(data) {
+  var dim = data[0][0][0].length,
+    result = {vertices: [], holes: [], dimensions: dim},
+    holeIndex = 0, 
+    polygonCount;
+    for(polygonCount = 0; polygonCount < data.length; polygonCount++){ 
+      result.vertices[polygonCount] = [];
+      result.holes[polygonCount] = [];
+    }
+  for (var i = 0; i < data.length; i++) { // i is the number of polygons
+    for (var j = 0; j < data[i].length; j++) { // j is the number of holes in the polygon
+      for(var k = 0; k < data[i][j].length; k++ ){ // k is the number of points in the polygon
+        for (var d = 0; d < dim; d++) result.vertices[i].push(data[i][j][k][d]); // d is the dimensions of the points
+      } 
+    if (j > 0) { 
+      holeIndex += data[i][j - 1].length;
+      result.holes[i].push(holeIndex);
+    }
+    }
+  }
+  return result;
+}
+
 function flattenData(data) {
   var dim = data[0][0].length,
     result = {vertices: [], holes: [], dimensions: dim},
@@ -78,5 +101,6 @@ module.exports = {
   glslMin,
   pointInCircle,
   flattenData,
+  flattenMultiPolyData,
   latLonToPixel
 };
