@@ -59,6 +59,7 @@ Shapes.defaults = {
   fragmentShaderSource: null,
   click: null,
   color: 'random',
+  border: false,
   className: '',
   opacity: 0.5,
   shaderVars: {
@@ -160,6 +161,7 @@ Shapes.prototype = {
       feature,
       colorFn,
       color = settings.color,
+      border = settings.border,
       featureIndex = 0,
       featureMax = features.length,
       triangles,
@@ -202,14 +204,6 @@ Shapes.prototype = {
         continue;
       }
 
-      // if(flat.vertices.length > 1){ // log all parcels that have multiple polygons
-      //   console.log("Parcel with multiple polygons found: " + feature.properties.parcelpin); // this is specific to our data
-      //   console.log("Vertices: " + JSON.stringify(flat.vertices));
-      //   console.log("Holes: " + JSON.stringify(flat.holes));
-      //   console.log("Dim: " + flat.dimensions);
-      //   console.log("indices: " + JSON.stringify(indices));  // earcut
-      // }
-
       for(var j = 0; j < flat.vertices.length; j++ ){ // this is based on number of polygons in a multipolygon
 
         indices = earcut(flat.vertices[j], flat.holes[j], flat.dimensions);
@@ -226,16 +220,18 @@ Shapes.prototype = {
         }
 
         // get line coordinates again according to the original latitude and lng info
-        lines = [];
+        if(border) {
+          lines = [];
 
-        for(i = 1, iMax = flat.vertices[j].length; i < iMax; i = i + 2){
-          lines.push(flat.vertices[j][i], flat.vertices[j][i-1]);
-          lines.push(flat.vertices[j][i+2], flat.vertices[j][i+1]);
-        }
+          for(i = 1, iMax = flat.vertices[j].length; i < iMax; i = i + 2){
+            lines.push(flat.vertices[j][i], flat.vertices[j][i-1]);
+            lines.push(flat.vertices[j][i+2], flat.vertices[j][i+1]);
+          }
 
-        for(i=0, iMax=lines.length; i < iMax; i){
-          pixel = utils.latLonToPixel(lines[i++],lines[i++]);
-          this.vertsLines.push(pixel.x, pixel.y, color.r, color.g, color.b);
+          for(i=0, iMax=lines.length; i < iMax; i){
+            pixel = utils.latLonToPixel(lines[i++],lines[i++]);
+            this.vertsLines.push(pixel.x, pixel.y, color.r, color.g, color.b);
+          }
         }
       }
     }
@@ -314,6 +310,7 @@ Shapes.prototype = {
 
     var gl = this.gl,
       settings = this.settings,
+      border = settings.border,
       canvas = this.canvas,
       map = settings.map,
       pointSize = Math.max(map.getZoom() - 4.0, 1.0),
@@ -343,56 +340,56 @@ Shapes.prototype = {
     // gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
 
     // LINES LINE_LOOP LINE_STRIP TRIANGLES TRIANGE_FAN
-
+    if(border) {
     //================ DRAW LINE =================
-    var vertsLines = this.vertsLines,
-        vertexBuffer = gl.createBuffer(),
-        vertArray = new Float32Array(vertsLines),
-        size = vertArray.BYTES_PER_ELEMENT,
-        program = this.program,
-        vertex = gl.getAttribLocation(program, 'vertex'),
-        opacity = gl.getUniformLocation(program, 'opacity');
+      var vertsLines = this.vertsLines,
+          vertexBuffer = gl.createBuffer(),
+          vertArray = new Float32Array(vertsLines),
+          size = vertArray.BYTES_PER_ELEMENT,
+          program = this.program,
+          vertex = gl.getAttribLocation(program, 'vertex'),
+          opacity = gl.getUniformLocation(program, 'opacity');
 
-    gl.uniform1f(opacity, 1);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
+      gl.uniform1f(opacity, 1);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
 
-    if (settings.shaderVars !== null) {
-      settings.attachShaderVars(size, gl, program, settings.shaderVars);
-    }
+      if (settings.shaderVars !== null) {
+        settings.attachShaderVars(size, gl, program, settings.shaderVars);
+      }
 
-    gl.vertexAttribPointer(vertex, 3, gl.FLOAT, false, size *5, 0);
-    gl.enableVertexAttribArray(vertex);
+      gl.vertexAttribPointer(vertex, 3, gl.FLOAT, false, size *5, 0);
+      gl.enableVertexAttribArray(vertex);
 
-    gl.enable(gl.DEPTH_TEST);
-    gl.viewport(0,0,canvas.width, canvas.height);
-    //console.log("this is verLines: "  + this.vertsLines);
-    gl.drawArrays(gl.LINES, 0, this.vertsLines.length/5);
+      gl.enable(gl.DEPTH_TEST);
+      gl.viewport(0,0,canvas.width, canvas.height);
+      //console.log("this is verLines: "  + this.vertsLines);
+      gl.drawArrays(gl.LINES, 0, this.vertsLines.length/5);
 
-    //================Now draw the Triangles ================
-    var verts = this.verts,
-        vertexBuffer = gl.createBuffer(),
-        vertArray = new Float32Array(verts),
-        size = vertArray.BYTES_PER_ELEMENT,
-        program = this.program,
-        vertex = gl.getAttribLocation(program, 'vertex'),
-        opacity = gl.getUniformLocation(program, 'opacity');
-    gl.uniform1f(opacity, this.settings.opacity);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
+      //================Now draw the Triangles ================
+      var verts = this.verts,
+          vertexBuffer = gl.createBuffer(),
+          vertArray = new Float32Array(verts),
+          size = vertArray.BYTES_PER_ELEMENT,
+          program = this.program,
+          vertex = gl.getAttribLocation(program, 'vertex'),
+          opacity = gl.getUniformLocation(program, 'opacity');
+      gl.uniform1f(opacity, this.settings.opacity);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
 
-    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size *5, 0);
-    gl.enableVertexAttribArray(vertex);
+      gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size *5, 0);
+      gl.enableVertexAttribArray(vertex);
 
-    if (settings.shaderVars !== null) {
-      settings.attachShaderVars(size, gl, program, settings.shaderVars);
-    }
+      if (settings.shaderVars !== null) {
+        settings.attachShaderVars(size, gl, program, settings.shaderVars);
+      }
 
-    gl.enable(gl.DEPTH_TEST);
-    gl.viewport(0,0,canvas.width, canvas.height);
-
+      gl.enable(gl.DEPTH_TEST);
+      gl.viewport(0,0,canvas.width, canvas.height);
+  }
     gl.drawArrays(gl.TRIANGLES, 0, this.verts.length/5);
     return this;
   },
