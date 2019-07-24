@@ -6,8 +6,8 @@ var mapMatrix = require('./map-matrix');
 var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
 var Shapes = function Shapes(settings) {
-  Shapes.instances.push(this); // manages shapes instances
-  this.settings = utils.defaults(settings, Shapes.defaults); // sets setting andfilters out uneeded settings
+  Shapes.instances.push(this);
+  this.settings = utils.defaults(settings, Shapes.defaults);
 
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
@@ -18,7 +18,7 @@ var Shapes = function Shapes(settings) {
     glLayer = this.glLayer = canvasOverlay(function() { // creates gl  layr
         self.drawOnCanvas();
       })
-      .addTo(settings.map), // then adds this layer to the settings map
+      .addTo(settings.map),
     canvas = this.canvas = glLayer.canvas; 
 
   canvas.width = canvas.clientWidth;
@@ -30,7 +30,6 @@ var Shapes = function Shapes(settings) {
 
   var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
 
-  //this creates a webgl context for the canvas that was initiated before
   this.gl = canvas.getContext('webgl',{preserveDrawingBuffer}) || canvas.getContext('experimental-webgl',{preserveDrawingBuffer});
 
   this.pixelsToWebGLMatrix = new Float32Array(16);
@@ -83,7 +82,7 @@ Shapes.prototype = {
   setup: function () {
     var settings = this.settings;
     if (settings.click) {
-      settings.setupClick(settings.map); // not sure hat this does
+      settings.setupClick(settings.map);
     }
 
     return this
