@@ -236,28 +236,22 @@ Shapes.prototype = {
       }
     }
 
-    // console.log("num points: " + (this.vertsLines.length/5));
-    // console.log("verts : " + JSON.stringify(verts));
-    // console.log("vertlines : " + JSON.stringify(this.vertsLines));
-    // console.log("lines : " + JSON.stringify(lines));
-
     return this;
   },
   /**
    *
    * @returns {Shapes}
    */
-  setupVertexShader: function () {  // self explanatory. A vertex shader 
+  setupVertexShader: function () {   
     var gl = this.gl,
       settings = this.settings,
-      //hmm i guess the vertex shader can be a function, so you could pass a string into it
       vertexShaderSource = typeof settings.vertexShaderSource === 'function' ? settings.vertexShaderSource() : settings.vertexShaderSource,
       vertexShader = gl.createShader(gl.VERTEX_SHADER);
 
     gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
 
-    this.vertexShader = vertexShader; // the vertex shader is created 
+    this.vertexShader = vertexShader;  
 
     return this;
   },
