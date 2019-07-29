@@ -21188,21 +21188,24 @@ Lines.prototype = {
     3. Do this for all lines and put all coordinates in array
     */
 
-    var size = 0;
+    var size = verts.length;
     var allVertices = [];
-    verts.map(function (vertices) {
-      var verticesDuplicated = [];
 
-      for (var i = 0; i < vertices.length / 5; i++) {
-        if (i !== 0 && i !== vertices.length / 5 - 1) {
-          verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+    for (var i = 0; i < size; i++) {
+      var vertices = verts[i];
+      var length = vertices.length / 5;
+
+      for (var j = 0; j < length; j++) {
+        var vertexIndex = j * 5;
+
+        if (j !== 0 && j !== length - 1) {
+          allVertices.push(vertices[vertexIndex], vertices[vertexIndex + 1], vertices[vertexIndex + 2], vertices[vertexIndex + 3], vertices[vertexIndex + 4]);
         }
 
-        verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+        allVertices.push(vertices[vertexIndex], vertices[vertexIndex + 1], vertices[vertexIndex + 2], vertices[vertexIndex + 3], vertices[vertexIndex + 4]);
       }
+    }
 
-      allVertices = allVertices.concat(verticesDuplicated);
-    });
     this.verts = allVertices;
     var vertArray = new Float32Array(allVertices);
     size = vertArray.BYTES_PER_ELEMENT;
@@ -21428,7 +21431,7 @@ Lines.tryClick = function (e, map) {
   if (instance) {
     instance.settings.click(e, foundFeature);
   } else {
-    return false;
+    return;
   }
 };
 
