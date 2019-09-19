@@ -92,7 +92,6 @@ L.glify.lines({
 * `points(options)`
 * `shapes(options)`
 * `flattenData(data)`
-* `latLonToPixel(lat, lon)`
 
 
 ## Roadmap

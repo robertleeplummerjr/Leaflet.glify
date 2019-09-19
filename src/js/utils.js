@@ -37,19 +37,6 @@ function flattenData(data) {
   return result;
 }
 
-
-// -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
-// -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
-function latLonToPixel(latitude, longitude) {
-  var pi180 = Math.PI / 180.0,
-    pi4 = Math.PI * 4,
-    sinLatitude = Math.sin(latitude * pi180),
-    pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (pi4)) * 256,
-    pixelX = ((longitude + 180) / 360) * 256;
-
-  return {x: pixelX, y: pixelY};
-}
-
 function glslMin(src) {
   return '"' +
     src
@@ -77,6 +64,5 @@ module.exports = {
   tryFunction,
   glslMin,
   pointInCircle,
-  flattenData,
-  latLonToPixel
+  flattenData
 };
