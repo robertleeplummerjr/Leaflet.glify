@@ -21272,7 +21272,7 @@ Lines.prototype = {
       }
 
       for (i = 0; i < feature.geometry.coordinates.length; i++) {
-        pixel = utils.latLonToPixel(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]);
+        pixel = settings.map.project(L.latLng(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]), 0);
         featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
 
@@ -21345,7 +21345,7 @@ Lines.prototype = {
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
         // -- Scale to current zoom
     scale = Math.pow(2, map.getZoom()),
-        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+        offset = map.project(topLeft, 0),
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
@@ -21658,7 +21658,7 @@ Points.prototype = {
       latLng = data[i];
       key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
       lookup = latLngLookup[key];
-      pixel = utils.latLonToPixel(latLng[latitudeKey], latLng[longitudeKey]);
+      pixel = settings.map.project(L.latLng(latLng[latitudeKey], latLng[longitudeKey]), 0);
 
       if (lookup === undefined) {
         lookup = latLngLookup[key] = [];
@@ -21759,7 +21759,7 @@ Points.prototype = {
         map = settings.map,
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+        offset = map.project(topLeft, 0),
         zoom = map.getZoom(),
         scale = Math.pow(2, zoom),
         mapMatrix = this.mapMatrix,
@@ -22057,7 +22057,7 @@ Shapes.prototype = {
       }
 
       for (i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = utils.latLonToPixel(triangles[i++], triangles[i++]);
+        pixel = settings.map.project(L.latLng(triangles[i++], triangles[i++]), 0);
         verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
     }
@@ -22128,7 +22128,7 @@ Shapes.prototype = {
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
         // -- Scale to current zoom
     scale = Math.pow(2, map.getZoom()),
-        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+        offset = map.project(topLeft, 0),
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
@@ -22230,20 +22230,6 @@ function flattenData(data) {
   }
 
   return result;
-} // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
-// -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
-
-
-function latLonToPixel(latitude, longitude) {
-  var pi180 = Math.PI / 180.0,
-      pi4 = Math.PI * 4,
-      sinLatitude = Math.sin(latitude * pi180),
-      pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / pi4) * 256,
-      pixelX = (longitude + 180) / 360 * 256;
-  return {
-    x: pixelX,
-    y: pixelY
-  };
 }
 
 function glslMin(src) {
@@ -22265,8 +22251,7 @@ module.exports = {
   tryFunction: tryFunction,
   glslMin: glslMin,
   pointInCircle: pointInCircle,
-  flattenData: flattenData,
-  latLonToPixel: latLonToPixel
+  flattenData: flattenData
 };
 
 },{}]},{},[12]);

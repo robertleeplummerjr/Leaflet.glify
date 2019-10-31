@@ -208,7 +208,7 @@ Lines.prototype = {
       }
 
       for (i = 0; i < feature.geometry.coordinates.length; i++) {
-        pixel = utils.latLonToPixel(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]);
+        pixel = settings.map.project(L.latLng(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]), 0);
         featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
 
@@ -290,7 +290,7 @@ Lines.prototype = {
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
     // -- Scale to current zoom
       scale = Math.pow(2, map.getZoom()),
-      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+      offset = map.project(topLeft, 0),
       mapMatrix = this.mapMatrix,
       pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 

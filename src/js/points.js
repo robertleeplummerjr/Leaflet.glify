@@ -169,7 +169,7 @@ Points.prototype = {
       latLng = data[i];
       key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
       lookup = latLngLookup[key];
-      pixel = utils.latLonToPixel(latLng[latitudeKey], latLng[longitudeKey]);
+      pixel = settings.map.project(L.latLng(latLng[latitudeKey], latLng[longitudeKey]), 0);
 
       if (lookup === undefined) {
         lookup = latLngLookup[key] = [];
@@ -280,7 +280,7 @@ Points.prototype = {
       map = settings.map,
       bounds = map.getBounds(),
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+      offset = map.project(topLeft, 0),
       zoom = map.getZoom(),
       scale = Math.pow(2, zoom),
       mapMatrix = this.mapMatrix,
