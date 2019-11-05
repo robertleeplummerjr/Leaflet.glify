@@ -31,8 +31,7 @@ var Points = function Points(settings) {
     canvas.className += ' ' + settings.className;
   }
 
-  var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
-  this.gl = canvas.getContext('webgl',{preserveDrawingBuffer}) || canvas.getContext('experimental-webgl',{preserveDrawingBuffer});
+  this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
@@ -149,7 +148,7 @@ Points.prototype = {
       colorFn,
       color = settings.color,
       i = 0,
-      max = data.length,
+      max = data.hasOwnProperty('features') ? data.features.length : data.length,
       latLngLookup = this.latLngLookup,
       latitudeKey = settings.latitudeKey,
       longitudeKey = settings.longitudeKey,
@@ -166,10 +165,14 @@ Points.prototype = {
     }
 
     for(; i < max; i++) {
-      latLng = data[i];
+      latLng = data.hasOwnProperty('features') ? data.features[i] : data[i];
+      // detect geoJSON points instead of simple flat array of coords
+      if (latLng.hasOwnProperty('geometry')) {
+        latLng = latLng.geometry.coordinates;
+      }
       key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
       lookup = latLngLookup[key];
-      pixel = settings.map.project(L.latLng(latLng[latitudeKey], latLng[longitudeKey]), 0);
+      pixel = utils.latLonToPixel(latLng[latitudeKey], latLng[longitudeKey]);
 
       if (lookup === undefined) {
         lookup = latLngLookup[key] = [];
@@ -280,7 +283,7 @@ Points.prototype = {
       map = settings.map,
       bounds = map.getBounds(),
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-      offset = map.project(topLeft, 0),
+      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
       zoom = map.getZoom(),
       scale = Math.pow(2, zoom),
       mapMatrix = this.mapMatrix,
@@ -299,7 +302,9 @@ Points.prototype = {
     gl.vertexAttrib1f(gl.pointSize, this.pointSize());
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-    gl.drawArrays(gl.POINTS, 0, settings.data.length);
+    if (settings.data.hasOwnProperty('features')) var arrayLength = settings.data.features.length;
+    else var arrayLength = settings.data.length
+    gl.drawArrays(gl.POINTS, 0, arrayLength);
 
     return this;
   },
@@ -350,7 +355,13 @@ Points.prototype = {
     }
 
     //try matches first, if it is empty, try the data, and hope it isn't too big
-    return this.settings.closest(coords, matches.length === 0 ? this.settings.data.slice(0) : matches, this.settings.map);
+    if (this.settings.data.length) var copy = this.settings.data.slice(0);
+    else var copy = [this.settings.data.features[0].geometry.coordinates];
+//console.log(copy)
+// here, we actually want to return an array of all coordinates, which doesn't work for geoJson... 
+// we need something like .collect(&:geometry).collect(&:coordinates)
+// well, we're trying to find nearest neighbors. Maybe if we don't find any matches, we can give up instead of searching ALL points?
+    return this.settings.closest(coords, matches.length === 0 ? copy : matches, this.settings.map);
   },
   remove: function() {
     this.settings.map.removeLayer(this.glLayer);
