@@ -114,20 +114,31 @@ Lines.prototype = {
     [[0,0],[1,1],[2,2]] => [[0,0],[1,1],[1,1],[2,2]]
     3. Do this for all lines and put all coordinates in array
     */
-    var size = 0;
+    var size = verts.length;
     var allVertices = [];
-    verts.map(function (vertices) {
-      var verticesDuplicated = [];
-      for (var i = 0; i < vertices.length / 5; i++) {
-        if (i !== 0 && i !== (vertices.length / 5 - 1)) {
-          verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+    for (var i = 0; i < size; i++) {
+      var vertices = verts[i];
+      var length = vertices.length / 5;
+      for (var j = 0; j < length; j++) {
+        var vertexIndex = j * 5;
+        if (j !== 0 && j !== (length - 1)) {
+          allVertices.push(
+            vertices[vertexIndex],
+            vertices[vertexIndex + 1],
+            vertices[vertexIndex + 2],
+            vertices[vertexIndex + 3],
+            vertices[vertexIndex + 4]
+          );
         }
-
-        verticesDuplicated.push(vertices[i * 5], vertices[i * 5 + 1], vertices[i * 5 + 2], vertices[i * 5 + 3], vertices[i * 5 + 4]);
+        allVertices.push(
+          vertices[vertexIndex],
+          vertices[vertexIndex + 1],
+          vertices[vertexIndex + 2],
+          vertices[vertexIndex + 3],
+          vertices[vertexIndex + 4]
+        );
       }
-
-      allVertices = allVertices.concat(verticesDuplicated);
-    });
+    }
 
     this.verts = allVertices;
 
@@ -197,7 +208,7 @@ Lines.prototype = {
       }
 
       for (i = 0; i < feature.geometry.coordinates.length; i++) {
-        pixel = utils.latLonToPixel(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]);
+        pixel = settings.map.project(L.latLng(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]), 0);
         featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
 
@@ -279,7 +290,7 @@ Lines.prototype = {
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
     // -- Scale to current zoom
       scale = Math.pow(2, map.getZoom()),
-      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+      offset = map.project(topLeft, 0),
       mapMatrix = this.mapMatrix,
       pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 
@@ -385,7 +396,7 @@ Lines.tryClick = function(e, map) {
   if (instance) {
     instance.settings.click(e, foundFeature);
   } else {
-    return false;
+    return;
   }
 };
 
