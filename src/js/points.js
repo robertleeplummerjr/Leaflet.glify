@@ -31,7 +31,8 @@ var Points = function Points(settings) {
     canvas.className += ' ' + settings.className;
   }
 
-  this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  var preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
+  this.gl = canvas.getContext('webgl',{preserveDrawingBuffer}) || canvas.getContext('experimental-webgl',{preserveDrawingBuffer});
 
   this.pixelsToWebGLMatrix = new Float32Array(16);
   this.mapMatrix = mapMatrix();
@@ -166,13 +167,9 @@ Points.prototype = {
 
     for(; i < max; i++) {
       latLng = data.hasOwnProperty('features') ? data.features[i] : data[i];
-      // detect geoJSON points instead of simple flat array of coords
-      if (latLng.hasOwnProperty('geometry')) {
-        latLng = latLng.geometry.coordinates;
-      }
       key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
       lookup = latLngLookup[key];
-      pixel = utils.latLonToPixel(latLng[latitudeKey], latLng[longitudeKey]);
+      pixel = settings.map.project(L.latLng(latLng[latitudeKey], latLng[longitudeKey]), 0);
 
       if (lookup === undefined) {
         lookup = latLngLookup[key] = [];
@@ -283,7 +280,7 @@ Points.prototype = {
       map = settings.map,
       bounds = map.getBounds(),
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+      offset = map.project(topLeft, 0),
       zoom = map.getZoom(),
       scale = Math.pow(2, zoom),
       mapMatrix = this.mapMatrix,
@@ -355,12 +352,9 @@ Points.prototype = {
     }
 
     //try matches first, if it is empty, try the data, and hope it isn't too big
-    if (this.settings.data.length) var copy = this.settings.data.slice(0);
-    else var copy = [this.settings.data.features[0].geometry.coordinates];
-//console.log(copy)
-// here, we actually want to return an array of all coordinates, which doesn't work for geoJson... 
-// we need something like .collect(&:geometry).collect(&:coordinates)
-// well, we're trying to find nearest neighbors. Maybe if we don't find any matches, we can give up instead of searching ALL points?
+    if (this.settings.data.hasOwnProperty('features')) {
+      var copy = this.settings.data.features;
+    } else var copy = this.settings.data.slice(0);
     return this.settings.closest(coords, matches.length === 0 ? copy : matches, this.settings.map);
   },
   remove: function() {

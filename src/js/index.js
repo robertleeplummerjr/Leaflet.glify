@@ -149,8 +149,8 @@ var glify = {
     return Math.sqrt(dx * dx + dy * dy);
   },
   locationDistance: function (location1, location2, map) {
-    var point1 = map.latLngToLayerPoint(location1),
-        point2 = map.latLngToLayerPoint(location2),
+    var point1 = map.latLngToLayerPoint(location1.hasOwnProperty('geometry') ? location1.geometry.coordinates : location1),
+        point2 = map.latLngToLayerPoint(location2.hasOwnProperty('geometry') ? location2.geometry.coordinates : location2),
 
         dx = point1.x - point2.x,
         dy = point1.y - point2.y;
