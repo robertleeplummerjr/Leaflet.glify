@@ -21061,14 +21061,14 @@ var glify = {
   },
   mapMatrix: mapMatrix,
   shader: {
-    vertex: Buffer("dW5pZm9ybSBtYXQ0IG1hdHJpeDsNCmF0dHJpYnV0ZSB2ZWM0IHZlcnRleDsNCmF0dHJpYnV0ZSBmbG9hdCBwb2ludFNpemU7DQphdHRyaWJ1dGUgdmVjNCBjb2xvcjsNCnZhcnlpbmcgdmVjNCBfY29sb3I7DQoNCnZvaWQgbWFpbigpIHsNCiAgLy9zZXQgdGhlIHNpemUgb2YgdGhlIHBvaW50DQogIGdsX1BvaW50U2l6ZSA9IHBvaW50U2l6ZTsNCg0KICAvL211bHRpcGx5IGVhY2ggdmVydGV4IGJ5IGEgbWF0cml4Lg0KICBnbF9Qb3NpdGlvbiA9IG1hdHJpeCAqIHZlcnRleDsNCg0KICAvL3Bhc3MgdGhlIGNvbG9yIHRvIHRoZSBmcmFnbWVudCBzaGFkZXINCiAgX2NvbG9yID0gY29sb3I7DQp9", "base64"),
+    vertex: Buffer("dW5pZm9ybSBtYXQ0IG1hdHJpeDsKYXR0cmlidXRlIHZlYzQgdmVydGV4OwphdHRyaWJ1dGUgZmxvYXQgcG9pbnRTaXplOwphdHRyaWJ1dGUgdmVjNCBjb2xvcjsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICAvL3NldCB0aGUgc2l6ZSBvZiB0aGUgcG9pbnQKICBnbF9Qb2ludFNpemUgPSBwb2ludFNpemU7CgogIC8vbXVsdGlwbHkgZWFjaCB2ZXJ0ZXggYnkgYSBtYXRyaXguCiAgZ2xfUG9zaXRpb24gPSBtYXRyaXggKiB2ZXJ0ZXg7CgogIC8vcGFzcyB0aGUgY29sb3IgdG8gdGhlIGZyYWdtZW50IHNoYWRlcgogIF9jb2xvciA9IGNvbG9yOwp9", "base64"),
     fragment: {
-      dot: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp1bmlmb3JtIHZlYzQgY29sb3I7DQp1bmlmb3JtIGZsb2F0IG9wYWNpdHk7DQoNCnZvaWQgbWFpbigpIHsNCiAgICBmbG9hdCBib3JkZXIgPSAwLjA1Ow0KICAgIGZsb2F0IHJhZGl1cyA9IDAuNTsNCiAgICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41KTsNCg0KICAgIHZlYzQgY29sb3IwID0gdmVjNCgwLjApOw0KICAgIHZlYzQgY29sb3IxID0gdmVjNChjb2xvclswXSwgY29sb3JbMV0sIGNvbG9yWzJdLCBvcGFjaXR5KTsNCg0KICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7DQogICAgZmxvYXQgZGlzdCA9IHJhZGl1cyAtIHNxcnQobS54ICogbS54ICsgbS55ICogbS55KTsNCg0KICAgIGZsb2F0IHQgPSAwLjA7DQogICAgaWYgKGRpc3QgPiBib3JkZXIpIHsNCiAgICAgICAgdCA9IDEuMDsNCiAgICB9IGVsc2UgaWYgKGRpc3QgPiAwLjApIHsNCiAgICAgICAgdCA9IGRpc3QgLyBib3JkZXI7DQogICAgfQ0KDQogICAgLy93b3JrcyBmb3Igb3ZlcmxhcHBpbmcgY2lyY2xlcyBpZiBibGVuZGluZyBpcyBlbmFibGVkDQogICAgZ2xfRnJhZ0NvbG9yID0gbWl4KGNvbG9yMCwgY29sb3IxLCB0KTsNCn0=", "base64"),
-      point: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KdW5pZm9ybSBmbG9hdCBvcGFjaXR5Ow0KDQp2b2lkIG1haW4oKSB7DQogIGZsb2F0IGJvcmRlciA9IDAuMTsNCiAgZmxvYXQgcmFkaXVzID0gMC41Ow0KICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41LCAwLjUpOw0KDQogIHZlYzQgcG9pbnRDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7DQoNCiAgdmVjMiBtID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsNCiAgZmxvYXQgZGlzdDEgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7DQoNCiAgZmxvYXQgdDEgPSAwLjA7DQogIGlmIChkaXN0MSA+IGJvcmRlcikgew0KICAgICAgdDEgPSAxLjA7DQogIH0gZWxzZSBpZiAoZGlzdDEgPiAwLjApIHsNCiAgICAgIHQxID0gZGlzdDEgLyBib3JkZXI7DQogIH0NCg0KICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQNCiAgLy9nbF9GcmFnQ29sb3IgPSBtaXgoY29sb3IwLCBjb2xvcjEsIHQpOw0KDQogIC8vYm9yZGVyDQogIGZsb2F0IG91dGVyQm9yZGVyID0gMC4wNTsNCiAgZmxvYXQgaW5uZXJCb3JkZXIgPSAwLjg7DQogIHZlYzQgYm9yZGVyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDAuNCk7DQogIHZlYzIgdXYgPSBnbF9Qb2ludENvb3JkLnh5Ow0KICB2ZWM0IGNsZWFyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDApOw0KICANCiAgLy8gT2Zmc2V0IHV2IHdpdGggdGhlIGNlbnRlciBvZiB0aGUgY2lyY2xlLg0KICB1diAtPSBjZW50ZXI7DQogIA0KICBmbG9hdCBkaXN0MiA9ICBzcXJ0KGRvdCh1diwgdXYpKTsNCiANCiAgZmxvYXQgdDIgPSAxLjAgKyBzbW9vdGhzdGVwKHJhZGl1cywgcmFkaXVzICsgb3V0ZXJCb3JkZXIsIGRpc3QyKQ0KICAgICAgICAgICAgICAgIC0gc21vb3Roc3RlcChyYWRpdXMgLSBpbm5lckJvcmRlciwgcmFkaXVzLCBkaXN0Mik7DQogDQogIGdsX0ZyYWdDb2xvciA9IG1peChtaXgoYm9yZGVyQ29sb3IsIGNsZWFyQ29sb3IsIHQyKSwgcG9pbnRDb2xvciwgdDEpOw0KfQ==", "base64"),
-      puck: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KdW5pZm9ybSBmbG9hdCBvcGFjaXR5Ow0KDQp2b2lkIG1haW4oKSB7DQogIHZlYzIgY2VudGVyID0gdmVjMigwLjUpOw0KICB2ZWMyIHV2ID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsNCiAgZmxvYXQgc21vb3RoaW5nID0gMC4wMDU7DQogIHZlYzQgX2NvbG9yMSA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7DQogIGZsb2F0IHJhZGl1czEgPSAwLjM7DQogIHZlYzQgX2NvbG9yMiA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7DQogIGZsb2F0IHJhZGl1czIgPSAwLjU7DQogIGZsb2F0IGRpc3QgPSBsZW5ndGgodXYpOw0KDQogIC8vU01PT1RIDQogIGZsb2F0IGdhbW1hID0gMi4yOw0KICBjb2xvcjEucmdiID0gcG93KF9jb2xvcjEucmdiLCB2ZWMzKGdhbW1hKSk7DQogIGNvbG9yMi5yZ2IgPSBwb3coX2NvbG9yMi5yZ2IsIHZlYzMoZ2FtbWEpKTsNCg0KICB2ZWM0IHB1Y2sgPSBtaXgoDQogICAgbWl4KA0KICAgICAgX2NvbG9yMSwNCiAgICAgIF9jb2xvcjIsDQogICAgICBzbW9vdGhzdGVwKA0KICAgICAgICByYWRpdXMxIC0gc21vb3RoaW5nLA0KICAgICAgICByYWRpdXMxICsgc21vb3RoaW5nLA0KICAgICAgICBkaXN0DQogICAgICApDQogICAgKSwNCiAgICB2ZWM0KDAsMCwwLDApLA0KICAgICAgc21vb3Roc3RlcCgNCiAgICAgICAgcmFkaXVzMiAtIHNtb290aGluZywNCiAgICAgICAgcmFkaXVzMiArIHNtb290aGluZywNCiAgICAgICAgZGlzdA0KICAgICkNCiAgKTsNCg0KICAvL0dhbW1hIGNvcnJlY3Rpb24gKHByZXZlbnRzIGNvbG9yIGZyaW5nZXMpDQogIHB1Y2sucmdiID0gcG93KHB1Y2sucmdiLCB2ZWMzKDEuMCAvIGdhbW1hKSk7DQogIGdsX0ZyYWdDb2xvciA9IHB1Y2s7DQp9", "base64"),
-      simpleCircle: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KdW5pZm9ybSBmbG9hdCBvcGFjaXR5Ow0KDQp2b2lkIG1haW4oKSB7DQogICAgdmVjNCBjb2xvcjEgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOw0KDQogICAgLy9zaW1wbGUgY2lyY2xlcw0KICAgIGZsb2F0IGQgPSBkaXN0YW5jZSAoZ2xfUG9pbnRDb29yZCwgdmVjMigwLjUsIDAuNSkpOw0KICAgIGlmIChkIDwgMC41ICl7DQogICAgICAgIGdsX0ZyYWdDb2xvciA9IGNvbG9yMTsNCiAgICB9IGVsc2Ugew0KICAgICAgICBkaXNjYXJkOw0KICAgIH0NCn0=", "base64"),
-      square: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KdW5pZm9ybSBmbG9hdCBvcGFjaXR5Ow0KDQp2b2lkIG1haW4oKSB7DQogICAgLy9zcXVhcmVzDQogICAgZ2xfRnJhZ0NvbG9yID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsNCn0=", "base64"),
-      polygon: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp1bmlmb3JtIGZsb2F0IG9wYWNpdHk7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KDQp2b2lkIG1haW4oKSB7DQogIGdsX0ZyYWdDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7DQp9", "base64")
+      dot: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gdmVjNCBjb2xvcjsKdW5pZm9ybSBmbG9hdCBvcGFjaXR5OwoKdm9pZCBtYWluKCkgewogICAgZmxvYXQgYm9yZGVyID0gMC4wNTsKICAgIGZsb2F0IHJhZGl1cyA9IDAuNTsKICAgIHZlYzIgY2VudGVyID0gdmVjMigwLjUpOwoKICAgIHZlYzQgY29sb3IwID0gdmVjNCgwLjApOwogICAgdmVjNCBjb2xvcjEgPSB2ZWM0KGNvbG9yWzBdLCBjb2xvclsxXSwgY29sb3JbMl0sIG9wYWNpdHkpOwoKICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgICBmbG9hdCBkaXN0ID0gcmFkaXVzIC0gc3FydChtLnggKiBtLnggKyBtLnkgKiBtLnkpOwoKICAgIGZsb2F0IHQgPSAwLjA7CiAgICBpZiAoZGlzdCA+IGJvcmRlcikgewogICAgICAgIHQgPSAxLjA7CiAgICB9IGVsc2UgaWYgKGRpc3QgPiAwLjApIHsKICAgICAgICB0ID0gZGlzdCAvIGJvcmRlcjsKICAgIH0KCiAgICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAgIGdsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7Cn0=", "base64"),
+      point: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICBmbG9hdCBib3JkZXIgPSAwLjE7CiAgZmxvYXQgcmFkaXVzID0gMC41OwogIHZlYzIgY2VudGVyID0gdmVjMigwLjUsIDAuNSk7CgogIHZlYzQgcG9pbnRDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7CgogIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgZmxvYXQgZGlzdDEgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogIGZsb2F0IHQxID0gMC4wOwogIGlmIChkaXN0MSA+IGJvcmRlcikgewogICAgICB0MSA9IDEuMDsKICB9IGVsc2UgaWYgKGRpc3QxID4gMC4wKSB7CiAgICAgIHQxID0gZGlzdDEgLyBib3JkZXI7CiAgfQoKICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAvL2dsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7CgogIC8vYm9yZGVyCiAgZmxvYXQgb3V0ZXJCb3JkZXIgPSAwLjA1OwogIGZsb2F0IGlubmVyQm9yZGVyID0gMC44OwogIHZlYzQgYm9yZGVyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDAuNCk7CiAgdmVjMiB1diA9IGdsX1BvaW50Q29vcmQueHk7CiAgdmVjNCBjbGVhckNvbG9yID0gdmVjNCgwLCAwLCAwLCAwKTsKICAKICAvLyBPZmZzZXQgdXYgd2l0aCB0aGUgY2VudGVyIG9mIHRoZSBjaXJjbGUuCiAgdXYgLT0gY2VudGVyOwogIAogIGZsb2F0IGRpc3QyID0gIHNxcnQoZG90KHV2LCB1dikpOwogCiAgZmxvYXQgdDIgPSAxLjAgKyBzbW9vdGhzdGVwKHJhZGl1cywgcmFkaXVzICsgb3V0ZXJCb3JkZXIsIGRpc3QyKQogICAgICAgICAgICAgICAgLSBzbW9vdGhzdGVwKHJhZGl1cyAtIGlubmVyQm9yZGVyLCByYWRpdXMsIGRpc3QyKTsKIAogIGdsX0ZyYWdDb2xvciA9IG1peChtaXgoYm9yZGVyQ29sb3IsIGNsZWFyQ29sb3IsIHQyKSwgcG9pbnRDb2xvciwgdDEpOwp9", "base64"),
+      puck: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41KTsKICB2ZWMyIHV2ID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsKICBmbG9hdCBzbW9vdGhpbmcgPSAwLjAwNTsKICB2ZWM0IF9jb2xvcjEgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwogIGZsb2F0IHJhZGl1czEgPSAwLjM7CiAgdmVjNCBfY29sb3IyID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKICBmbG9hdCByYWRpdXMyID0gMC41OwogIGZsb2F0IGRpc3QgPSBsZW5ndGgodXYpOwoKICAvL1NNT09USAogIGZsb2F0IGdhbW1hID0gMi4yOwogIGNvbG9yMS5yZ2IgPSBwb3coX2NvbG9yMS5yZ2IsIHZlYzMoZ2FtbWEpKTsKICBjb2xvcjIucmdiID0gcG93KF9jb2xvcjIucmdiLCB2ZWMzKGdhbW1hKSk7CgogIHZlYzQgcHVjayA9IG1peCgKICAgIG1peCgKICAgICAgX2NvbG9yMSwKICAgICAgX2NvbG9yMiwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMxIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czEgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgICApCiAgICApLAogICAgdmVjNCgwLDAsMCwwKSwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMyIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czIgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgKQogICk7CgogIC8vR2FtbWEgY29ycmVjdGlvbiAocHJldmVudHMgY29sb3IgZnJpbmdlcykKICBwdWNrLnJnYiA9IHBvdyhwdWNrLnJnYiwgdmVjMygxLjAgLyBnYW1tYSkpOwogIGdsX0ZyYWdDb2xvciA9IHB1Y2s7Cn0=", "base64"),
+      simpleCircle: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIHZlYzQgY29sb3IxID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKCiAgICAvL3NpbXBsZSBjaXJjbGVzCiAgICBmbG9hdCBkID0gZGlzdGFuY2UgKGdsX1BvaW50Q29vcmQsIHZlYzIoMC41LCAwLjUpKTsKICAgIGlmIChkIDwgMC41ICl7CiAgICAgICAgZ2xfRnJhZ0NvbG9yID0gY29sb3IxOwogICAgfSBlbHNlIHsKICAgICAgICBkaXNjYXJkOwogICAgfQp9", "base64"),
+      square: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIC8vc3F1YXJlcwogICAgZ2xfRnJhZ0NvbG9yID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKfQ==", "base64"),
+      polygon: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICBnbF9GcmFnQ29sb3IgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwp9", "base64")
     }
   }
 };
@@ -21139,6 +21139,7 @@ Lines.defaults = {
   color: 'random',
   className: '',
   opacity: 0.5,
+  thickness: 2,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -21340,6 +21341,7 @@ Lines.prototype = {
         settings = this.settings,
         canvas = this.canvas,
         map = settings.map,
+        thickness = settings.thickness,
         pointSize = Math.max(map.getZoom() - 4.0, 4.0),
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
@@ -21347,16 +21349,24 @@ Lines.prototype = {
     scale = Math.pow(2, map.getZoom()),
         offset = map.project(topLeft, 0),
         mapMatrix = this.mapMatrix,
-        pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-
-    mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y);
+        pixelsToWebGLMatrix = this.pixelsToWebGLMatrix,
+        lineScale = map.getZoom() / scale / 10,
+        lineThickness = lineScale * thickness;
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.vertexAttrib1f(gl.aPointSize, pointSize); // -- attach matrix value to 'mapMatrix' uniform in shader
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
-    gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-    gl.drawArrays(gl.LINES, 0, this.verts.length / 5);
+    for (var yOffset = -lineThickness; yOffset < lineThickness; yOffset += lineScale) {
+      for (var xOffset = -lineThickness; xOffset < lineThickness; xOffset += lineScale) {
+        // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
+        mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x + xOffset, -offset.y + yOffset);
+        gl.vertexAttrib1f(gl.aPointSize, pointSize); // -- attach matrix value to 'mapMatrix' uniform in shader
+
+        gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
+        gl.drawArrays(gl.LINES, 0, this.verts.length / 5);
+      }
+    }
+
     return this;
   },
 
@@ -22230,6 +22240,20 @@ function flattenData(data) {
   }
 
   return result;
+} // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
+// -- source : http://build-failed.blogspot.cz/2013/02/displaying-webgl-data-on-google-maps.html
+
+
+function latLonToPixel(latitude, longitude) {
+  var pi180 = Math.PI / 180.0,
+      pi4 = Math.PI * 4,
+      sinLatitude = Math.sin(latitude * pi180),
+      pixelY = (0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / pi4) * 256,
+      pixelX = (longitude + 180) / 360 * 256;
+  return {
+    x: pixelX,
+    y: pixelY
+  };
 }
 
 function glslMin(src) {
@@ -22251,7 +22275,8 @@ module.exports = {
   tryFunction: tryFunction,
   glslMin: glslMin,
   pointInCircle: pointInCircle,
-  flattenData: flattenData
+  flattenData: flattenData,
+  latLonToPixel: latLonToPixel
 };
 
 },{}]},{},[12]);
