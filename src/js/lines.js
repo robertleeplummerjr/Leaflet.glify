@@ -294,21 +294,22 @@ Lines.prototype = {
       scale = Math.pow(2, map.getZoom()),
       offset = map.project(topLeft, 0),
       mapMatrix = this.mapMatrix,
-      pixelsToWebGLMatrix = this.pixelsToWebGLMatrix,
-      lineScale = map.getZoom() / scale / 10,
-      lineThickness = lineScale * thickness;
+      pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
-    for (let yOffset = -lineThickness; yOffset < lineThickness; yOffset += lineScale) {
-      for (let xOffset = -lineThickness; xOffset < lineThickness; xOffset += lineScale) {
+    // Now draw the lines several times, but like a brush, taking advantage of the single pixel line generally used by cards
+    for (let yOffset = -thickness; yOffset < thickness; yOffset++) {
+      for (let xOffset = -thickness; xOffset < thickness; xOffset++) {
         // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
         mapMatrix
           .set(pixelsToWebGLMatrix)
           .scaleMatrix(scale)
-          .translateMatrix(-offset.x + xOffset, -offset.y + yOffset);
+          .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
+
+        gl.viewport(0, 0, canvas.width, canvas.height);
 
         gl.vertexAttrib1f(gl.aPointSize, pointSize);
         // -- attach matrix value to 'mapMatrix' uniform in shader
@@ -352,7 +353,7 @@ Lines.tryClick = function(e, map) {
     var dot = A * C + B * D;
     var len_sq = C * C + D * D;
     var param = -1;
-    if (len_sq != 0) //in case of 0 length line
+    if (len_sq !== 0) //in case of 0 length line
         param = dot / len_sq;
 
     var xx, yy;
