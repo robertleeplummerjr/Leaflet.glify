@@ -21352,10 +21352,10 @@ Lines.prototype = {
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // Now draw the lines several times, but like a brush, taking advantage of the single pixel line generally used by cards
 
-    for (var yOffset = -thickness; yOffset < thickness; yOffset += 2) {
-      for (var xOffset = -thickness; xOffset < thickness; xOffset += 2) {
+    for (var yOffset = -thickness; yOffset < thickness; yOffset += 0.5) {
+      for (var xOffset = -thickness; xOffset < thickness; xOffset += 0.5) {
         // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
         mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x + xOffset / scale, -offset.y + yOffset / scale);
         gl.viewport(0, 0, canvas.width, canvas.height);
