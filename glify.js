@@ -21139,7 +21139,7 @@ Lines.defaults = {
   color: 'random',
   className: '',
   opacity: 0.5,
-  thickness: 2,
+  weight: 2,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -21341,7 +21341,7 @@ Lines.prototype = {
         settings = this.settings,
         canvas = this.canvas,
         map = settings.map,
-        thickness = settings.thickness,
+        weight = settings.weight,
         pointSize = Math.max(map.getZoom() - 4.0, 4.0),
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
@@ -21354,8 +21354,8 @@ Lines.prototype = {
     gl.viewport(0, 0, canvas.width, canvas.height);
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // Now draw the lines several times, but like a brush, taking advantage of the single pixel line generally used by cards
 
-    for (var yOffset = -thickness; yOffset < thickness; yOffset += 0.5) {
-      for (var xOffset = -thickness; xOffset < thickness; xOffset += 0.5) {
+    for (var yOffset = -weight; yOffset < weight; yOffset += 0.5) {
+      for (var xOffset = -weight; xOffset < weight; xOffset += 0.5) {
         // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
         mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x + xOffset / scale, -offset.y + yOffset / scale);
         gl.viewport(0, 0, canvas.width, canvas.height);
