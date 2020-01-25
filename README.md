@@ -85,7 +85,9 @@ L.glify.lines({
 * `className` {String} a class name applied to canvas, default is ''
 * `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets. 
-* `weight` {Number} a value in pixels of how thick lines should be drawn
+* `weight` {Number|Function} a value in pixels of how thick lines should be drawn
+  * When `weight` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being drawn
+  * CAUTION: Zoom of more than 18 will turn weight internally to 1 to prevent WebGL precision rendering issues.
 
 ## `L.glify` methods
 * `longitudeFirst()`
