@@ -184,14 +184,25 @@ Shapes.prototype = {
         color = colorFn(featureIndex, feature);
       }
 
-      flat = utils.flattenData(feature.geometry.coordinates);
-
-      indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-
-      dim = feature.geometry.coordinates[0][0].length;
-      for (i = 0, iMax = indices.length; i < iMax; i++) {
-        index = indices[i];
-        triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
+      if (feature.geometry.type === "MultiPolygon") {
+        for (let num in feature.geometry.coordinates) {
+          let singlePolygonGeometry = feature.geometry.coordinates[num]
+          flat = utils.flattenData(singlePolygonGeometry);
+          indices = earcut(flat.vertices, flat.holes, flat.dimensions);
+          dim = singlePolygonGeometry[0][0].length;
+          for (i = 0, iMax = indices.length; i < iMax; i++) {
+            index = indices[i];
+            triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
+          }
+        }
+      } else {
+        flat = utils.flattenData(feature.geometry.coordinates);
+        indices = earcut(flat.vertices, flat.holes, flat.dimensions);
+        dim = feature.geometry.coordinates[0][0].length;
+        for (i = 0, iMax = indices.length; i < iMax; i++) {
+          index = indices[i];
+          triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
+        }
       }
 
       for (i = 0, iMax = triangles.length; i < iMax; i) {
@@ -199,9 +210,20 @@ Shapes.prototype = {
         verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
     }
-
     return this;
   },
+  trianglesBy: function(geometry) {
+    let triangles = [];
+    flat = utils.flattenData(singlePolygonGeometry);
+    indices = earcut(flat.vertices, flat.holes, flat.dimensions);
+    dim = singlePolygonGeometry[0][0].length;
+    for (i = 0, iMax = indices.length; i < iMax; i++) {
+      index = indices[i];
+      triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
+    }
+    return triangles
+  },
+
   /**
    *
    * @returns {Shapes}
