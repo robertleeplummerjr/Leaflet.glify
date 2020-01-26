@@ -185,6 +185,7 @@ Shapes.prototype = {
       }
 
       if (feature.geometry.type === "MultiPolygon") {
+        //iterate multi-part features as single-[art items
         for (let num in feature.geometry.coordinates) {
           let singlePolygonGeometry = feature.geometry.coordinates[num]
           flat = utils.flattenData(singlePolygonGeometry);
