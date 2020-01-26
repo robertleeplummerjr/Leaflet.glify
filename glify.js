@@ -21249,8 +21249,6 @@ Lines.prototype = {
         feature,
         colorFn,
         color = settings.color,
-        latitudeKey = settings.latitudeKey,
-        longitudeKey = settings.longitudeKey,
         featureIndex = 0,
         featureMax = features.length,
         i;
@@ -21264,19 +21262,36 @@ Lines.prototype = {
 
 
     for (; featureIndex < featureMax; featureIndex++) {
-      feature = features[featureIndex];
-      var featureVerts = []; //use colorFn function here if it exists
+      feature = features[featureIndex]; //use colorFn function here if it exists
 
       if (colorFn) {
         color = colorFn(featureIndex, feature);
       }
 
-      for (i = 0; i < feature.geometry.coordinates.length; i++) {
-        pixel = settings.map.project(L.latLng(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]), 0);
-        featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
-      }
+      if (feature.geometry.type === "MultiLineString") {
+        //iterate multi-part linestring as single-part items
+        for (var num in feature.geometry.coordinates) {
+          var featureVerts = [];
+          var singleLineCoordinates = feature.geometry.coordinates[num];
 
-      verts.push(featureVerts);
+          for (i = 0; i < singleLineCoordinates.length; i++) {
+            pixel = settings.map.project(L.latLng(singleLineCoordinates[i][1], singleLineCoordinates[i][0]), 0);
+            featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+          }
+
+          verts.push(featureVerts);
+        }
+      } else {
+        var _featureVerts = [];
+
+        for (i = 0; i < feature.geometry.coordinates.length; i++) {
+          pixel = settings.map.project(L.latLng(feature.geometry.coordinates[i][1], feature.geometry.coordinates[i][0]), 0);
+
+          _featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+        }
+
+        verts.push(_featureVerts);
+      }
     }
 
     return this;
