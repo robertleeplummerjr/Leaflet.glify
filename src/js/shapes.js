@@ -213,17 +213,6 @@ Shapes.prototype = {
     }
     return this;
   },
-  trianglesBy: function(geometry) {
-    let triangles = [];
-    flat = utils.flattenData(singlePolygonGeometry);
-    indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-    dim = singlePolygonGeometry[0][0].length;
-    for (i = 0, iMax = indices.length; i < iMax; i++) {
-      index = indices[i];
-      triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
-    }
-    return triangles
-  },
 
   /**
    *

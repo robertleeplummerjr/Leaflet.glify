@@ -22048,11 +22048,12 @@ Shapes.prototype = {
       }
 
       if (feature.geometry.type === "MultiPolygon") {
+        //iterate multi-part features as single-[art items
         for (var num in feature.geometry.coordinates) {
-          var _singlePolygonGeometry = feature.geometry.coordinates[num];
-          flat = utils.flattenData(_singlePolygonGeometry);
+          var singlePolygonGeometry = feature.geometry.coordinates[num];
+          flat = utils.flattenData(singlePolygonGeometry);
           indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-          dim = _singlePolygonGeometry[0][0].length;
+          dim = singlePolygonGeometry[0][0].length;
 
           for (i = 0, iMax = indices.length; i < iMax; i++) {
             index = indices[i];
@@ -22077,19 +22078,6 @@ Shapes.prototype = {
     }
 
     return this;
-  },
-  trianglesBy: function trianglesBy(geometry) {
-    var triangles = [];
-    flat = utils.flattenData(singlePolygonGeometry);
-    indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-    dim = singlePolygonGeometry[0][0].length;
-
-    for (i = 0, iMax = indices.length; i < iMax; i++) {
-      index = indices[i];
-      triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
-    }
-
-    return triangles;
   },
 
   /**
