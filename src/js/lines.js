@@ -313,15 +313,13 @@ Lines.prototype = {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.vertexAttrib1f(gl.aPointSize, pointSize);
     if (zoom > 18) {
       mapMatrix
         .set(pixelsToWebGLMatrix)
         .scaleMatrix(scale)
         .translateMatrix(-offset.x, -offset.y);
-
-      gl.viewport(0, 0, canvas.width, canvas.height);
-
-      gl.vertexAttrib1f(gl.aPointSize, pointSize);
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
 
@@ -335,10 +333,6 @@ Lines.prototype = {
             .set(pixelsToWebGLMatrix)
             .scaleMatrix(scale)
             .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
-
-          gl.viewport(0, 0, canvas.width, canvas.height);
-
-          gl.vertexAttrib1f(gl.aPointSize, pointSize);
           // -- attach matrix value to 'mapMatrix' uniform in shader
           gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
 
@@ -360,10 +354,6 @@ Lines.prototype = {
               .set(pixelsToWebGLMatrix)
               .scaleMatrix(scale)
               .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
-
-            gl.viewport(0, 0, canvas.width, canvas.height);
-
-            gl.vertexAttrib1f(gl.aPointSize, pointSize);
             // -- attach matrix value to 'mapMatrix' uniform in shader
             gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
 
