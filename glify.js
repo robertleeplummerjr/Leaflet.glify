@@ -21265,20 +21265,41 @@ Lines.prototype = {
     } // -- data
 
 
-    for (; featureIndex < featureMax; featureIndex++) {
+    var _loop = function _loop() {
       feature = features[featureIndex];
-      var featureVerts = []; //use colorFn function here if it exists
+      featureVerts = [];
+      featureVerts.vertexCount = 0; //use colorFn function here if it exists
 
       if (colorFn) {
         color = colorFn(featureIndex, feature);
       }
 
-      for (i = 0; i < feature.geometry.coordinates.length; i++) {
-        pixel = settings.map.project(L.latLng(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]), 0);
-        featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+      function getFeatureVerts(featureVerts, coordinates) {
+        for (var i = 0; i < coordinates.length; i++) {
+          if (Array.isArray(coordinates[i][0])) {
+            getFeatureVerts(featureVerts, coordinates[i]);
+            continue;
+          }
+
+          pixel = settings.map.project(L.latLng(coordinates[i][latitudeKey], coordinates[i][longitudeKey]), 0);
+          featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+
+          if (i !== 0 && i !== coordinates.length - 1) {
+            featureVerts.vertexCount += 1;
+          }
+
+          featureVerts.vertexCount += 1;
+        }
       }
 
+      getFeatureVerts(featureVerts, feature.geometry.coordinates);
       verts.push(featureVerts);
+    };
+
+    for (; featureIndex < featureMax; featureIndex++) {
+      var featureVerts;
+
+      _loop();
     }
 
     return this;
@@ -21377,11 +21398,12 @@ Lines.prototype = {
         }
       }
     } else if (typeof weight === 'function') {
-      var vertexCount = 0;
+      var allVertexCount = 0;
       var features = this.settings.data.features;
 
       for (var i = 0; i < this.verts.length; i++) {
         var vert = this.verts[i];
+        var vertexCount = vert.vertexCount;
         var weightValue = weight(i, features[i]); // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
 
         for (var _yOffset = -weightValue; _yOffset < weightValue; _yOffset += 0.5) {
@@ -21392,11 +21414,11 @@ Lines.prototype = {
             gl.vertexAttrib1f(gl.aPointSize, pointSize); // -- attach matrix value to 'mapMatrix' uniform in shader
 
             gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-            gl.drawArrays(gl.LINES, vertexCount / 5, (vertexCount + vert.length) / 5);
+            gl.drawArrays(gl.LINES, allVertexCount, vertexCount);
           }
         }
 
-        vertexCount += vert.length * 2 - 10; // number of vertexes is features.length * 2, but not first or last (5 each) in array of each set of features
+        allVertexCount += vertexCount; // number of vertexes is features.length * 2, but not first or last (5 each) in array of each set of features
       }
     }
 
