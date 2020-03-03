@@ -75,6 +75,9 @@
 
     L.glify.points({
       map: map,
+      size: function(i) {
+        return (Math.random() * 17) + 3;
+      },
       click: function (e, point, xy) {
         //set up a standalone popup (use a popup as a layer)
         L.popup()

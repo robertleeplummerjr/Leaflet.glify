@@ -69,6 +69,7 @@ L.glify.lines({
 * `opacity` {Number} a value from 0 to 1, default is 0.8
 * `className` {String} a class name applied to canvas, default is ''
 * `size` {Number|Function} pixel size of point
+  * When `size` is a `Function` its arguments are `index`:`number`, and the `point`:`array` that is being sized
 * `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a point
 * `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets.

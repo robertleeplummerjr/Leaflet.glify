@@ -66,11 +66,21 @@ Points.defaults = {
   className: '',
   sensitivity: 2,
   shaderVars: {
+    vertex: {
+      type: 'FLOAT',
+      start: 0,
+      size: 2,
+    },
     color: {
       type: 'FLOAT',
       start: 2,
       size: 3
-    }
+    },
+    pointSize: {
+      type: 'FLOAT',
+      start: 5,
+      size: 2
+    },
   }
 };
 
@@ -111,12 +121,9 @@ Points.prototype = {
       glLayer = this.glLayer,
       matrix = this.matrix = gl.getUniformLocation(program, 'matrix'),
       opacity = gl.getUniformLocation(program, 'opacity'),
-      vertex = gl.getAttribLocation(program, 'vertex'),
       vertexBuffer = gl.createBuffer(),
       vertexArray = new Float32Array(this.verts),
-      size = vertexArray.BYTES_PER_ELEMENT;
-
-    gl.pointSize = gl.getAttribLocation(program, 'pointSize');
+      byteCount = vertexArray.BYTES_PER_ELEMENT;
 
     //set the matrix to some that makes 1 unit 1 pixel.
     this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
@@ -126,11 +133,9 @@ Points.prototype = {
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
-    gl.enableVertexAttribArray(vertex);
 
     if (settings.shaderVars !== null) {
-      this.settings.attachShaderVars(size, gl, program, settings.shaderVars);
+      this.settings.attachShaderVars(byteCount, gl, program, settings.shaderVars);
     }
 
     glLayer.redraw();
@@ -148,6 +153,8 @@ Points.prototype = {
       data = settings.data,
       colorFn,
       color = settings.color,
+      sizeFn,
+      size = settings.size,
       i = 0,
       max = data.length,
       latLngLookup = this.latLngLookup,
@@ -163,6 +170,13 @@ Points.prototype = {
     } else if (typeof color === 'function') {
       colorFn = color;
       color = undefined;
+    }
+
+    if (size === null) {
+      throw new Error('size is not properly defined');
+    } else if (typeof size === 'function') {
+      sizeFn = size;
+      size = undefined;
     }
 
     for(; i < max; i++) {
@@ -181,8 +195,12 @@ Points.prototype = {
         color = colorFn(i, latLng);
       }
 
-      //-- 2 coord, 3 rgb colors interleaved buffer
-      verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+      if (sizeFn) {
+        size = sizeFn(i, latLng);
+      }
+
+      //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
+      verts.push(pixel.x, pixel.y, color.r, color.g, color.b, size);
       if (settings.eachVertex !== null) {
         settings.eachVertex.call(this, latLng, pixel, color);
       }
@@ -257,14 +275,15 @@ Points.prototype = {
     return this;
   },
 
-  pointSize: function() {
+  pointSize: function(pointIndex) {
     var settings = this.settings,
       map = settings.map,
-      pointSize = settings.size,
+      size = settings.size,
+      pointSize = typeof size === 'function' ? size(pointIndex) : size,
       // -- Scale to current zoom
       zoom = map.getZoom();
 
-    return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize
+    return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize;
   },
 
   /**
@@ -296,8 +315,6 @@ Points.prototype = {
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.vertexAttrib1f(gl.pointSize, this.pointSize());
-    // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
     gl.drawArrays(gl.POINTS, 0, settings.data.length);
 
@@ -394,7 +411,8 @@ Points.tryClick = function(e, map) {
   latLng = L.latLng(found[settings.latitudeKey], found[settings.longitudeKey]);
   xy = map.latLngToLayerPoint(latLng);
 
-  if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
+  const pointIndex = typeof instance.settings.size === 'function' ? instance.settings.data.indexOf(found) : null;
+  if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize(pointIndex) * instance.settings.sensitivity)) {
     result = instance.settings.click(e, found, xy);
     return result !== undefined ? result : true;
   }
