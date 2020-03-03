@@ -21629,7 +21629,14 @@ Points.defaults = {
     color: {
       type: 'FLOAT',
       start: 2,
-      size: 3
+      size: 3,
+	  bytes: 6
+    },
+	pointSize: {
+      type: 'FLOAT',
+      start: 5,
+      size: 1,
+	  bytes: 6
     }
   }
 }; //statics
@@ -21678,7 +21685,7 @@ Points.prototype = {
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
+    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 6, 0);
     gl.enableVertexAttribArray(vertex);
 
     if (settings.shaderVars !== null) {
@@ -21692,12 +21699,16 @@ Points.prototype = {
     //empty verts and repopulate
     this.latLngLookup = {};
     this.verts = []; // -- data
+	this.sizeMap = {};
 
     var verts = this.verts,
+		sizeMap = this.sizeMap,
         settings = this.settings,
         data = settings.data,
         colorFn,
+		sizeFn,
         color = settings.color,
+		size = settings.size,
         i = 0,
         max = data.length,
         latLngLookup = this.latLngLookup,
@@ -21715,6 +21726,13 @@ Points.prototype = {
       color = undefined;
     }
 
+	if (size === null) {
+      size = this.pointSize();
+    }else if(typeof size === 'function'){
+		sizeFn = size;
+		size = undefined;
+	}
+	
     for (; i < max; i++) {
       latLng = data[i];
       key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
@@ -21731,8 +21749,13 @@ Points.prototype = {
         color = colorFn(i, latLng);
       } //-- 2 coord, 3 rgb colors interleaved buffer
 
-
-      verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+	  if(sizeFn){
+		 size = sizeFn(i, latLng);
+		 var indexObj  = parseFloat(latLng[latitudeKey])+"~"+parseFloat(latLng[longitudeKey]);
+		 sizeMap[indexObj] = size;
+	  }
+	  
+      verts.push(pixel.x, pixel.y, color.r, color.g, color.b, size);
 
       if (settings.eachVertex !== null) {
         settings.eachVertex.call(this, latLng, pixel, color);
@@ -21830,7 +21853,6 @@ Points.prototype = {
     mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.vertexAttrib1f(gl.pointSize, this.pointSize()); // -- attach matrix value to 'mapMatrix' uniform in shader
 
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
     gl.drawArrays(gl.POINTS, 0, settings.data.length);
@@ -21920,7 +21942,15 @@ Points.tryClick = function (e, map) {
   latLng = L.latLng(found[settings.latitudeKey], found[settings.longitudeKey]);
   xy = map.latLngToLayerPoint(latLng);
 
-  if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
+  var ptSize = 0;
+  if(typeof instance.pointSize() === 'function'){
+	  var indexObj  = parseFloat(found[settings.latitudeKey])+"~"+parseFloat(found[settings.longitudeKey]);
+	  ptSize = instance.sizeMap[indexObj] ? instance.sizeMap[indexObj] : 0;
+  }else{
+	  ptSize = instance.pointSize();
+  }
+  
+  if (utils.pointInCircle(xy, e.layerPoint, ptSize * instance.settings.sensitivity)) {
     result = instance.settings.click(e, found, xy);
     return result !== undefined ? result : true;
   }
