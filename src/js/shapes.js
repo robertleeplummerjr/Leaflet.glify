@@ -195,7 +195,7 @@ Shapes.prototype = {
       }
 
       for (i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = utils.latLonToPixel(triangles[i++],triangles[i++]);
+        pixel = settings.map.project(L.latLng(triangles[i++],triangles[i++]), 0);
         verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
     }
@@ -275,7 +275,7 @@ Shapes.prototype = {
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
     // -- Scale to current zoom
       scale = Math.pow(2, map.getZoom()),
-      offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+      offset = map.project(topLeft, 0),
       mapMatrix = this.mapMatrix,
       pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 

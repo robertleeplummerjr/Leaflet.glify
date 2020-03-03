@@ -66,7 +66,8 @@ function toByteArray (b64) {
     ? validLen - 4
     : validLen
 
-  for (var i = 0; i < len; i += 4) {
+  var i
+  for (i = 0; i < len; i += 4) {
     tmp =
       (revLookup[b64.charCodeAt(i)] << 18) |
       (revLookup[b64.charCodeAt(i + 1)] << 12) |
@@ -165,6 +166,10 @@ function fromByteArray (uint8) {
 
 var base64 = require('base64-js')
 var ieee754 = require('ieee754')
+var customInspectSymbol =
+  (typeof Symbol === 'function' && typeof Symbol.for === 'function')
+    ? Symbol.for('nodejs.util.inspect.custom')
+    : null
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -201,7 +206,9 @@ function typedArraySupport () {
   // Can typed array instances can be augmented?
   try {
     var arr = new Uint8Array(1)
-    arr.__proto__ = { __proto__: Uint8Array.prototype, foo: function () { return 42 } }
+    var proto = { foo: function () { return 42 } }
+    Object.setPrototypeOf(proto, Uint8Array.prototype)
+    Object.setPrototypeOf(arr, proto)
     return arr.foo() === 42
   } catch (e) {
     return false
@@ -230,7 +237,7 @@ function createBuffer (length) {
   }
   // Return an augmented `Uint8Array` instance
   var buf = new Uint8Array(length)
-  buf.__proto__ = Buffer.prototype
+  Object.setPrototypeOf(buf, Buffer.prototype)
   return buf
 }
 
@@ -280,7 +287,7 @@ function from (value, encodingOrOffset, length) {
   }
 
   if (value == null) {
-    throw TypeError(
+    throw new TypeError(
       'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
       'or Array-like Object. Received type ' + (typeof value)
     )
@@ -332,8 +339,8 @@ Buffer.from = function (value, encodingOrOffset, length) {
 
 // Note: Change prototype *after* Buffer.from is defined to workaround Chrome bug:
 // https://github.com/feross/buffer/pull/148
-Buffer.prototype.__proto__ = Uint8Array.prototype
-Buffer.__proto__ = Uint8Array
+Object.setPrototypeOf(Buffer.prototype, Uint8Array.prototype)
+Object.setPrototypeOf(Buffer, Uint8Array)
 
 function assertSize (size) {
   if (typeof size !== 'number') {
@@ -437,7 +444,8 @@ function fromArrayBuffer (array, byteOffset, length) {
   }
 
   // Return an augmented `Uint8Array` instance
-  buf.__proto__ = Buffer.prototype
+  Object.setPrototypeOf(buf, Buffer.prototype)
+
   return buf
 }
 
@@ -759,6 +767,9 @@ Buffer.prototype.inspect = function inspect () {
   if (this.length > max) str += ' ... '
   return '<Buffer ' + str + '>'
 }
+if (customInspectSymbol) {
+  Buffer.prototype[customInspectSymbol] = Buffer.prototype.inspect
+}
 
 Buffer.prototype.compare = function compare (target, start, end, thisStart, thisEnd) {
   if (isInstance(target, Uint8Array)) {
@@ -884,7 +895,7 @@ function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
         return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset)
       }
     }
-    return arrayIndexOf(buffer, [ val ], byteOffset, encoding, dir)
+    return arrayIndexOf(buffer, [val], byteOffset, encoding, dir)
   }
 
   throw new TypeError('val must be string, number or Buffer')
@@ -1213,7 +1224,7 @@ function hexSlice (buf, start, end) {
 
   var out = ''
   for (var i = start; i < end; ++i) {
-    out += toHex(buf[i])
+    out += hexSliceLookupTable[buf[i]]
   }
   return out
 }
@@ -1250,7 +1261,8 @@ Buffer.prototype.slice = function slice (start, end) {
 
   var newBuf = this.subarray(start, end)
   // Return an augmented `Uint8Array` instance
-  newBuf.__proto__ = Buffer.prototype
+  Object.setPrototypeOf(newBuf, Buffer.prototype)
+
   return newBuf
 }
 
@@ -1739,6 +1751,8 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
     }
   } else if (typeof val === 'number') {
     val = val & 255
+  } else if (typeof val === 'boolean') {
+    val = Number(val)
   }
 
   // Invalid ranges are not set to a default, so can range check early.
@@ -1794,11 +1808,6 @@ function base64clean (str) {
     str = str + '='
   }
   return str
-}
-
-function toHex (n) {
-  if (n < 16) return '0' + n.toString(16)
-  return n.toString(16)
 }
 
 function utf8ToBytes (string, units) {
@@ -1931,6 +1940,20 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
+// Create lookup table for `toString('hex')`
+// See: https://github.com/feross/buffer/issues/219
+var hexSliceLookupTable = (function () {
+  var alphabet = '0123456789abcdef'
+  var table = new Array(256)
+  for (var i = 0; i < 16; ++i) {
+    var i16 = i * 16
+    for (var j = 0; j < 16; ++j) {
+      table[i16 + j] = alphabet[i] + alphabet[j]
+    }
+  }
+  return table
+})()
+
 }).call(this,require("buffer").Buffer)
 },{"base64-js":1,"buffer":2,"ieee754":4}],3:[function(require,module,exports){
 'use strict';
@@ -2059,7 +2082,7 @@ function earcutLinked(ear, triangles, dim, minX, minY, invSize, pass) {
 
             // if this didn't work, try curing all small self-intersections locally
             } else if (pass === 1) {
-                ear = cureLocalIntersections(ear, triangles, dim);
+                ear = cureLocalIntersections(filterPoints(ear), triangles, dim);
                 earcutLinked(ear, triangles, dim, minX, minY, invSize, 2);
 
             // as a last resort, try splitting the remaining polygon into two
@@ -2166,7 +2189,7 @@ function cureLocalIntersections(start, triangles, dim) {
         p = p.next;
     } while (p !== start);
 
-    return p;
+    return filterPoints(p);
 }
 
 // try splitting polygon into two and triangulate them independently
@@ -2228,6 +2251,9 @@ function eliminateHole(hole, outerNode) {
     outerNode = findHoleBridge(hole, outerNode);
     if (outerNode) {
         var b = splitPolygon(outerNode, hole);
+
+        // filter collinear points around the cuts
+        filterPoints(outerNode, outerNode.next);
         filterPoints(b, b.next);
     }
 }
@@ -2259,7 +2285,7 @@ function findHoleBridge(hole, outerNode) {
 
     if (!m) return null;
 
-    if (hx === qx) return m.prev; // hole touches outer segment; pick lower endpoint
+    if (hx === qx) return m; // hole touches outer segment; pick leftmost endpoint
 
     // look for points inside the triangle of hole point, segment intersection and endpoint;
     // if there are no points found, we have a valid connection;
@@ -2271,24 +2297,30 @@ function findHoleBridge(hole, outerNode) {
         tanMin = Infinity,
         tan;
 
-    p = m.next;
+    p = m;
 
-    while (p !== stop) {
+    do {
         if (hx >= p.x && p.x >= mx && hx !== p.x &&
                 pointInTriangle(hy < my ? hx : qx, hy, mx, my, hy < my ? qx : hx, hy, p.x, p.y)) {
 
             tan = Math.abs(hy - p.y) / (hx - p.x); // tangential
 
-            if ((tan < tanMin || (tan === tanMin && p.x > m.x)) && locallyInside(p, hole)) {
+            if (locallyInside(p, hole) &&
+                (tan < tanMin || (tan === tanMin && (p.x > m.x || (p.x === m.x && sectorContainsSector(m, p)))))) {
                 m = p;
                 tanMin = tan;
             }
         }
 
         p = p.next;
-    }
+    } while (p !== stop);
 
     return m;
+}
+
+// whether sector in vertex m contains sector in vertex p in the same coordinates
+function sectorContainsSector(m, p) {
+    return area(m.prev, m, p.prev) < 0 && area(p.next, m, m.next) < 0;
 }
 
 // interlink polygon nodes in z-order
@@ -2400,8 +2432,10 @@ function pointInTriangle(ax, ay, bx, by, cx, cy, px, py) {
 
 // check if a diagonal between two polygon nodes is valid (lies in polygon interior)
 function isValidDiagonal(a, b) {
-    return a.next.i !== b.i && a.prev.i !== b.i && !intersectsPolygon(a, b) &&
-           locallyInside(a, b) && locallyInside(b, a) && middleInside(a, b);
+    return a.next.i !== b.i && a.prev.i !== b.i && !intersectsPolygon(a, b) && // dones't intersect other edges
+           (locallyInside(a, b) && locallyInside(b, a) && middleInside(a, b) && // locally visible
+            (area(a.prev, a, b.prev) || area(a, b.prev, b)) || // does not create opposite-facing sectors
+            equals(a, b) && area(a.prev, a, a.next) > 0 && area(b.prev, b, b.next) > 0); // special zero-length case
 }
 
 // signed area of a triangle
@@ -2416,10 +2450,28 @@ function equals(p1, p2) {
 
 // check if two segments intersect
 function intersects(p1, q1, p2, q2) {
-    if ((equals(p1, q1) && equals(p2, q2)) ||
-        (equals(p1, q2) && equals(p2, q1))) return true;
-    return area(p1, q1, p2) > 0 !== area(p1, q1, q2) > 0 &&
-           area(p2, q2, p1) > 0 !== area(p2, q2, q1) > 0;
+    var o1 = sign(area(p1, q1, p2));
+    var o2 = sign(area(p1, q1, q2));
+    var o3 = sign(area(p2, q2, p1));
+    var o4 = sign(area(p2, q2, q1));
+
+    if (o1 !== o2 && o3 !== o4) return true; // general case
+
+    if (o1 === 0 && onSegment(p1, p2, q1)) return true; // p1, q1 and p2 are collinear and p2 lies on p1q1
+    if (o2 === 0 && onSegment(p1, q2, q1)) return true; // p1, q1 and q2 are collinear and q2 lies on p1q1
+    if (o3 === 0 && onSegment(p2, p1, q2)) return true; // p2, q2 and p1 are collinear and p1 lies on p2q2
+    if (o4 === 0 && onSegment(p2, q1, q2)) return true; // p2, q2 and q1 are collinear and q1 lies on p2q2
+
+    return false;
+}
+
+// for collinear points p, q, r, check if point q lies on segment pr
+function onSegment(p, q, r) {
+    return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) && q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
+}
+
+function sign(num) {
+    return num > 0 ? 1 : num < 0 ? -1 : 0;
 }
 
 // check if a polygon diagonal intersects any polygon segments
@@ -20906,7 +20958,7 @@ var glify = {
     var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
     return distanceSquared <= radius * radius;
   },
-  attachShaderVars: function attachShaderVars(size, gl, program, attributes) {
+  attachShaderVars: function attachShaderVars(byteCount, gl, program, attributes) {
     var name,
         loc,
         attribute,
@@ -20922,7 +20974,7 @@ var glify = {
           throw new Error('shader variable ' + name + ' not found');
         }
 
-        gl.vertexAttribPointer(loc, attribute.size, gl[attribute.type], false, size * (attribute.bytes || bytes), size * attribute.start);
+        gl.vertexAttribPointer(loc, attribute.size, gl[attribute.type], attribute.normalize ? true : false, byteCount * (attribute.bytes || bytes), byteCount * attribute.start);
         gl.enableVertexAttribArray(loc);
       }
     }
@@ -21064,10 +21116,10 @@ var glify = {
     vertex: Buffer("dW5pZm9ybSBtYXQ0IG1hdHJpeDsKYXR0cmlidXRlIHZlYzQgdmVydGV4OwphdHRyaWJ1dGUgZmxvYXQgcG9pbnRTaXplOwphdHRyaWJ1dGUgdmVjNCBjb2xvcjsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICAvL3NldCB0aGUgc2l6ZSBvZiB0aGUgcG9pbnQKICBnbF9Qb2ludFNpemUgPSBwb2ludFNpemU7CgogIC8vbXVsdGlwbHkgZWFjaCB2ZXJ0ZXggYnkgYSBtYXRyaXguCiAgZ2xfUG9zaXRpb24gPSBtYXRyaXggKiB2ZXJ0ZXg7CgogIC8vcGFzcyB0aGUgY29sb3IgdG8gdGhlIGZyYWdtZW50IHNoYWRlcgogIF9jb2xvciA9IGNvbG9yOwp9", "base64"),
     fragment: {
       dot: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gdmVjNCBjb2xvcjsKdW5pZm9ybSBmbG9hdCBvcGFjaXR5OwoKdm9pZCBtYWluKCkgewogICAgZmxvYXQgYm9yZGVyID0gMC4wNTsKICAgIGZsb2F0IHJhZGl1cyA9IDAuNTsKICAgIHZlYzIgY2VudGVyID0gdmVjMigwLjUpOwoKICAgIHZlYzQgY29sb3IwID0gdmVjNCgwLjApOwogICAgdmVjNCBjb2xvcjEgPSB2ZWM0KGNvbG9yWzBdLCBjb2xvclsxXSwgY29sb3JbMl0sIG9wYWNpdHkpOwoKICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgICBmbG9hdCBkaXN0ID0gcmFkaXVzIC0gc3FydChtLnggKiBtLnggKyBtLnkgKiBtLnkpOwoKICAgIGZsb2F0IHQgPSAwLjA7CiAgICBpZiAoZGlzdCA+IGJvcmRlcikgewogICAgICAgIHQgPSAxLjA7CiAgICB9IGVsc2UgaWYgKGRpc3QgPiAwLjApIHsKICAgICAgICB0ID0gZGlzdCAvIGJvcmRlcjsKICAgIH0KCiAgICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAgIGdsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7Cn0=", "base64"),
-      point: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICBmbG9hdCBib3JkZXIgPSAwLjE7CiAgZmxvYXQgcmFkaXVzID0gMC41OwogIHZlYzIgY2VudGVyID0gdmVjMigwLjUsIDAuNSk7CgogIHZlYzQgcG9pbnRDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7CgogIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgZmxvYXQgZGlzdDEgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogIGZsb2F0IHQxID0gMC4wOwogIGlmIChkaXN0MSA+IGJvcmRlcikgewogICAgICB0MSA9IDEuMDsKICB9IGVsc2UgaWYgKGRpc3QxID4gMC4wKSB7CiAgICAgIHQxID0gZGlzdDEgLyBib3JkZXI7CiAgfQoKICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAvL2dsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7CgogIC8vYm9yZGVyCiAgZmxvYXQgb3V0ZXJCb3JkZXIgPSAwLjA1OwogIGZsb2F0IGlubmVyQm9yZGVyID0gMC44OwogIHZlYzQgYm9yZGVyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDAuNCk7CiAgdmVjMiB1diA9IGdsX1BvaW50Q29vcmQueHk7CiAgdmVjNCBjbGVhckNvbG9yID0gdmVjNCgwLCAwLCAwLCAwKTsKICAKICAvLyBPZmZzZXQgdXYgd2l0aCB0aGUgY2VudGVyIG9mIHRoZSBjaXJjbGUuCiAgdXYgLT0gY2VudGVyOwogIAogIGZsb2F0IGRpc3QyID0gIHNxcnQoZG90KHV2LCB1dikpOwogCiAgZmxvYXQgdDIgPSAxLjAgKyBzbW9vdGhzdGVwKHJhZGl1cywgcmFkaXVzICsgb3V0ZXJCb3JkZXIsIGRpc3QyKQogICAgICAgICAgICAgICAgLSBzbW9vdGhzdGVwKHJhZGl1cyAtIGlubmVyQm9yZGVyLCByYWRpdXMsIGRpc3QyKTsKIAogIGdsX0ZyYWdDb2xvciA9IG1peChtaXgoYm9yZGVyQ29sb3IsIGNsZWFyQ29sb3IsIHQyKSwgcG9pbnRDb2xvciwgdDEpOwp9", "base64"),
+      point: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICBmbG9hdCBib3JkZXIgPSAwLjE7CiAgZmxvYXQgcmFkaXVzID0gMC41OwogIHZlYzIgY2VudGVyID0gdmVjMigwLjUsIDAuNSk7CgogIHZlYzQgcG9pbnRDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7CgogIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgZmxvYXQgZGlzdDEgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogIGZsb2F0IHQxID0gMC4wOwogIGlmIChkaXN0MSA+IGJvcmRlcikgewogICAgICB0MSA9IDEuMDsKICB9IGVsc2UgaWYgKGRpc3QxID4gMC4wKSB7CiAgICAgIHQxID0gZGlzdDEgLyBib3JkZXI7CiAgfQoKICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAvL2dsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7CgogIC8vYm9yZGVyCiAgZmxvYXQgb3V0ZXJCb3JkZXIgPSAwLjA1OwogIGZsb2F0IGlubmVyQm9yZGVyID0gMC44OwogIHZlYzQgYm9yZGVyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDAuNCk7CiAgdmVjMiB1diA9IGdsX1BvaW50Q29vcmQueHk7CiAgdmVjNCBjbGVhckNvbG9yID0gdmVjNCgwLCAwLCAwLCAwKTsKCiAgLy8gT2Zmc2V0IHV2IHdpdGggdGhlIGNlbnRlciBvZiB0aGUgY2lyY2xlLgogIHV2IC09IGNlbnRlcjsKCiAgZmxvYXQgZGlzdDIgPSAgc3FydChkb3QodXYsIHV2KSk7CgogIGZsb2F0IHQyID0gMS4wICsgc21vb3Roc3RlcChyYWRpdXMsIHJhZGl1cyArIG91dGVyQm9yZGVyLCBkaXN0MikKICAgICAgICAgICAgICAgIC0gc21vb3Roc3RlcChyYWRpdXMgLSBpbm5lckJvcmRlciwgcmFkaXVzLCBkaXN0Mik7CgogIGdsX0ZyYWdDb2xvciA9IG1peChtaXgoYm9yZGVyQ29sb3IsIGNsZWFyQ29sb3IsIHQyKSwgcG9pbnRDb2xvciwgdDEpOwp9", "base64"),
       puck: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41KTsKICB2ZWMyIHV2ID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsKICBmbG9hdCBzbW9vdGhpbmcgPSAwLjAwNTsKICB2ZWM0IF9jb2xvcjEgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwogIGZsb2F0IHJhZGl1czEgPSAwLjM7CiAgdmVjNCBfY29sb3IyID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKICBmbG9hdCByYWRpdXMyID0gMC41OwogIGZsb2F0IGRpc3QgPSBsZW5ndGgodXYpOwoKICAvL1NNT09USAogIGZsb2F0IGdhbW1hID0gMi4yOwogIGNvbG9yMS5yZ2IgPSBwb3coX2NvbG9yMS5yZ2IsIHZlYzMoZ2FtbWEpKTsKICBjb2xvcjIucmdiID0gcG93KF9jb2xvcjIucmdiLCB2ZWMzKGdhbW1hKSk7CgogIHZlYzQgcHVjayA9IG1peCgKICAgIG1peCgKICAgICAgX2NvbG9yMSwKICAgICAgX2NvbG9yMiwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMxIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czEgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgICApCiAgICApLAogICAgdmVjNCgwLDAsMCwwKSwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMyIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czIgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgKQogICk7CgogIC8vR2FtbWEgY29ycmVjdGlvbiAocHJldmVudHMgY29sb3IgZnJpbmdlcykKICBwdWNrLnJnYiA9IHBvdyhwdWNrLnJnYiwgdmVjMygxLjAgLyBnYW1tYSkpOwogIGdsX0ZyYWdDb2xvciA9IHB1Y2s7Cn0=", "base64"),
-      simpleCircle: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKCiAgICBmbG9hdCBib3JkZXIgPSAwLjA1OwogICAgZmxvYXQgcmFkaXVzID0gMC41OwogICAgdmVjNCBjb2xvcjAgPSB2ZWM0KDAuMCwgMC4wLCAwLjAsIDAuMCk7CiAgICB2ZWM0IGNvbG9yMSA9IHZlYzQoY29sb3JbMF0sIGNvbG9yWzFdLCBjb2xvclsyXSwgb3BhY2l0eSk7CgogICAgdmVjMiBtID0gZ2xfUG9pbnRDb29yZC54eSAtIHZlYzIoMC41LCAwLjUpOwogICAgZmxvYXQgZGlzdCA9IHJhZGl1cyAtIHNxcnQobS54ICogbS54ICsgbS55ICogbS55KTsKCiAgICBmbG9hdCB0ID0gMC4wOwogICAgaWYgKGRpc3QgPiBib3JkZXIpIHsKICAgICAgICB0ID0gMS4wOwogICAgfSBlbHNlIGlmIChkaXN0ID4gMC4wKSB7CiAgICAgICAgdCA9IGRpc3QgLyBib3JkZXI7CiAgICB9CgogICAgLy9zaW1wbGUgY2lyY2xlcwogICAgZmxvYXQgZCA9IGRpc3RhbmNlIChnbF9Qb2ludENvb3JkLCB2ZWMyKDAuNSwgMC41KSk7CiAgICBpZiAoZCA8IDAuNSApewogICAgICAgIGdsX0ZyYWdDb2xvciA9IGNvbG9yMTsKICAgIH0gZWxzZSB7CiAgICAgICAgZGlzY2FyZDsKICAgIH0KfQ==", "base64"),
-      square: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIGZsb2F0IGJvcmRlciA9IDAuMDU7CiAgICBmbG9hdCByYWRpdXMgPSAwLjU7CiAgICB2ZWM0IGNvbG9yMCA9IHZlYzQoMC4wLCAwLjAsIDAuMCwgMC4wKTsKICAgIHZlYzQgY29sb3IxID0gdmVjNChjb2xvclswXSwgY29sb3JbMV0sIGNvbG9yWzJdLCBvcGFjaXR5KTsKICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSB2ZWMyKDAuNSwgMC41KTsKICAgIGZsb2F0IGRpc3QgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogICAgZmxvYXQgdCA9IDAuMDsKICAgIGlmIChkaXN0ID4gYm9yZGVyKSB7CiAgICAgICAgdCA9IDEuMDsKICAgIH0gZWxzZSBpZiAoZGlzdCA+IDAuMCkgewogICAgICAgIHQgPSBkaXN0IC8gYm9yZGVyOwogICAgfQoKICAgIC8vc3F1YXJlcwogICAgZ2xfRnJhZ0NvbG9yID0gdmVjNChjb2xvclswXSwgY29sb3JbMV0sIGNvbG9yWzJdLCBvcGFjaXR5KTsKfQ==", "base64"),
+      simpleCircle: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIHZlYzQgY29sb3IxID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKCiAgICAvL3NpbXBsZSBjaXJjbGVzCiAgICBmbG9hdCBkID0gZGlzdGFuY2UgKGdsX1BvaW50Q29vcmQsIHZlYzIoMC41LCAwLjUpKTsKICAgIGlmIChkIDwgMC41ICl7CiAgICAgICAgZ2xfRnJhZ0NvbG9yID0gY29sb3IxOwogICAgfSBlbHNlIHsKICAgICAgICBkaXNjYXJkOwogICAgfQp9", "base64"),
+      square: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIC8vc3F1YXJlcwogICAgZ2xfRnJhZ0NvbG9yID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKfQ==", "base64"),
       polygon: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICBnbF9GcmFnQ29sb3IgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwp9", "base64")
     }
   }
@@ -21139,6 +21191,7 @@ Lines.defaults = {
   color: 'random',
   className: '',
   opacity: 0.5,
+  weight: 2,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -21211,7 +21264,7 @@ Lines.prototype = {
       }
     }
 
-    this.verts = allVertices;
+    this.allVertices = allVertices;
     var vertArray = new Float32Array(allVertices);
     size = vertArray.BYTES_PER_ELEMENT;
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
@@ -21240,6 +21293,7 @@ Lines.prototype = {
    * @returns {Lines}
    */
   resetVertices: function resetVertices() {
+    this.allVertices = [];
     this.verts = [];
     var pixel,
         verts = this.verts,
@@ -21263,20 +21317,41 @@ Lines.prototype = {
     } // -- data
 
 
-    for (; featureIndex < featureMax; featureIndex++) {
+    var _loop = function _loop() {
       feature = features[featureIndex];
-      var featureVerts = []; //use colorFn function here if it exists
+      featureVerts = [];
+      featureVerts.vertexCount = 0; //use colorFn function here if it exists
 
       if (colorFn) {
         color = colorFn(featureIndex, feature);
       }
 
-      for (i = 0; i < feature.geometry.coordinates.length; i++) {
-        pixel = utils.latLonToPixel(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]);
-        featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+      function getFeatureVerts(featureVerts, coordinates) {
+        for (var i = 0; i < coordinates.length; i++) {
+          if (Array.isArray(coordinates[i][0])) {
+            getFeatureVerts(featureVerts, coordinates[i]);
+            continue;
+          }
+
+          pixel = settings.map.project(L.latLng(coordinates[i][latitudeKey], coordinates[i][longitudeKey]), 0);
+          featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+
+          if (i !== 0 && i !== coordinates.length - 1) {
+            featureVerts.vertexCount += 1;
+          }
+
+          featureVerts.vertexCount += 1;
+        }
       }
 
+      getFeatureVerts(featureVerts, feature.geometry.coordinates);
       verts.push(featureVerts);
+    };
+
+    for (; featureIndex < featureMax; featureIndex++) {
+      var featureVerts;
+
+      _loop();
     }
 
     return this;
@@ -21340,23 +21415,61 @@ Lines.prototype = {
         settings = this.settings,
         canvas = this.canvas,
         map = settings.map,
-        pointSize = Math.max(map.getZoom() - 4.0, 4.0),
+        weight = settings.weight,
+        zoom = map.getZoom(),
+        pointSize = Math.max(zoom - 4.0, 4.0),
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
         // -- Scale to current zoom
-    scale = Math.pow(2, map.getZoom()),
-        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+    scale = Math.pow(2, zoom),
+        offset = map.project(topLeft, 0),
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-
-    mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.vertexAttrib1f(gl.aPointSize, pointSize); // -- attach matrix value to 'mapMatrix' uniform in shader
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.vertexAttrib1f(gl.aPointSize, pointSize);
 
-    gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-    gl.drawArrays(gl.LINES, 0, this.verts.length / 5);
+    if (zoom > 18) {
+      mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y); // -- attach matrix value to 'mapMatrix' uniform in shader
+
+      gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
+      gl.drawArrays(gl.LINES, 0, this.allVertices.length / 5);
+    } else if (typeof weight === 'number') {
+      // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
+      for (var yOffset = -weight; yOffset < weight; yOffset += 0.5) {
+        for (var xOffset = -weight; xOffset < weight; xOffset += 0.5) {
+          // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
+          mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x + xOffset / scale, -offset.y + yOffset / scale); // -- attach matrix value to 'mapMatrix' uniform in shader
+
+          gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
+          gl.drawArrays(gl.LINES, 0, this.allVertices.length / 5);
+        }
+      }
+    } else if (typeof weight === 'function') {
+      var allVertexCount = 0;
+      var features = this.settings.data.features;
+
+      for (var i = 0; i < this.verts.length; i++) {
+        var vert = this.verts[i];
+        var vertexCount = vert.vertexCount;
+        var weightValue = weight(i, features[i]); // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
+
+        for (var _yOffset = -weightValue; _yOffset < weightValue; _yOffset += 0.5) {
+          for (var _xOffset = -weightValue; _xOffset < weightValue; _xOffset += 0.5) {
+            // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
+            mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x + _xOffset / scale, -offset.y + _yOffset / scale); // -- attach matrix value to 'mapMatrix' uniform in shader
+
+            gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
+            gl.drawArrays(gl.LINES, allVertexCount, vertexCount);
+          }
+        }
+
+        allVertexCount += vertexCount; // number of vertexes is features.length * 2, but not first or last (5 each) in array of each set of features
+      }
+    }
+
     return this;
   },
 
@@ -21391,7 +21504,7 @@ Lines.tryClick = function (e, map) {
     var dot = A * C + B * D;
     var len_sq = C * C + D * D;
     var param = -1;
-    if (len_sq != 0) //in case of 0 length line
+    if (len_sq !== 0) //in case of 0 length line
       param = dot / len_sq;
     var xx, yy;
 
@@ -21565,10 +21678,20 @@ Points.defaults = {
   className: '',
   sensitivity: 2,
   shaderVars: {
+    vertex: {
+      type: 'FLOAT',
+      start: 0,
+      size: 2
+    },
     color: {
       type: 'FLOAT',
       start: 2,
       size: 3
+    },
+    pointSize: {
+      type: 'FLOAT',
+      start: 5,
+      size: 2
     }
   }
 }; //statics
@@ -21605,11 +21728,9 @@ Points.prototype = {
         glLayer = this.glLayer,
         matrix = this.matrix = gl.getUniformLocation(program, 'matrix'),
         opacity = gl.getUniformLocation(program, 'opacity'),
-        vertex = gl.getAttribLocation(program, 'vertex'),
         vertexBuffer = gl.createBuffer(),
         vertexArray = new Float32Array(this.verts),
-        size = vertexArray.BYTES_PER_ELEMENT;
-    gl.pointSize = gl.getAttribLocation(program, 'pointSize'); //set the matrix to some that makes 1 unit 1 pixel.
+        byteCount = vertexArray.BYTES_PER_ELEMENT; //set the matrix to some that makes 1 unit 1 pixel.
 
     this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -21617,11 +21738,9 @@ Points.prototype = {
     gl.uniform1f(opacity, this.settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
-    gl.enableVertexAttribArray(vertex);
 
     if (settings.shaderVars !== null) {
-      this.settings.attachShaderVars(size, gl, program, settings.shaderVars);
+      this.settings.attachShaderVars(byteCount, gl, program, settings.shaderVars);
     }
 
     glLayer.redraw();
@@ -21637,6 +21756,8 @@ Points.prototype = {
         data = settings.data,
         colorFn,
         color = settings.color,
+        sizeFn,
+        size = settings.size,
         i = 0,
         max = data.length,
         latLngLookup = this.latLngLookup,
@@ -21654,11 +21775,18 @@ Points.prototype = {
       color = undefined;
     }
 
+    if (size === null) {
+      throw new Error('size is not properly defined');
+    } else if (typeof size === 'function') {
+      sizeFn = size;
+      size = undefined;
+    }
+
     for (; i < max; i++) {
       latLng = data[i];
       key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
       lookup = latLngLookup[key];
-      pixel = utils.latLonToPixel(latLng[latitudeKey], latLng[longitudeKey]);
+      pixel = settings.map.project(L.latLng(latLng[latitudeKey], latLng[longitudeKey]), 0);
 
       if (lookup === undefined) {
         lookup = latLngLookup[key] = [];
@@ -21668,10 +21796,14 @@ Points.prototype = {
 
       if (colorFn) {
         color = colorFn(i, latLng);
-      } //-- 2 coord, 3 rgb colors interleaved buffer
+      }
+
+      if (sizeFn) {
+        size = sizeFn(i, latLng);
+      } //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
 
 
-      verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+      verts.push(pixel.x, pixel.y, color.r, color.g, color.b, size);
 
       if (settings.eachVertex !== null) {
         settings.eachVertex.call(this, latLng, pixel, color);
@@ -21738,10 +21870,11 @@ Points.prototype = {
     this.program = program;
     return this;
   },
-  pointSize: function pointSize() {
+  pointSize: function pointSize(pointIndex) {
     var settings = this.settings,
         map = settings.map,
-        pointSize = settings.size,
+        size = settings.size,
+        pointSize = typeof size === 'function' ? size(pointIndex) : size,
         // -- Scale to current zoom
     zoom = map.getZoom();
     return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize;
@@ -21759,7 +21892,7 @@ Points.prototype = {
         map = settings.map,
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+        offset = map.project(topLeft, 0),
         zoom = map.getZoom(),
         scale = Math.pow(2, zoom),
         mapMatrix = this.mapMatrix,
@@ -21769,8 +21902,6 @@ Points.prototype = {
     mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.vertexAttrib1f(gl.pointSize, this.pointSize()); // -- attach matrix value to 'mapMatrix' uniform in shader
-
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
     gl.drawArrays(gl.POINTS, 0, settings.data.length);
     return this;
@@ -21858,8 +21989,9 @@ Points.tryClick = function (e, map) {
   if (!instance) return;
   latLng = L.latLng(found[settings.latitudeKey], found[settings.longitudeKey]);
   xy = map.latLngToLayerPoint(latLng);
+  var pointIndex = typeof instance.settings.size === 'function' ? instance.settings.data.indexOf(found) : null;
 
-  if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize() * instance.settings.sensitivity)) {
+  if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize(pointIndex) * instance.settings.sensitivity)) {
     result = instance.settings.click(e, found, xy);
     return result !== undefined ? result : true;
   }
@@ -22057,7 +22189,7 @@ Shapes.prototype = {
       }
 
       for (i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = utils.latLonToPixel(triangles[i++], triangles[i++]);
+        pixel = settings.map.project(L.latLng(triangles[i++], triangles[i++]), 0);
         verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
       }
     }
@@ -22128,7 +22260,7 @@ Shapes.prototype = {
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
         // -- Scale to current zoom
     scale = Math.pow(2, map.getZoom()),
-        offset = utils.latLonToPixel(topLeft.lat, topLeft.lng),
+        offset = map.project(topLeft, 0),
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates

@@ -38,6 +38,7 @@ L.glify.points({
 L.glify.lines({
   map: map,
   data: geojson,
+  size: 2,
   click: function(e, feature, xy) {
     //do something when a line is clicked
   }
@@ -68,6 +69,7 @@ L.glify.lines({
 * `opacity` {Number} a value from 0 to 1, default is 0.8
 * `className` {String} a class name applied to canvas, default is ''
 * `size` {Number|Function} pixel size of point
+  * When `size` is a `Function` its arguments are `index`:`number`, and the `point`:`array` that is being sized
 * `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a point
 * `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets.
@@ -84,6 +86,9 @@ L.glify.lines({
 * `className` {String} a class name applied to canvas, default is ''
 * `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets. 
+* `weight` {Number|Function} a value in pixels of how thick lines should be drawn
+  * When `weight` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being drawn
+  * CAUTION: Zoom of more than 18 will turn weight internally to 1 to prevent WebGL precision rendering issues.
 
 ## `L.glify` methods
 * `longitudeFirst()`
@@ -92,7 +97,6 @@ L.glify.lines({
 * `points(options)`
 * `shapes(options)`
 * `flattenData(data)`
-* `latLonToPixel(lat, lon)`
 
 
 ## Roadmap
