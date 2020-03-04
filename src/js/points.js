@@ -70,16 +70,19 @@ Points.defaults = {
       type: 'FLOAT',
       start: 0,
       size: 2,
+      bytes: 6
     },
     color: {
       type: 'FLOAT',
       start: 2,
-      size: 3
+      size: 3,
+      bytes: 6
     },
     pointSize: {
       type: 'FLOAT',
       start: 5,
-      size: 2
+      size: 2,
+      bytes: 6
     },
   }
 };
