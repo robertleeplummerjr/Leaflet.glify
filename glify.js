@@ -20873,6 +20873,7 @@ var glify = {
   points: function points(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
+      setupHoverPoints: glify.setupHoverPoints.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
@@ -20895,6 +20896,7 @@ var glify = {
   shapes: function shapes(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
+      setupHoverShapes: glify.setupHoverShapes.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
@@ -20917,6 +20919,7 @@ var glify = {
   lines: function lines(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
+      setupHoverLines: glify.setupHoverLines.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
@@ -20953,6 +20956,33 @@ var glify = {
         if (hit !== undefined) return hit;
       });
     }
+  },
+  setupHoverPoints: function setupHoverPoints(map, hoverWait) {
+    if (hoverWait === undefined) return;
+    this.maps.push(map);
+    map.on('mousemove', debounce(function (e) {
+      var hit;
+      hit = Points.tryHover(e, map);
+      if (hit !== undefined) return hit;
+    }, hoverWait));
+  },
+  setupHoverShapes: function setupHoverShapes(map, hoverWait) {
+    if (hoverWait === undefined) return;
+    this.maps.push(map);
+    map.on('mousemove', debounce(function (e) {
+      var hit;
+      hit = Shapes.tryHover(e, map);
+      if (hit !== undefined) return hit;
+    }, hoverWait));
+  },
+  setupHoverLines: function setupHoverLines(map, hoverWait) {
+    if (hoverWait === undefined) return;
+    this.maps.push(map);
+    map.on('mousemove', debounce(function (e) {
+      var hit;
+      hit = Lines.tryHover(e, map);
+      if (hit !== undefined) return hit;
+    }, hoverWait));
   },
   pointInCircle: function pointInCircle(centerPoint, checkPoint, radius) {
     var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
@@ -21113,17 +21143,37 @@ var glify = {
   },
   mapMatrix: mapMatrix,
   shader: {
-    vertex: Buffer("dW5pZm9ybSBtYXQ0IG1hdHJpeDsKYXR0cmlidXRlIHZlYzQgdmVydGV4OwphdHRyaWJ1dGUgZmxvYXQgcG9pbnRTaXplOwphdHRyaWJ1dGUgdmVjNCBjb2xvcjsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICAvL3NldCB0aGUgc2l6ZSBvZiB0aGUgcG9pbnQKICBnbF9Qb2ludFNpemUgPSBwb2ludFNpemU7CgogIC8vbXVsdGlwbHkgZWFjaCB2ZXJ0ZXggYnkgYSBtYXRyaXguCiAgZ2xfUG9zaXRpb24gPSBtYXRyaXggKiB2ZXJ0ZXg7CgogIC8vcGFzcyB0aGUgY29sb3IgdG8gdGhlIGZyYWdtZW50IHNoYWRlcgogIF9jb2xvciA9IGNvbG9yOwp9", "base64"),
+    vertex: Buffer("dW5pZm9ybSBtYXQ0IG1hdHJpeDsNCmF0dHJpYnV0ZSB2ZWM0IHZlcnRleDsNCmF0dHJpYnV0ZSBmbG9hdCBwb2ludFNpemU7DQphdHRyaWJ1dGUgdmVjNCBjb2xvcjsNCnZhcnlpbmcgdmVjNCBfY29sb3I7DQoNCnZvaWQgbWFpbigpIHsNCiAgLy9zZXQgdGhlIHNpemUgb2YgdGhlIHBvaW50DQogIGdsX1BvaW50U2l6ZSA9IHBvaW50U2l6ZTsNCg0KICAvL211bHRpcGx5IGVhY2ggdmVydGV4IGJ5IGEgbWF0cml4Lg0KICBnbF9Qb3NpdGlvbiA9IG1hdHJpeCAqIHZlcnRleDsNCg0KICAvL3Bhc3MgdGhlIGNvbG9yIHRvIHRoZSBmcmFnbWVudCBzaGFkZXINCiAgX2NvbG9yID0gY29sb3I7DQp9", "base64"),
     fragment: {
-      dot: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gdmVjNCBjb2xvcjsKdW5pZm9ybSBmbG9hdCBvcGFjaXR5OwoKdm9pZCBtYWluKCkgewogICAgZmxvYXQgYm9yZGVyID0gMC4wNTsKICAgIGZsb2F0IHJhZGl1cyA9IDAuNTsKICAgIHZlYzIgY2VudGVyID0gdmVjMigwLjUpOwoKICAgIHZlYzQgY29sb3IwID0gdmVjNCgwLjApOwogICAgdmVjNCBjb2xvcjEgPSB2ZWM0KGNvbG9yWzBdLCBjb2xvclsxXSwgY29sb3JbMl0sIG9wYWNpdHkpOwoKICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgICBmbG9hdCBkaXN0ID0gcmFkaXVzIC0gc3FydChtLnggKiBtLnggKyBtLnkgKiBtLnkpOwoKICAgIGZsb2F0IHQgPSAwLjA7CiAgICBpZiAoZGlzdCA+IGJvcmRlcikgewogICAgICAgIHQgPSAxLjA7CiAgICB9IGVsc2UgaWYgKGRpc3QgPiAwLjApIHsKICAgICAgICB0ID0gZGlzdCAvIGJvcmRlcjsKICAgIH0KCiAgICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAgIGdsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7Cn0=", "base64"),
-      point: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICBmbG9hdCBib3JkZXIgPSAwLjE7CiAgZmxvYXQgcmFkaXVzID0gMC41OwogIHZlYzIgY2VudGVyID0gdmVjMigwLjUsIDAuNSk7CgogIHZlYzQgcG9pbnRDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7CgogIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7CiAgZmxvYXQgZGlzdDEgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7CgogIGZsb2F0IHQxID0gMC4wOwogIGlmIChkaXN0MSA+IGJvcmRlcikgewogICAgICB0MSA9IDEuMDsKICB9IGVsc2UgaWYgKGRpc3QxID4gMC4wKSB7CiAgICAgIHQxID0gZGlzdDEgLyBib3JkZXI7CiAgfQoKICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQKICAvL2dsX0ZyYWdDb2xvciA9IG1peChjb2xvcjAsIGNvbG9yMSwgdCk7CgogIC8vYm9yZGVyCiAgZmxvYXQgb3V0ZXJCb3JkZXIgPSAwLjA1OwogIGZsb2F0IGlubmVyQm9yZGVyID0gMC44OwogIHZlYzQgYm9yZGVyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDAuNCk7CiAgdmVjMiB1diA9IGdsX1BvaW50Q29vcmQueHk7CiAgdmVjNCBjbGVhckNvbG9yID0gdmVjNCgwLCAwLCAwLCAwKTsKCiAgLy8gT2Zmc2V0IHV2IHdpdGggdGhlIGNlbnRlciBvZiB0aGUgY2lyY2xlLgogIHV2IC09IGNlbnRlcjsKCiAgZmxvYXQgZGlzdDIgPSAgc3FydChkb3QodXYsIHV2KSk7CgogIGZsb2F0IHQyID0gMS4wICsgc21vb3Roc3RlcChyYWRpdXMsIHJhZGl1cyArIG91dGVyQm9yZGVyLCBkaXN0MikKICAgICAgICAgICAgICAgIC0gc21vb3Roc3RlcChyYWRpdXMgLSBpbm5lckJvcmRlciwgcmFkaXVzLCBkaXN0Mik7CgogIGdsX0ZyYWdDb2xvciA9IG1peChtaXgoYm9yZGVyQ29sb3IsIGNsZWFyQ29sb3IsIHQyKSwgcG9pbnRDb2xvciwgdDEpOwp9", "base64"),
-      puck: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41KTsKICB2ZWMyIHV2ID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsKICBmbG9hdCBzbW9vdGhpbmcgPSAwLjAwNTsKICB2ZWM0IF9jb2xvcjEgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwogIGZsb2F0IHJhZGl1czEgPSAwLjM7CiAgdmVjNCBfY29sb3IyID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKICBmbG9hdCByYWRpdXMyID0gMC41OwogIGZsb2F0IGRpc3QgPSBsZW5ndGgodXYpOwoKICAvL1NNT09USAogIGZsb2F0IGdhbW1hID0gMi4yOwogIGNvbG9yMS5yZ2IgPSBwb3coX2NvbG9yMS5yZ2IsIHZlYzMoZ2FtbWEpKTsKICBjb2xvcjIucmdiID0gcG93KF9jb2xvcjIucmdiLCB2ZWMzKGdhbW1hKSk7CgogIHZlYzQgcHVjayA9IG1peCgKICAgIG1peCgKICAgICAgX2NvbG9yMSwKICAgICAgX2NvbG9yMiwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMxIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czEgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgICApCiAgICApLAogICAgdmVjNCgwLDAsMCwwKSwKICAgICAgc21vb3Roc3RlcCgKICAgICAgICByYWRpdXMyIC0gc21vb3RoaW5nLAogICAgICAgIHJhZGl1czIgKyBzbW9vdGhpbmcsCiAgICAgICAgZGlzdAogICAgKQogICk7CgogIC8vR2FtbWEgY29ycmVjdGlvbiAocHJldmVudHMgY29sb3IgZnJpbmdlcykKICBwdWNrLnJnYiA9IHBvdyhwdWNrLnJnYiwgdmVjMygxLjAgLyBnYW1tYSkpOwogIGdsX0ZyYWdDb2xvciA9IHB1Y2s7Cn0=", "base64"),
-      simpleCircle: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIHZlYzQgY29sb3IxID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKCiAgICAvL3NpbXBsZSBjaXJjbGVzCiAgICBmbG9hdCBkID0gZGlzdGFuY2UgKGdsX1BvaW50Q29vcmQsIHZlYzIoMC41LCAwLjUpKTsKICAgIGlmIChkIDwgMC41ICl7CiAgICAgICAgZ2xfRnJhZ0NvbG9yID0gY29sb3IxOwogICAgfSBlbHNlIHsKICAgICAgICBkaXNjYXJkOwogICAgfQp9", "base64"),
-      square: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnZhcnlpbmcgdmVjNCBfY29sb3I7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKCnZvaWQgbWFpbigpIHsKICAgIC8vc3F1YXJlcwogICAgZ2xfRnJhZ0NvbG9yID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsKfQ==", "base64"),
-      polygon: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7CnVuaWZvcm0gZmxvYXQgb3BhY2l0eTsKdmFyeWluZyB2ZWM0IF9jb2xvcjsKCnZvaWQgbWFpbigpIHsKICBnbF9GcmFnQ29sb3IgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOwp9", "base64")
+      dot: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp1bmlmb3JtIHZlYzQgY29sb3I7DQp1bmlmb3JtIGZsb2F0IG9wYWNpdHk7DQoNCnZvaWQgbWFpbigpIHsNCiAgICBmbG9hdCBib3JkZXIgPSAwLjA1Ow0KICAgIGZsb2F0IHJhZGl1cyA9IDAuNTsNCiAgICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41KTsNCg0KICAgIHZlYzQgY29sb3IwID0gdmVjNCgwLjApOw0KICAgIHZlYzQgY29sb3IxID0gdmVjNChjb2xvclswXSwgY29sb3JbMV0sIGNvbG9yWzJdLCBvcGFjaXR5KTsNCg0KICAgIHZlYzIgbSA9IGdsX1BvaW50Q29vcmQueHkgLSBjZW50ZXI7DQogICAgZmxvYXQgZGlzdCA9IHJhZGl1cyAtIHNxcnQobS54ICogbS54ICsgbS55ICogbS55KTsNCg0KICAgIGZsb2F0IHQgPSAwLjA7DQogICAgaWYgKGRpc3QgPiBib3JkZXIpIHsNCiAgICAgICAgdCA9IDEuMDsNCiAgICB9IGVsc2UgaWYgKGRpc3QgPiAwLjApIHsNCiAgICAgICAgdCA9IGRpc3QgLyBib3JkZXI7DQogICAgfQ0KDQogICAgLy93b3JrcyBmb3Igb3ZlcmxhcHBpbmcgY2lyY2xlcyBpZiBibGVuZGluZyBpcyBlbmFibGVkDQogICAgZ2xfRnJhZ0NvbG9yID0gbWl4KGNvbG9yMCwgY29sb3IxLCB0KTsNCn0=", "base64"),
+      point: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KdW5pZm9ybSBmbG9hdCBvcGFjaXR5Ow0KDQp2b2lkIG1haW4oKSB7DQogIGZsb2F0IGJvcmRlciA9IDAuMTsNCiAgZmxvYXQgcmFkaXVzID0gMC41Ow0KICB2ZWMyIGNlbnRlciA9IHZlYzIoMC41LCAwLjUpOw0KDQogIHZlYzQgcG9pbnRDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7DQoNCiAgdmVjMiBtID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsNCiAgZmxvYXQgZGlzdDEgPSByYWRpdXMgLSBzcXJ0KG0ueCAqIG0ueCArIG0ueSAqIG0ueSk7DQoNCiAgZmxvYXQgdDEgPSAwLjA7DQogIGlmIChkaXN0MSA+IGJvcmRlcikgew0KICAgICAgdDEgPSAxLjA7DQogIH0gZWxzZSBpZiAoZGlzdDEgPiAwLjApIHsNCiAgICAgIHQxID0gZGlzdDEgLyBib3JkZXI7DQogIH0NCg0KICAvL3dvcmtzIGZvciBvdmVybGFwcGluZyBjaXJjbGVzIGlmIGJsZW5kaW5nIGlzIGVuYWJsZWQNCiAgLy9nbF9GcmFnQ29sb3IgPSBtaXgoY29sb3IwLCBjb2xvcjEsIHQpOw0KDQogIC8vYm9yZGVyDQogIGZsb2F0IG91dGVyQm9yZGVyID0gMC4wNTsNCiAgZmxvYXQgaW5uZXJCb3JkZXIgPSAwLjg7DQogIHZlYzQgYm9yZGVyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDAuNCk7DQogIHZlYzIgdXYgPSBnbF9Qb2ludENvb3JkLnh5Ow0KICB2ZWM0IGNsZWFyQ29sb3IgPSB2ZWM0KDAsIDAsIDAsIDApOw0KDQogIC8vIE9mZnNldCB1diB3aXRoIHRoZSBjZW50ZXIgb2YgdGhlIGNpcmNsZS4NCiAgdXYgLT0gY2VudGVyOw0KDQogIGZsb2F0IGRpc3QyID0gIHNxcnQoZG90KHV2LCB1dikpOw0KDQogIGZsb2F0IHQyID0gMS4wICsgc21vb3Roc3RlcChyYWRpdXMsIHJhZGl1cyArIG91dGVyQm9yZGVyLCBkaXN0MikNCiAgICAgICAgICAgICAgICAtIHNtb290aHN0ZXAocmFkaXVzIC0gaW5uZXJCb3JkZXIsIHJhZGl1cywgZGlzdDIpOw0KDQogIGdsX0ZyYWdDb2xvciA9IG1peChtaXgoYm9yZGVyQ29sb3IsIGNsZWFyQ29sb3IsIHQyKSwgcG9pbnRDb2xvciwgdDEpOw0KfQ==", "base64"),
+      puck: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KdW5pZm9ybSBmbG9hdCBvcGFjaXR5Ow0KDQp2b2lkIG1haW4oKSB7DQogIHZlYzIgY2VudGVyID0gdmVjMigwLjUpOw0KICB2ZWMyIHV2ID0gZ2xfUG9pbnRDb29yZC54eSAtIGNlbnRlcjsNCiAgZmxvYXQgc21vb3RoaW5nID0gMC4wMDU7DQogIHZlYzQgX2NvbG9yMSA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7DQogIGZsb2F0IHJhZGl1czEgPSAwLjM7DQogIHZlYzQgX2NvbG9yMiA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7DQogIGZsb2F0IHJhZGl1czIgPSAwLjU7DQogIGZsb2F0IGRpc3QgPSBsZW5ndGgodXYpOw0KDQogIC8vU01PT1RIDQogIGZsb2F0IGdhbW1hID0gMi4yOw0KICBjb2xvcjEucmdiID0gcG93KF9jb2xvcjEucmdiLCB2ZWMzKGdhbW1hKSk7DQogIGNvbG9yMi5yZ2IgPSBwb3coX2NvbG9yMi5yZ2IsIHZlYzMoZ2FtbWEpKTsNCg0KICB2ZWM0IHB1Y2sgPSBtaXgoDQogICAgbWl4KA0KICAgICAgX2NvbG9yMSwNCiAgICAgIF9jb2xvcjIsDQogICAgICBzbW9vdGhzdGVwKA0KICAgICAgICByYWRpdXMxIC0gc21vb3RoaW5nLA0KICAgICAgICByYWRpdXMxICsgc21vb3RoaW5nLA0KICAgICAgICBkaXN0DQogICAgICApDQogICAgKSwNCiAgICB2ZWM0KDAsMCwwLDApLA0KICAgICAgc21vb3Roc3RlcCgNCiAgICAgICAgcmFkaXVzMiAtIHNtb290aGluZywNCiAgICAgICAgcmFkaXVzMiArIHNtb290aGluZywNCiAgICAgICAgZGlzdA0KICAgICkNCiAgKTsNCg0KICAvL0dhbW1hIGNvcnJlY3Rpb24gKHByZXZlbnRzIGNvbG9yIGZyaW5nZXMpDQogIHB1Y2sucmdiID0gcG93KHB1Y2sucmdiLCB2ZWMzKDEuMCAvIGdhbW1hKSk7DQogIGdsX0ZyYWdDb2xvciA9IHB1Y2s7DQp9", "base64"),
+      simpleCircle: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KdW5pZm9ybSBmbG9hdCBvcGFjaXR5Ow0KDQp2b2lkIG1haW4oKSB7DQogICAgdmVjNCBjb2xvcjEgPSB2ZWM0KF9jb2xvclswXSwgX2NvbG9yWzFdLCBfY29sb3JbMl0sIG9wYWNpdHkpOw0KDQogICAgLy9zaW1wbGUgY2lyY2xlcw0KICAgIGZsb2F0IGQgPSBkaXN0YW5jZSAoZ2xfUG9pbnRDb29yZCwgdmVjMigwLjUsIDAuNSkpOw0KICAgIGlmIChkIDwgMC41ICl7DQogICAgICAgIGdsX0ZyYWdDb2xvciA9IGNvbG9yMTsNCiAgICB9IGVsc2Ugew0KICAgICAgICBkaXNjYXJkOw0KICAgIH0NCn0=", "base64"),
+      square: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KdW5pZm9ybSBmbG9hdCBvcGFjaXR5Ow0KDQp2b2lkIG1haW4oKSB7DQogICAgLy9zcXVhcmVzDQogICAgZ2xfRnJhZ0NvbG9yID0gdmVjNChfY29sb3JbMF0sIF9jb2xvclsxXSwgX2NvbG9yWzJdLCBvcGFjaXR5KTsNCn0=", "base64"),
+      polygon: Buffer("cHJlY2lzaW9uIG1lZGl1bXAgZmxvYXQ7DQp1bmlmb3JtIGZsb2F0IG9wYWNpdHk7DQp2YXJ5aW5nIHZlYzQgX2NvbG9yOw0KDQp2b2lkIG1haW4oKSB7DQogIGdsX0ZyYWdDb2xvciA9IHZlYzQoX2NvbG9yWzBdLCBfY29sb3JbMV0sIF9jb2xvclsyXSwgb3BhY2l0eSk7DQp9", "base64")
     }
   }
 };
+
+function debounce(func, wait, immediate) {
+  var timeout;
+  return function () {
+    var context = this,
+        args = arguments;
+
+    var later = function later() {
+      timeout = null;
+      if (!immediate) func.apply(context, args);
+    };
+
+    var callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+    if (callNow) func.apply(context, args);
+  };
+}
+
+;
 module.exports = glify;
 
 if (typeof window !== 'undefined' && window.L) {
@@ -21185,13 +21235,19 @@ Lines.defaults = {
   latitudeKey: null,
   attachShaderVars: null,
   setupClick: null,
+  setupHoverLines: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   click: null,
+  hover: null,
   color: 'random',
   className: '',
   opacity: 0.5,
   weight: 2,
+  sensitivity: 0.1,
+  sensitivityHover: 0.03,
+  hoverWait: 150,
+  highlight: null,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -21214,6 +21270,10 @@ Lines.prototype = {
 
     if (settings.click) {
       settings.setupClick(settings.map);
+    }
+
+    if (settings.hover) {
+      settings.setupHoverLines(settings.map, settings.hoverWait);
     }
 
     return this.setupVertexShader().setupFragmentShader().setupProgram();
@@ -21495,41 +21555,41 @@ Lines.prototype = {
   }
 };
 
-Lines.tryClick = function (e, map) {
-  function pDistance(x, y, x1, y1, x2, y2) {
-    var A = x - x1;
-    var B = y - y1;
-    var C = x2 - x1;
-    var D = y2 - y1;
-    var dot = A * C + B * D;
-    var len_sq = C * C + D * D;
-    var param = -1;
-    if (len_sq !== 0) //in case of 0 length line
-      param = dot / len_sq;
-    var xx, yy;
+function pDistance(x, y, x1, y1, x2, y2) {
+  var A = x - x1;
+  var B = y - y1;
+  var C = x2 - x1;
+  var D = y2 - y1;
+  var dot = A * C + B * D;
+  var len_sq = C * C + D * D;
+  var param = -1;
+  if (len_sq !== 0) //in case of 0 length line
+    param = dot / len_sq;
+  var xx, yy;
 
-    if (param < 0) {
-      xx = x1;
-      yy = y1;
-    } else if (param > 1) {
-      xx = x2;
-      yy = y2;
-    } else {
-      xx = x1 + param * C;
-      yy = y1 + param * D;
-    }
-
-    var dx = x - xx;
-    var dy = y - yy;
-    return Math.sqrt(dx * dx + dy * dy);
+  if (param < 0) {
+    xx = x1;
+    yy = y1;
+  } else if (param > 1) {
+    xx = x2;
+    yy = y2;
+  } else {
+    xx = x1 + param * C;
+    yy = y1 + param * D;
   }
 
+  var dx = x - xx;
+  var dy = y - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+Lines.tryClick = function (e, map) {
   var foundFeature = false;
   var instance = false;
-  var record = 0.1;
-  var settings;
+  var settings, sensitivity;
   Lines.instances.forEach(function (_instance) {
     settings = _instance.settings;
+    sensitivity = settings.sensitivity;
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
@@ -21537,8 +21597,8 @@ Lines.tryClick = function (e, map) {
       for (var i = 1; i < feature.geometry.coordinates.length; i++) {
         var distance = pDistance(e.latlng.lng, e.latlng.lat, feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1], feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
 
-        if (distance < record) {
-          record = distance;
+        if (distance < sensitivity) {
+          sensitivity = distance;
           foundFeature = feature;
           instance = _instance;
         }
@@ -21549,6 +21609,87 @@ Lines.tryClick = function (e, map) {
   if (instance) {
     instance.settings.click(e, foundFeature);
   } else {
+    return;
+  }
+};
+
+function inBounds(e, bounds) {
+  var cond = bounds._northEast.lat > e.lat && e.lat > bounds._southWest.lat && bounds._northEast.lng > e.lng && e.lng > bounds._southWest.lng;
+  return cond;
+}
+
+Lines.tryHover = function (e, map) {
+  var foundFeature = false;
+  var instance = false;
+  var settings, sensitivity;
+  Lines.instances.forEach(function (_instance) {
+    settings = _instance.settings;
+    sensitivity = settings.sensitivityHover;
+    if (!_instance.active) return;
+    if (settings.map !== map) return;
+    if (!settings.hover) return; // Check if e.latlng is inside the bbox of the features
+
+    var bounds = L.geoJson(settings.data.features).getBounds();
+
+    if (inBounds(e.latlng, bounds)) {
+      settings.data.features.map(function (feature) {
+        for (var i = 1; i < feature.geometry.coordinates.length; i++) {
+          var distance = pDistance(e.latlng.lng, e.latlng.lat, feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1], feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+
+          if (distance < sensitivity) {
+            sensitivity = distance;
+            foundFeature = feature;
+            instance = _instance;
+          }
+        }
+      });
+    }
+  });
+  var highlight = settings.highlight;
+
+  if (instance) {
+    // If highlight is activated and there is a highlighted line already, remove it
+    if (highlight !== null) {
+      if (map.highlightLines) {
+        map.removeLayer(map.highlightLines);
+        map.highlightLines.remove();
+      } // Add hovered/highlighted line
+      // Leaflet Lines - Working, but problematic with weight?
+
+
+      map.highlightLines = L.polyline(L.GeoJSON.coordsToLatLngs(foundFeature.geometry.coordinates), {
+        color: highlight.color ? highlight.color : "red",
+        weight: highlight.weight ? highlight.weight : 3,
+        opacity: highlight.opacity ? highlight.opacity : 1
+      });
+      map.highlightLines.addTo(map); // Glify Lines - Not working 
+
+      /*
+      // TODO - Is it because Coordinates are Objects?
+      var data = {"type":"FeatureCollection",
+                  "features":[{"type":"Feature","geometry":{
+                  "type":"LineString","coordinates":
+                  L.GeoJSON.coordsToLatLngs(foundFeature.geometry.coordinates)}}]}
+                   
+      var highlightLines = L.glify.lines({
+       map: map,
+       color: highlight.color ? highlight.color : "red",
+       weight: highlight.weight ? highlight.weight : 3,
+       data: data,
+       opacity: 1
+      });
+      highlightLines.addTo(map);
+      */
+    }
+
+    instance.settings.hover(e, foundFeature);
+  } else {
+    // Remove the highlighted line again if highlight is activated and no feature was hovered
+    if (highlight !== null && map.highlightLines) {
+      map.removeLayer(map.highlightLines);
+      map.highlightLines.remove();
+    }
+
     return;
   }
 };
@@ -21668,15 +21809,20 @@ Points.defaults = {
   closest: null,
   attachShaderVars: null,
   setupClick: null,
+  setupHoverPoints: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   eachVertex: null,
   click: null,
+  hover: null,
   color: 'random',
   opacity: 0.8,
   size: null,
   className: '',
-  sensitivity: 2,
+  sensitivity: 0.1,
+  sensitivityHover: 0.03,
+  hoverWait: 150,
+  highlight: null,
   shaderVars: {
     vertex: {
       type: 'FLOAT',
@@ -21709,6 +21855,10 @@ Points.prototype = {
 
     if (settings.click) {
       this.settings.setupClick(settings.map);
+    }
+
+    if (settings.hover) {
+      settings.setupHoverPoints(settings.map, settings.hoverWait);
     }
 
     return this.setupVertexShader().setupFragmentShader().setupProgram();
@@ -21997,6 +22147,82 @@ Points.tryClick = function (e, map) {
   }
 };
 
+Points.tryHover = function (e, map) {
+  var result,
+      settings,
+      instance,
+      closestFromEach = [],
+      instancesLookup = {},
+      point,
+      xy,
+      found,
+      latLng; // TODO - Can we restrict by BBOX of all Points, so it doesnt trigger so often?
+
+  Points.instances.forEach(function (_instance) {
+    settings = _instance.settings;
+    if (!_instance.active) return;
+    if (settings.map !== map) return;
+    if (!settings.hover) return;
+    point = _instance.lookup(e.latlng);
+    instancesLookup[point] = _instance;
+    closestFromEach.push(point);
+  });
+  if (closestFromEach.length < 1) return;
+  if (!settings) return;
+  found = settings.closest(e.latlng, closestFromEach, map);
+  if (found === null) return;
+  instance = instancesLookup[found];
+  if (!instance) return;
+  latLng = L.latLng(found[settings.latitudeKey], found[settings.longitudeKey]);
+  xy = map.latLngToLayerPoint(latLng);
+  var pointIndex = typeof instance.settings.size === 'function' ? instance.settings.data.indexOf(found) : null;
+
+  if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize(pointIndex) * instance.settings.sensitivityHover)) {
+    result = instance.settings.hover(e, found, xy); // If highlight is activated and there is a highlighted point already, remove it
+
+    var highlight = instance.settings.highlight;
+
+    if (highlight !== null) {
+      if (map.highlightPoints) {
+        map.removeLayer(map.highlightPoints);
+        map.highlightPoints.remove();
+      } // Add hovered/highlighted Point / Circle
+      // TODO - Leaflet Points- Problem with radius/size?
+
+
+      map.highlightPoints = L.circle(found, {
+        color: highlight.color ? highlight.color : "red",
+        fillColor: highlight.fillColor ? highlight.fillColor : "red",
+        radius: highlight.radius ? highlight.radius : 10000 / map._zoom,
+        fillOpacity: highlight.fillOpacity ? highlight.fillOpacity : 1
+      });
+      map.highlightPoints.addTo(map); // Glify Points. Doesnt really work?
+
+      /*
+      map.highlightPoints = L.glify.points({
+        map: map,
+        data: [found.reverse()],
+        color: highlight.color ? highlight.color : "red",
+        size: highlight.size ? highlight.size : 1000
+      })
+      map.highlightPoints.addTo(map);
+      */
+    }
+
+    return result !== undefined ? result : true;
+  } else {
+    // Remove the highlighted Point again if highlight is activated and no feature was hovered
+    if (highlight !== null) {
+      if (map.highlightPoints) {
+        map.removeLayer(map.highlightPoints);
+        map.highlightPoints.remove();
+      }
+    }
+
+    return;
+  }
+};
+
 module.exports = Points;
 
 },{"./canvasoverlay":11,"./map-matrix":14,"./utils":17,"leaflet":"leaflet"}],16:[function(require,module,exports){
@@ -22058,12 +22284,16 @@ Shapes.defaults = {
   latitudeKey: null,
   attachShaderVars: null,
   setupClick: null,
+  setupHoverShapes: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   click: null,
+  hover: null,
   color: 'random',
   className: '',
   opacity: 0.5,
+  hoverWait: 150,
+  highlight: null,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -22086,6 +22316,10 @@ Shapes.prototype = {
 
     if (settings.click) {
       settings.setupClick(settings.map);
+    }
+
+    if (settings.hover) {
+      settings.setupHoverShapes(settings.map, settings.hoverWait);
     }
 
     return this.setupVertexShader().setupFragmentShader().setupProgram();
@@ -22308,6 +22542,64 @@ Shapes.tryClick = function (e, map) {
 
     if (feature !== undefined) {
       result = settings.click(e, feature);
+    }
+  });
+  return result !== undefined ? result : true;
+};
+
+Shapes.tryHover = function (e, map) {
+  var result, settings, feature;
+  Shapes.instances.forEach(function (_instance) {
+    settings = _instance.settings;
+    if (!_instance.active) return;
+    if (settings.map !== map) return;
+    if (!settings.hover) return;
+    feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+    var highlight = settings.highlight;
+
+    if (feature !== undefined) {
+      // If highlight is activated and there is a highlighted shape already, remove it
+      if (highlight !== null) {
+        if (map.highlightPolygon) {
+          map.removeLayer(map.highlightPolygon);
+          map.highlightPolygon.remove();
+        } // Glify Polygons
+
+
+        var data = Object.assign({
+          "type": "FeatureCollection",
+          "features": [feature]
+        });
+        map.highlightPolygon = L.glify.shapes({
+          map: map,
+          color: highlight.color ? highlight.color : "red",
+          fill: highlight.fill ? highlight.fill : "red",
+          size: highlight.size ? highlight.size : 1,
+          opacity: highlight.opacity ? highlight.opacity : 1,
+          data: data
+        }); // Leaflet Polygons 
+
+        /*
+        map.highlightPolygon = L.polygon(feature, {
+            color: "red",
+            fill: "red",
+            opacity: 1,
+            stroke: true,
+            interactive: false,
+            weight: 3
+        })
+        */
+
+        map.highlightPolygon.addTo(map);
+      }
+
+      result = settings.hover(e, feature);
+    } else {
+      // Remove the highlighted shape again if highlight is activated and no feature was hovered
+      if (highlight !== null && map.highlightPolygon) {
+        map.removeLayer(map.highlightPolygon);
+        map.highlightPolygon.remove();
+      }
     }
   });
   return result !== undefined ? result : true;

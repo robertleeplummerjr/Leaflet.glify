@@ -53,6 +53,9 @@ L.glify.lines({
 * `vertexShaderSource` `{String|Function}` optional glsl vertex shader source, defaults to use `L.glify.shader.vertex`
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.polygon`
 * `click` `{Function}` optional event handler for clicking a shape
+* `hover` `{Function}` optional event handler for hovering a shape
+* `hoverWait` {Number} a number in milliseconds for debouncing the hover-event, default is 150
+* `highlight` `{Object}` optional Object to highlight hovered shapes, default is `null`. Object can contain `size`, `color`, `fill` and `opacity`.
 * `color` `{Function|Object|String}` optional, default is 'random'
   * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being colored
 * `opacity` {Number} a value from 0 to 1, default is 0.5
@@ -66,13 +69,17 @@ L.glify.lines({
 * `vertexShaderSource` `{String|Function}` optional glsl vertex shader source, defaults to use `L.glify.shader.vertex`
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.point`
 * `click` `{Function}` optional event handler for clicking a point
+* `hover` `{Function}` optional event handler for hovering a point
+* `hoverWait` {Number} a number in milliseconds for debouncing the hover-event, default is 150
+* `highlight` `{Object}` optional Object to highlight hovered points, default is `null`. Object can contain `radius`, `color`, `fillColor` and `opacity`.
 * `color` `{Function|Object|String}` optional, default is 'random'
   * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `point`:`array` that is being colored 
 * `opacity` {Number} a value from 0 to 1, default is 0.8
 * `className` {String} a class name applied to canvas, default is ''
 * `size` {Number|Function} pixel size of point
   * When `size` is a `Function` its arguments are `index`:`number`, and the `point`:`array` that is being sized
-* `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a point
+* `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a point, default is 0.1
+* `sensitivityHover` {Number} a value which determines the hoverable area of a point, default is 0.03
 * `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets.
 
@@ -81,16 +88,21 @@ L.glify.lines({
 * `data` `{Object}` required geojson data
 * `vertexShaderSource` `{String|Function}` optional glsl vertex shader source, defaults to use `L.glify.shader.vertex`
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.point`
-* `click` `{Function}` optional event handler for clicking a point
+* `click` `{Function}` optional event handler for clicking a line
+* `hover` `{Function}` optional event handler for hovering a line
+* `hoverWait` {Number} a number in milliseconds for debouncing the hover-event, default is 150
+* `highlight` `{Object}` optional Object to highlight hovered lines, default is `null`. Object can contain `color`, `weight` and `opacity`.
 * `color` `{Function|Object|String}` optional, default is 'random'
   * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `point`:`array` that is being colored 
 * `opacity` {Number} a value from 0 to 1, default is 0.5
 * `className` {String} a class name applied to canvas, default is ''
-* `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
-  * CAUTION: May cause performance issue with large data sets. 
 * `weight` {Number|Function} a value in pixels of how thick lines should be drawn
   * When `weight` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being drawn
   * CAUTION: Zoom of more than 18 will turn weight internally to 1 to prevent WebGL precision rendering issues.
+* `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a line, default is 0.1
+* `sensitivityHover` {Number} a value which determines the hoverable area of a line, default is 0.03
+* `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
+  * CAUTION: May cause performance issue with large data sets. 
 
 ## `L.glify` methods
 * `longitudeFirst()`

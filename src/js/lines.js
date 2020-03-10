@@ -50,13 +50,19 @@ Lines.defaults = {
   latitudeKey: null,
   attachShaderVars: null,
   setupClick: null,
+  setupHoverLines: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   click: null,
+  hover: null,
   color: 'random',
   className: '',
   opacity: 0.5,
   weight: 2,
+  sensitivity: 0.1,
+  sensitivityHover: 0.03,
+  hoverWait: 150,
+  highlight: null,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -79,6 +85,10 @@ Lines.prototype = {
     var settings = this.settings;
     if (settings.click) {
       settings.setupClick(settings.map);
+    }
+
+    if (settings.hover) {
+      settings.setupHoverLines(settings.map, settings.hoverWait);
     }
 
     return this
@@ -388,45 +398,44 @@ Lines.prototype = {
   }
 };
 
-Lines.tryClick = function(e, map) {
-  function pDistance(x, y, x1, y1, x2, y2) {
-    var A = x - x1;
-    var B = y - y1;
-    var C = x2 - x1;
-    var D = y2 - y1;
+function pDistance(x, y, x1, y1, x2, y2) {
+  var A = x - x1;
+  var B = y - y1;
+  var C = x2 - x1;
+  var D = y2 - y1;
 
-    var dot = A * C + B * D;
-    var len_sq = C * C + D * D;
-    var param = -1;
-    if (len_sq !== 0) //in case of 0 length line
-        param = dot / len_sq;
+  var dot = A * C + B * D;
+  var len_sq = C * C + D * D;
+  var param = -1;
+  if (len_sq !== 0) //in case of 0 length line
+      param = dot / len_sq;
 
-    var xx, yy;
+  var xx, yy;
 
-    if (param < 0) {
-      xx = x1;
-      yy = y1;
-    }
-    else if (param > 1) {
-      xx = x2;
-      yy = y2;
-    }
-    else {
-      xx = x1 + param * C;
-      yy = y1 + param * D;
-    }
-
-    var dx = x - xx;
-    var dy = y - yy;
-    return Math.sqrt(dx * dx + dy * dy);
+  if (param < 0) {
+    xx = x1;
+    yy = y1;
+  }
+  else if (param > 1) {
+    xx = x2;
+    yy = y2;
+  }
+  else {
+    xx = x1 + param * C;
+    yy = y1 + param * D;
   }
 
+  var dx = x - xx;
+  var dy = y - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+Lines.tryClick = function(e, map) {
   var foundFeature = false;
   var instance = false;
-  var record = 0.1;
-  var settings;
+  var settings, sensitivity;
   Lines.instances.forEach(function (_instance) {
     settings = _instance.settings;
+    sensitivity = settings.sensitivity;
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
@@ -436,8 +445,8 @@ Lines.tryClick = function(e, map) {
         var distance = pDistance(e.latlng.lng, e.latlng.lat,
           feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
           feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
-        if (distance < record) {
-          record = distance;
+        if (distance < sensitivity) {
+          sensitivity = distance;
           foundFeature = feature;
           instance = _instance;
         }
@@ -448,6 +457,89 @@ Lines.tryClick = function(e, map) {
   if (instance) {
     instance.settings.click(e, foundFeature);
   } else {
+    return;
+  }
+};
+function inBounds(e, bounds) {
+  var cond = ((bounds._northEast.lat > e.lat) && (e.lat > bounds._southWest.lat) &&
+   (bounds._northEast.lng > e.lng) && (e.lng > bounds._southWest.lng));
+  return cond;
+}
+Lines.tryHover = function (e, map) {
+  var foundFeature = false;
+  var instance = false;
+  var settings, sensitivity;
+  Lines.instances.forEach(function (_instance) {
+    settings = _instance.settings;
+    sensitivity = settings.sensitivityHover;
+    if (!_instance.active) return;
+    if (settings.map !== map) return;
+    if (!settings.hover) return;
+    // Check if e.latlng is inside the bbox of the features
+    var bounds = L.geoJson(settings.data.features).getBounds();
+    if (inBounds(e.latlng, bounds)) {
+      settings.data.features.map(function (feature) {
+        for (var i = 1; i < feature.geometry.coordinates.length; i++) {
+          var distance = pDistance(e.latlng.lng,
+                                   e.latlng.lat,
+                                   feature.geometry.coordinates[i - 1][0],
+                                   feature.geometry.coordinates[i - 1][1],
+                                   feature.geometry.coordinates[i][0],
+                                   feature.geometry.coordinates[i][1]);
+
+          if (distance < sensitivity) {
+            sensitivity = distance;
+            foundFeature = feature;
+            instance = _instance;
+          }
+        }
+      });
+    }
+  });
+
+  var highlight = settings.highlight;
+  if (instance) {
+    // If highlight is activated and there is a highlighted line already, remove it
+    if (highlight !== null) {
+      if (map.highlightLines) {
+        map.removeLayer(map.highlightLines);
+        map.highlightLines.remove();
+      }
+      
+      // Add hovered/highlighted line
+      // Leaflet Lines - Working, but problematic with weight?
+      map.highlightLines = L.polyline(L.GeoJSON.coordsToLatLngs(foundFeature.geometry.coordinates), {
+          color: highlight.color ? highlight.color : "red",
+          weight: highlight.weight ? highlight.weight : 3,
+          opacity: highlight.opacity ? highlight.opacity : 1
+      })
+      map.highlightLines.addTo(map);  
+      
+      // Glify Lines - Not working 
+      /*
+      // TODO - Is it because Coordinates are Objects?
+      var data = {"type":"FeatureCollection",
+                  "features":[{"type":"Feature","geometry":{
+                  "type":"LineString","coordinates":
+                  L.GeoJSON.coordsToLatLngs(foundFeature.geometry.coordinates)}}]}
+                   
+      var highlightLines = L.glify.lines({
+       map: map,
+       color: highlight.color ? highlight.color : "red",
+       weight: highlight.weight ? highlight.weight : 3,
+       data: data,
+       opacity: 1
+      });
+      highlightLines.addTo(map);
+      */  
+    }
+    instance.settings.hover(e, foundFeature);
+  } else {
+    // Remove the highlighted line again if highlight is activated and no feature was hovered
+    if (highlight !== null && map.highlightLines) {
+      map.removeLayer(map.highlightLines);
+      map.highlightLines.remove()
+    }
     return;
   }
 };

@@ -24,6 +24,7 @@ var glify = {
   points: function(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
+      setupHoverPoints: glify.setupHoverPoints.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
@@ -40,6 +41,7 @@ var glify = {
   shapes: function(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
+      setupHoverShapes: glify.setupHoverShapes.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
@@ -56,6 +58,7 @@ var glify = {
   lines: function(settings) {
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
+      setupHoverLines: glify.setupHoverLines.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
@@ -88,6 +91,33 @@ var glify = {
         if (hit !== undefined) return hit;
       });
     }
+  },
+  setupHoverPoints: function(map, hoverWait) {
+    if (hoverWait === undefined) return;
+    this.maps.push(map);
+    map.on('mousemove', debounce(function (e) {
+        var hit;
+        hit = Points.tryHover(e, map);
+        if (hit !== undefined) return hit;
+    }, hoverWait));
+  },
+  setupHoverShapes: function(map, hoverWait) {
+    if (hoverWait === undefined) return;
+    this.maps.push(map);
+    map.on('mousemove', debounce(function (e) {
+        var hit;
+        hit = Shapes.tryHover(e, map);
+        if (hit !== undefined) return hit;
+    }, hoverWait));
+  },
+  setupHoverLines: function(map, hoverWait) {
+    if (hoverWait === undefined) return;
+    this.maps.push(map);
+    map.on('mousemove', debounce(function (e) {
+        var hit;
+        hit = Lines.tryHover(e, map);
+        if (hit !== undefined) return hit;
+    }, hoverWait));
   },
   pointInCircle: function (centerPoint, checkPoint, radius) {
     var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
@@ -219,6 +249,21 @@ var glify = {
       polygon: fs.readFileSync(__dirname + '/../shader/fragment/polygon.glsl')
     }
   }
+};
+
+function debounce(func, wait, immediate) {
+	var timeout;
+	return function() {
+		var context = this, args = arguments;
+		var later = function() {
+			timeout = null;
+			if (!immediate) func.apply(context, args);
+		};
+		var callNow = immediate && !timeout;
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
+		if (callNow) func.apply(context, args);
+	};
 };
 
 module.exports = glify;

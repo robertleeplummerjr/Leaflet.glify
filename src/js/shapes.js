@@ -53,12 +53,16 @@ Shapes.defaults = {
   latitudeKey: null,
   attachShaderVars: null,
   setupClick: null,
+  setupHoverShapes: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   click: null,
+  hover: null,
   color: 'random',
   className: '',
   opacity: 0.5,
+  hoverWait: 150,
+  highlight: null,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -83,6 +87,10 @@ Shapes.prototype = {
       settings.setupClick(settings.map);
     }
 
+    if (settings.hover) {
+      settings.setupHoverShapes(settings.map, settings.hoverWait);
+    }
+    
     return this
       .setupVertexShader()
       .setupFragmentShader()
@@ -337,6 +345,66 @@ Shapes.tryClick = function(e, map) {
     }
   });
 
+  return result !== undefined ? result : true;
+};
+Shapes.tryHover = function (e, map) {
+  var result,
+      settings,
+      feature;
+
+  Shapes.instances.forEach(function (_instance) {
+    settings = _instance.settings;
+    if (!_instance.active) return;
+    if (settings.map !== map) return;
+    if (!settings.hover) return;
+
+    feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+    var highlight = settings.highlight;
+    if (feature !== undefined) {
+      // If highlight is activated and there is a highlighted shape already, remove it
+      if (highlight !== null) {
+        if (map.highlightPolygon) {
+          map.removeLayer(map.highlightPolygon);
+          map.highlightPolygon.remove();
+        }
+        
+        // Glify Polygons
+        var data = Object.assign({"type":"FeatureCollection",
+                                  "features": [feature]});
+        map.highlightPolygon = L.glify.shapes({
+          map: map,
+          color: highlight.color ? highlight.color : "red",
+          fill: highlight.fill ? highlight.fill : "red",
+          size: highlight.size ? highlight.size : 1,
+          opacity: highlight.opacity ? highlight.opacity : 1,
+          data: data
+        }); 
+        
+        // Leaflet Polygons 
+        /*
+        map.highlightPolygon = L.polygon(feature, {
+            color: "red",
+            fill: "red",
+            opacity: 1,
+            stroke: true,
+            interactive: false,
+            weight: 3
+        })
+        */
+        
+        map.highlightPolygon.addTo(map);
+      }
+
+      result = settings.hover(e, feature);
+    } else {
+      // Remove the highlighted shape again if highlight is activated and no feature was hovered
+      if (highlight !== null && map.highlightPolygon) {
+        map.removeLayer(map.highlightPolygon);
+        map.highlightPolygon.remove()
+      } 
+    }
+  });
+  
   return result !== undefined ? result : true;
 };
 

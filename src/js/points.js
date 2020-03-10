@@ -56,15 +56,20 @@ Points.defaults = {
   closest: null,
   attachShaderVars: null,
   setupClick: null,
+  setupHoverPoints: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   eachVertex: null,
   click: null,
+  hover: null,
   color: 'random',
   opacity: 0.8,
   size: null,
   className: '',
-  sensitivity: 2,
+  sensitivity: 0.1,
+  sensitivityHover: 0.03,
+  hoverWait: 150,
+  highlight: null,
   shaderVars: {
     vertex: {
       type: 'FLOAT',
@@ -99,6 +104,10 @@ Points.prototype = {
       this.settings.setupClick(settings.map);
     }
 
+    if (settings.hover) {
+      settings.setupHoverPoints(settings.map, settings.hoverWait);
+    }
+    
     return this
       .setupVertexShader()
       .setupFragmentShader()
@@ -415,6 +424,84 @@ Points.tryClick = function(e, map) {
   if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize(pointIndex) * instance.settings.sensitivity)) {
     result = instance.settings.click(e, found, xy);
     return result !== undefined ? result : true;
+  }
+};
+Points.tryHover = function (e, map) {
+  var result,
+      settings,
+      instance,
+      closestFromEach = [],
+      instancesLookup = {},
+      point,
+      xy,
+      found,
+      latLng;
+
+  // TODO - Can we restrict by BBOX of all Points, so it doesnt trigger so often?
+  Points.instances.forEach(function (_instance) {
+    settings = _instance.settings;
+    if (!_instance.active) return;
+    if (settings.map !== map) return;
+    if (!settings.hover) return;
+    point = _instance.lookup(e.latlng);
+    instancesLookup[point] = _instance;
+    closestFromEach.push(point);
+  });
+
+  if (closestFromEach.length < 1) return;
+  if (!settings) return;
+
+  found = settings.closest(e.latlng, closestFromEach, map);
+  if (found === null) return;
+
+  instance = instancesLookup[found];
+  if (!instance) return;
+
+  latLng = L.latLng(found[settings.latitudeKey], found[settings.longitudeKey]);
+  xy = map.latLngToLayerPoint(latLng);
+  
+  const pointIndex = typeof instance.settings.size === 'function' ? instance.settings.data.indexOf(found) : null;
+  if (utils.pointInCircle(xy, e.layerPoint, instance.pointSize(pointIndex) * instance.settings.sensitivityHover)) {
+    result = instance.settings.hover(e, found, xy);
+    // If highlight is activated and there is a highlighted point already, remove it
+    var highlight = instance.settings.highlight;
+    if (highlight !== null) {
+      if (map.highlightPoints) {
+        map.removeLayer(map.highlightPoints);
+        map.highlightPoints.remove();
+      }
+      
+      // Add hovered/highlighted Point / Circle
+      // TODO - Leaflet Points- Problem with radius/size?
+      map.highlightPoints = L.circle(found, {
+        color: highlight.color ? highlight.color : "red",
+        fillColor: highlight.fillColor ? highlight.fillColor : "red",
+        radius: highlight.radius ? highlight.radius : 10000/map._zoom,
+        fillOpacity: highlight.fillOpacity ? highlight.fillOpacity : 1
+      })
+      map.highlightPoints.addTo(map);      
+      
+      // Glify Points. Doesnt really work?
+      /*
+      map.highlightPoints = L.glify.points({
+        map: map,
+        data: [found.reverse()],
+        color: highlight.color ? highlight.color : "red",
+        size: highlight.size ? highlight.size : 1000
+      })
+      map.highlightPoints.addTo(map);
+      */
+    }
+    return result !== undefined ? result : true;
+  } else {
+    // Remove the highlighted Point again if highlight is activated and no feature was hovered
+    if (highlight !== null) {
+      if (map.highlightPoints) {
+        map.removeLayer(map.highlightPoints);
+        map.highlightPoints.remove()
+      }      
+    }
+    return;
   }
 };
 
