@@ -374,7 +374,6 @@ Shapes.tryHover = function (e, map) {
         map.highlightPolygon = L.glify.shapes({
           map: map,
           color: highlight.color ? highlight.color : "red",
-          fill: highlight.fill ? highlight.fill : "red",
           size: highlight.size ? highlight.size : 1,
           opacity: highlight.opacity ? highlight.opacity : 1,
           data: data

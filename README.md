@@ -55,7 +55,7 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a shape
 * `hover` `{Function}` optional event handler for hovering a shape
 * `hoverWait` {Number} a number in milliseconds for debouncing the hover-event, default is 150
-* `highlight` `{Object}` optional Object to highlight hovered shapes, default is `null`. Object can contain `size`, `color`, `fill` and `opacity`.
+* `highlight` `{Object}` optional Object to highlight hovered shapes, default is `null`. Object can contain `size`, `color` and `opacity`.
 * `color` `{Function|Object|String}` optional, default is 'random'
   * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being colored
 * `opacity` {Number} a value from 0 to 1, default is 0.5
@@ -71,7 +71,7 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a point
 * `hover` `{Function}` optional event handler for hovering a point
 * `hoverWait` {Number} a number in milliseconds for debouncing the hover-event, default is 150
-* `highlight` `{Object}` optional Object to highlight hovered points, default is `null`. Object can contain `radius`, `color`, `fillColor` and `opacity`.
+* `highlight` `{Object}` optional Object to highlight hovered points, default is `null`. Object can contain `radius`, `color`, `fillColor` and `fillOpacity`.
 * `color` `{Function|Object|String}` optional, default is 'random'
   * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `point`:`array` that is being colored 
 * `opacity` {Number} a value from 0 to 1, default is 0.8
