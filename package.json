@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "browserify --external leaflet -t brfs src/js/index.js -t [ babelify --presets [ @babel/preset-env ] ] -o glify.js"
+    "build": "browserify --external leaflet src/js/index.js -t [ babelify --presets [ @babel/preset-env ] ] -p [ glslify-require ] -o glify.js"
   },
   "repository": {
     "type": "git",
@@ -32,7 +32,7 @@
     "@babel/core": "^7.3.4",
     "@babel/preset-env": "^7.3.4",
     "babelify": "^10.0.0",
-    "brfs": "^2.0.1",
-    "browserify": "^16.2.2"
+    "browserify": "^16.2.2",
+    "glslify-require": "^1.1.0"
   }
 }

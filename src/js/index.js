@@ -1,8 +1,8 @@
-var fs = require('fs');
 var Points = require('./points');
 var Shapes = require('./shapes');
 var Lines = require('./lines');
 var mapMatrix = require('./map-matrix');
+
 var glify = {
   longitudeKey: 1,
   latitudeKey: 0,
@@ -209,14 +209,15 @@ var glify = {
   },
   mapMatrix: mapMatrix,
   shader: {
-    vertex: fs.readFileSync(__dirname + '/../shader/vertex/default.glsl'),
+    vertex: require('../shader/vertex/default.glsl'),
+    centimetricVertex: require('../shader/vertex/centimetric.glsl'),
     fragment: {
-      dot: fs.readFileSync(__dirname + '/../shader/fragment/dot.glsl'),
-      point: fs.readFileSync(__dirname + '/../shader/fragment/point.glsl'),
-      puck: fs.readFileSync(__dirname + '/../shader/fragment/puck.glsl'),
-      simpleCircle: fs.readFileSync(__dirname + '/../shader/fragment/simple-circle.glsl'),
-      square: fs.readFileSync(__dirname + '/../shader/fragment/square.glsl'),
-      polygon: fs.readFileSync(__dirname + '/../shader/fragment/polygon.glsl')
+      dot: require('../shader/fragment/dot.glsl'),
+      point: require('../shader/fragment/point.glsl'),
+      puck: require('../shader/fragment/puck.glsl'),
+      simpleCircle: require('../shader/fragment/simple-circle.glsl'),
+      square: require('../shader/fragment/square.glsl'),
+      polygon: require('../shader/fragment/polygon.glsl')
     }
   }
 };
