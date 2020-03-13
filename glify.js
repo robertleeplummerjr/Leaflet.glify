@@ -19660,10 +19660,7 @@ Points.prototype = {
         opacity = gl.getUniformLocation(program, 'opacity'),
         vertexBuffer = gl.createBuffer(),
         vertexArray = new Float32Array(this.verts),
-        byteCount = vertexArray.BYTES_PER_ELEMENT;
-    console.log(this.verts);
-    console.log(vertexArray);
-    console.log('byteCount ' + byteCount); //set the matrix to some that makes 1 unit 1 pixel.
+        byteCount = vertexArray.BYTES_PER_ELEMENT; //set the matrix to some that makes 1 unit 1 pixel.
 
     this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -19836,7 +19833,6 @@ Points.prototype = {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
-    console.log(settings.data.length);
     gl.drawArrays(gl.POINTS, 0, settings.data.length);
     return this;
   },

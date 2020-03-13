@@ -210,7 +210,6 @@ var glify = {
   mapMatrix: mapMatrix,
   shader: {
     vertex: require('../shader/vertex/default.glsl'),
-    centimetricVertex: require('../shader/vertex/centimetric.glsl'),
     fragment: {
       dot: require('../shader/fragment/dot.glsl'),
       point: require('../shader/fragment/point.glsl'),
