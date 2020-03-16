@@ -10,8 +10,11 @@ var canvasOverlay = require('./canvasoverlay').canvasOverlay;
    */
 var Points = function Points(settings) {
   Points.instances.push(this);
-  this.settings = utils.defaults(settings, Points.defaults);
+  if(settings.isCentimetric && !('shaderVars' in settings) ) {
+    settings.shaderVars = Points.defaultCentimetricShaderVars;
+  }
 
+  this.settings = utils.defaults(settings, Points.defaults);
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
 
@@ -40,6 +43,8 @@ var Points = function Points(settings) {
   this.fragmentShader = null;
   this.program = null;
   this.matrix = null;
+  this.eyepos = null;
+  this.eyeposLow = null;
   this.verts = null;
   this.latLngLookup = null;
 
@@ -58,6 +63,7 @@ Points.defaults = {
   setupClick: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
+  isCentimetric: false,
   eachVertex: null,
   click: null,
   color: 'random',
@@ -87,6 +93,32 @@ Points.defaults = {
   }
 };
 
+Points.defaultCentimetricShaderVars = {
+  vertex: {
+    type: 'FLOAT',
+    start: 0,
+    size: 2,
+    bytes: 8
+  },
+  vertexLow: {
+    type: 'FLOAT',
+    start: 2,
+    size: 2,
+    bytes: 8
+  },
+  color: {
+    type: 'FLOAT',
+    start: 4,
+    size: 3,
+    bytes: 8
+  },
+  pointSize: {
+    type: 'FLOAT',
+    start: 7,
+    size: 2,
+    bytes: 8
+  },
+}
 //statics
 Points.instances = [];
 
@@ -137,6 +169,18 @@ Points.prototype = {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
 
+    if(settings.isCentimetric) {
+      this.eyepos = gl.getUniformLocation(program, "eyepos");
+      this.eyeposLow = gl.getUniformLocation(program, "eyeposLow");
+      //var vertexLow = gl.getAttribLocation(program, "vertexLow");
+
+      var bounds = settings.map.getBounds();
+      var topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest());
+      var offset = settings.map.project(L.latLng(topLeft.lat, topLeft.lng), 0);      
+      gl.uniform3f(this.eyepos, offset.x, offset.y, 0.0);
+
+      gl.uniform3f(this.eyeposLow, offset.x - Math.fround(offset.x), offset.y - Math.fround(offset.y), 0.0);
+    }
     if (settings.shaderVars !== null) {
       this.settings.attachShaderVars(byteCount, gl, program, settings.shaderVars);
     }
@@ -153,6 +197,7 @@ Points.prototype = {
     // -- data
     var verts = this.verts,
       settings = this.settings,
+      isCentimetric = settings.isCentimetric,
       data = settings.data,
       colorFn,
       color = settings.color,
@@ -203,7 +248,20 @@ Points.prototype = {
       }
 
       //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
-      verts.push(pixel.x, pixel.y, color.r, color.g, color.b, size);
+      if(isCentimetric) {
+        verts.push(
+          pixel.x,
+          pixel.y, 
+          pixel.x - Math.fround(pixel.x),
+          pixel.y - Math.fround(pixel.y),
+          color.r, 
+          color.g, 
+          color.b, 
+          size
+        );
+      } else {
+        verts.push(pixel.x, pixel.y, color.r, color.g, color.b, size);
+      }
       if (settings.eachVertex !== null) {
         settings.eachVertex.call(this, latLng, pixel, color);
       }
@@ -294,11 +352,13 @@ Points.prototype = {
    * @returns {Points}
    */
   drawOnCanvas: function () {
+
     if (this.gl == null) return this;
 
     var gl = this.gl,
       canvas = this.canvas,
       settings = this.settings,
+      isCentimetric = settings.isCentimetric,
       map = settings.map,
       bounds = map.getBounds(),
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
@@ -310,11 +370,19 @@ Points.prototype = {
 
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
-    //set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
       .set(pixelsToWebGLMatrix)
       .scaleMatrix(scale)
-      .translateMatrix(-offset.x, -offset.y);
+
+    if(isCentimetric) {
+      //on centimetric mode, we don't translate the matrix.
+      //matrix carries only information about scale
+      //and eyepos / eyeposLow uniforms carry position information
+      gl.uniform3f(this.eyepos, offset.x, offset.y, 0.0);
+      gl.uniform3f(this.eyeposLow, offset.x - Math.fround(offset.x), offset.y - Math.fround(offset.y), 0.0);
+    } else {
+      mapMatrix.translateMatrix(-offset.x, -offset.y);
+    }
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);

@@ -37,9 +37,15 @@
   var map = L.map('map')
           .setView([50.00, 14.44], 7);
 
-  L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png")
-    //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
-    .addTo(map);
+  L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png", {
+    maxZoom: 30,
+  })
+  //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
+  .addTo(map);
+
+  L.control.scale({
+    imperial: false
+  }).addTo(map);
 
   wget(['86T.json', 'CZDistricts.json', 'rivers.json'], function(points, districts, rivers) {
     L.glify.shapes({
@@ -89,6 +95,37 @@
       },
       data: JSON.parse(points)
     });
+
+    const centimetricPointsStart = [47.88687858, 13.74389628, ];
+    const centimetricPointsEnd = [47.99999906, 13.99999983];
+    const nbrCentimetricPoints = 20000;
+    var centimetricPoints = [];
+    for(var i = 0; i < nbrCentimetricPoints; i++) {
+      const fraction = i / nbrCentimetricPoints;
+      centimetricPoints.push([
+        centimetricPointsStart[0] * fraction + centimetricPointsEnd[0] * (1 - fraction),
+        centimetricPointsStart[1] * fraction + centimetricPointsEnd[1] * (1 - fraction)
+      ])
+    }
+
+    L.glify.points({
+      map: map,
+      size: function(i) {
+        return (Math.random() * 17) + 7;
+      },
+      click: function (e, point, xy) {
+        //set up a standalone popup (use a popup as a layer)
+        L.popup()
+            .setLatLng(point)
+            .setContent("You clicked the centimetric point at longitude:" + point[L.glify.longitudeKey] + ', latitude:' + point[L.glify.latitudeKey])
+            .openOn(map);
+
+        console.log(point);
+      },
+      data: centimetricPoints,
+      isCentimetric : true
+    });
+    
   });
 
   function wget(urls, fn) {

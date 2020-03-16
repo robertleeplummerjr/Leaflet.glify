@@ -18798,19 +18798,21 @@ var glify = {
   },
 
   points: function points(settings) {
+    var isCentimetric = 'isCentimetric' in settings && settings.isCentimetric === true;
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
       vertexShaderSource: function vertexShaderSource() {
-        return glify.shader.vertex;
+        return isCentimetric ? glify.shader.centimetricVertex : glify.shader.vertex;
       },
       fragmentShaderSource: function fragmentShaderSource() {
         return glify.shader.fragment.point;
       },
       color: glify.color.random,
-      closest: glify.closest.bind(this)
+      closest: glify.closest.bind(this),
+      isCentimetric: isCentimetric
     };
 
     for (var p in settings) {
@@ -19553,6 +19555,11 @@ var canvasOverlay = require('./canvasoverlay').canvasOverlay;
 
 var Points = function Points(settings) {
   Points.instances.push(this);
+
+  if (settings.isCentimetric && !('shaderVars' in settings)) {
+    settings.shaderVars = Points.defaultCentimetricShaderVars;
+  }
+
   this.settings = utils.defaults(settings, Points.defaults);
   if (!settings.data) throw new Error('no "data" array setting defined');
   if (!settings.map) throw new Error('no leaflet "map" object setting defined');
@@ -19582,6 +19589,8 @@ var Points = function Points(settings) {
   this.fragmentShader = null;
   this.program = null;
   this.matrix = null;
+  this.eyepos = null;
+  this.eyeposLow = null;
   this.verts = null;
   this.latLngLookup = null;
   this.setup().render();
@@ -19597,6 +19606,7 @@ Points.defaults = {
   setupClick: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
+  isCentimetric: false,
   eachVertex: null,
   click: null,
   color: 'random',
@@ -19624,8 +19634,34 @@ Points.defaults = {
       bytes: 6
     }
   }
-}; //statics
+};
+Points.defaultCentimetricShaderVars = {
+  vertex: {
+    type: 'FLOAT',
+    start: 0,
+    size: 2,
+    bytes: 8
+  },
+  vertexLow: {
+    type: 'FLOAT',
+    start: 2,
+    size: 2,
+    bytes: 8
+  },
+  color: {
+    type: 'FLOAT',
+    start: 4,
+    size: 3,
+    bytes: 8
+  },
+  pointSize: {
+    type: 'FLOAT',
+    start: 7,
+    size: 2,
+    bytes: 8
+  } //statics
 
+};
 Points.instances = [];
 Points.prototype = {
   maps: [],
@@ -19669,6 +19705,17 @@ Points.prototype = {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
 
+    if (settings.isCentimetric) {
+      this.eyepos = gl.getUniformLocation(program, "eyepos");
+      this.eyeposLow = gl.getUniformLocation(program, "eyeposLow"); //var vertexLow = gl.getAttribLocation(program, "vertexLow");
+
+      var bounds = settings.map.getBounds();
+      var topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest());
+      var offset = settings.map.project(L.latLng(topLeft.lat, topLeft.lng), 0);
+      gl.uniform3f(this.eyepos, offset.x, offset.y, 0.0);
+      gl.uniform3f(this.eyeposLow, offset.x - Math.fround(offset.x), offset.y - Math.fround(offset.y), 0.0);
+    }
+
     if (settings.shaderVars !== null) {
       this.settings.attachShaderVars(byteCount, gl, program, settings.shaderVars);
     }
@@ -19683,6 +19730,7 @@ Points.prototype = {
 
     var verts = this.verts,
         settings = this.settings,
+        isCentimetric = settings.isCentimetric,
         data = settings.data,
         colorFn,
         color = settings.color,
@@ -19733,7 +19781,11 @@ Points.prototype = {
       } //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
 
 
-      verts.push(pixel.x, pixel.y, color.r, color.g, color.b, size);
+      if (isCentimetric) {
+        verts.push(pixel.x, pixel.y, pixel.x - Math.fround(pixel.x), pixel.y - Math.fround(pixel.y), color.r, color.g, color.b, size);
+      } else {
+        verts.push(pixel.x, pixel.y, color.r, color.g, color.b, size);
+      }
 
       if (settings.eachVertex !== null) {
         settings.eachVertex.call(this, latLng, pixel, color);
@@ -19819,6 +19871,7 @@ Points.prototype = {
     var gl = this.gl,
         canvas = this.canvas,
         settings = this.settings,
+        isCentimetric = settings.isCentimetric,
         map = settings.map,
         bounds = map.getBounds(),
         topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
@@ -19827,9 +19880,19 @@ Points.prototype = {
         scale = Math.pow(2, zoom),
         mapMatrix = this.mapMatrix,
         pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]); //set base matrix to translate canvas pixel coordinates -> webgl coordinates
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale);
 
-    mapMatrix.set(pixelsToWebGLMatrix).scaleMatrix(scale).translateMatrix(-offset.x, -offset.y);
+    if (isCentimetric) {
+      //on centimetric mode, we don't translate the matrix.
+      //matrix carries only information about scale
+      //and eyepos / eyeposLow uniforms carry position information
+      gl.uniform3f(this.eyepos, offset.x, offset.y, 0.0);
+      gl.uniform3f(this.eyeposLow, offset.x - Math.fround(offset.x), offset.y - Math.fround(offset.y), 0.0);
+    } else {
+      mapMatrix.translateMatrix(-offset.x, -offset.y);
+    }
+
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
@@ -20344,7 +20407,7 @@ module.exports = "precision mediump float;\n#define GLSLIFY 1\nvarying vec4 _col
 },{}],20:[function(require,module,exports){
 module.exports = "precision mediump float;\n#define GLSLIFY 1\nvarying vec4 _color;\nuniform float opacity;\n\nvoid main() {\n    //squares\n    gl_FragColor = vec4(_color[0], _color[1], _color[2], opacity);\n}";
 },{}],21:[function(require,module,exports){
-module.exports = "precision highp float;\n#define GLSLIFY 1\n\nuniform mat4 u_matrix;\nuniform vec3 u_eyepos;\nuniform vec3 u_eyepos_low;\n\nattribute vec3 a_vertex;\nattribute vec3 a_vertex_low;\nattribute float a_pointSize;\n\nattribute vec4 a_color;\nvarying vec4 v_color;\n        \nvoid main() {\n    // inspired a lot by https://prideout.net/emulating-double-precision\n    vec3 t1 = a_vertex_low - u_eyepos_low;\n    vec3 e = t1 - a_vertex_low;\n    vec3 t2 = ((-u_eyepos_low - e) + (a_vertex_low - (t1 - e))) + a_vertex - u_eyepos;\n    vec3 high_delta = t1 + t2;\n    vec3 low_delta = t2 - (high_delta - t1);\n    vec3 p = high_delta + low_delta;\n    gl_Position = u_matrix * vec4(p, 1.0);\n\n    gl_PointSize =  a_pointSize;\n    // pass the color to the fragment shader\n    v_color = a_color;\n}";
+module.exports = "precision highp float;\n#define GLSLIFY 1\n\nuniform mat4 matrix;\nuniform vec3 eyepos;\nuniform vec3 eyeposLow;\n\nattribute vec3 vertex;\nattribute vec3 vertexLow;\nattribute float pointSize;\n\nattribute vec4 color;\nvarying vec4 _color;\n        \nvoid main() {\n    // inspired a lot by https://prideout.net/emulating-double-precision\n    vec3 t1 = vertexLow - eyeposLow;\n    vec3 e = t1 - vertexLow;\n    vec3 t2 = ((-eyeposLow - e) + (vertexLow - (t1 - e))) + vertex - eyepos;\n    vec3 high_delta = t1 + t2;\n    vec3 low_delta = t2 - (high_delta - t1);\n    vec3 p = high_delta + low_delta;\n    gl_Position = matrix * vec4(p, 1.0);\n\n    gl_PointSize =  pointSize;\n    // pass the color to the fragment shader\n    _color = color;\n}";
 },{}],22:[function(require,module,exports){
 module.exports = "#define GLSLIFY 1\nuniform mat4 matrix;\nattribute vec4 vertex;\nattribute float pointSize;\nattribute vec4 color;\nvarying vec4 _color;\n\nvoid main() {\n  //set the size of the point\n  gl_PointSize = pointSize;\n\n  //multiply each vertex by a matrix.\n  gl_Position = matrix * vertex;\n\n  //pass the color to the fragment shader\n  _color = color;\n}";
 },{}]},{},[9]);

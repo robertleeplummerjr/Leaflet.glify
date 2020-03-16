@@ -22,15 +22,17 @@ var glify = {
       .concat(Shapes.instances);
   },
   points: function(settings) {
+    const isCentimetric = 'isCentimetric' in settings && settings.isCentimetric === true;
     var extendedSettings = {
       setupClick: glify.setupClick.bind(this),
       attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
-      vertexShaderSource: function() { return glify.shader.vertex; },
+      vertexShaderSource: function() { return isCentimetric ? glify.shader.centimetricVertex : glify.shader.vertex },
       fragmentShaderSource: function() { return glify.shader.fragment.point; },
       color: glify.color.random,
-      closest: glify.closest.bind(this)
+      closest: glify.closest.bind(this),
+      isCentimetric
     };
     for (var p in settings) {
       extendedSettings[p] = settings[p];
@@ -210,6 +212,7 @@ var glify = {
   mapMatrix: mapMatrix,
   shader: {
     vertex: require('../shader/vertex/default.glsl'),
+    centimetricVertex: require('../shader/vertex/centimetric.glsl'),
     fragment: {
       dot: require('../shader/fragment/dot.glsl'),
       point: require('../shader/fragment/point.glsl'),
