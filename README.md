@@ -75,6 +75,7 @@ L.glify.lines({
 * `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a point
 * `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets.
+* `isCentimetric` {Boolean} optional, default `false`, uses a vertex shader with double precision to allow precise position for points at high zoom levels. Needed above zoom level 19 to avoid jittering and points snapped on a grid.
 
 ## `L.glify.lines` Options
 * `map` `{Object}` required leaflet map
