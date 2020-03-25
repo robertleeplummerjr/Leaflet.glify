@@ -432,10 +432,10 @@ Lines.tryClick = function(e, map) {
     if (!settings.click) return;
 
     settings.data.features.map(feature => {
-      for (var i = 1; i < feature.geometry.coordinates.length; i++) {
+      for (var i = 0; i < feature.geometry.coordinates.length; i++) {
         var distance = pDistance(e.latlng.lng, e.latlng.lat,
-          feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
-          feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+          feature.geometry.coordinates[i][0][0], feature.geometry.coordinates[i][0][1],
+          feature.geometry.coordinates[i][1][0], feature.geometry.coordinates[i][1][1]);
         if (distance < record) {
           record = distance;
           foundFeature = feature;
