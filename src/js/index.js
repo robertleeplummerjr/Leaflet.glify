@@ -94,7 +94,7 @@ var glify = {
     var distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
     return distanceSquared <= radius * radius;
   },
-  attachShaderVars: function(size, gl, program, attributes) { //this will initialize the values that will be used in shaders
+  attachShaderVars: function(byteCount, gl, program, attributes) {
     var name,
         loc,
         attribute,
@@ -107,7 +107,7 @@ var glify = {
         console.log(name, attribute);
         throw new Error('shader variable ' + name + ' not found');
       }
-      gl.vertexAttribPointer(loc, attribute.size, gl[attribute.type], false, size * (attribute.bytes || bytes), size * attribute.start);
+      gl.vertexAttribPointer(loc, attribute.size, gl[attribute.type], attribute.normalize ? true : false, byteCount * (attribute.bytes || bytes), byteCount * attribute.start);
       gl.enableVertexAttribArray(loc);
     }
 

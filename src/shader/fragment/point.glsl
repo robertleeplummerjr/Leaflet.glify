@@ -28,14 +28,14 @@ void main() {
   vec4 borderColor = vec4(0, 0, 0, 0.4);
   vec2 uv = gl_PointCoord.xy;
   vec4 clearColor = vec4(0, 0, 0, 0);
-  
+
   // Offset uv with the center of the circle.
   uv -= center;
-  
+
   float dist2 =  sqrt(dot(uv, uv));
- 
+
   float t2 = 1.0 + smoothstep(radius, radius + outerBorder, dist2)
                 - smoothstep(radius - innerBorder, radius, dist2);
- 
+
   gl_FragColor = mix(mix(borderColor, clearColor, t2), pointColor, t1);
 }

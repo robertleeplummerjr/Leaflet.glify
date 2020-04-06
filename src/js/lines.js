@@ -56,6 +56,7 @@ Lines.defaults = {
   color: 'random',
   className: '',
   opacity: 0.5,
+  weight: 2,
   shaderVars: {
     color: {
       type: 'FLOAT',
@@ -140,7 +141,7 @@ Lines.prototype = {
       }
     }
 
-    this.verts = allVertices;
+    this.allVertices = allVertices;
 
     var vertArray = new Float32Array(allVertices);
     size = vertArray.BYTES_PER_ELEMENT;
@@ -174,6 +175,7 @@ Lines.prototype = {
    * @returns {Lines}
    */
   resetVertices: function () {
+    this.allVertices = [];
     this.verts = [];
 
     var pixel,
@@ -201,16 +203,28 @@ Lines.prototype = {
     for (; featureIndex < featureMax; featureIndex++) {
       feature = features[featureIndex];
       var featureVerts = [];
+      featureVerts.vertexCount = 0;
 
       //use colorFn function here if it exists
       if (colorFn) {
         color = colorFn(featureIndex, feature);
       }
 
-      for (i = 0; i < feature.geometry.coordinates.length; i++) {
-        pixel = settings.map.project(L.latLng(feature.geometry.coordinates[i][latitudeKey], feature.geometry.coordinates[i][longitudeKey]), 0);
-        featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+      function getFeatureVerts(featureVerts, coordinates) {
+        for (var i = 0; i < coordinates.length; i++) {
+          if (Array.isArray(coordinates[i][0])) {
+            getFeatureVerts(featureVerts, coordinates[i]);
+            continue;
+          }
+          pixel = settings.map.project(L.latLng(coordinates[i][latitudeKey], coordinates[i][longitudeKey]), 0);
+          featureVerts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+          if (i !== 0 && i !== coordinates.length - 1) {
+            featureVerts.vertexCount += 1;
+          }
+          featureVerts.vertexCount += 1;
+        }
       }
+      getFeatureVerts(featureVerts, feature.geometry.coordinates);
 
       verts.push(featureVerts);
     }
@@ -285,32 +299,70 @@ Lines.prototype = {
       settings = this.settings,
       canvas = this.canvas,
       map = settings.map,
-      pointSize = Math.max(map.getZoom() - 4.0, 4.0),
+      weight = settings.weight,
+      zoom = map.getZoom(),
+      pointSize = Math.max(zoom - 4.0, 4.0),
       bounds = map.getBounds(),
       topLeft = new L.LatLng(bounds.getNorth(), bounds.getWest()),
-    // -- Scale to current zoom
-      scale = Math.pow(2, map.getZoom()),
+      // -- Scale to current zoom
+      scale = Math.pow(2, zoom),
       offset = map.project(topLeft, 0),
       mapMatrix = this.mapMatrix,
       pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
 
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
-
-    // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-    mapMatrix
-      .set(pixelsToWebGLMatrix)
-      .scaleMatrix(scale)
-      .translateMatrix(-offset.x, -offset.y);
-
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    gl.viewport(0, 0, canvas.width, canvas.height);
     gl.vertexAttrib1f(gl.aPointSize, pointSize);
-    // -- attach matrix value to 'mapMatrix' uniform in shader
-    gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
+    if (zoom > 18) {
+      mapMatrix
+        .set(pixelsToWebGLMatrix)
+        .scaleMatrix(scale)
+        .translateMatrix(-offset.x, -offset.y);
+      // -- attach matrix value to 'mapMatrix' uniform in shader
+      gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
 
-    gl.drawArrays(gl.LINES, 0, this.verts.length / 5);
+      gl.drawArrays(gl.LINES, 0, this.allVertices.length / 5);
+    } else if (typeof weight === 'number') {
+      // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
+      for (let yOffset = -weight; yOffset < weight; yOffset += 0.5) {
+        for (let xOffset = -weight; xOffset < weight; xOffset += 0.5) {
+          // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
+          mapMatrix
+            .set(pixelsToWebGLMatrix)
+            .scaleMatrix(scale)
+            .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
+          // -- attach matrix value to 'mapMatrix' uniform in shader
+          gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
 
+          gl.drawArrays(gl.LINES, 0, this.allVertices.length / 5);
+        }
+      }
+    } else if (typeof weight === 'function') {
+      let allVertexCount = 0;
+      const features = this.settings.data.features;
+      for (let i = 0; i < this.verts.length; i++) {
+        const vert = this.verts[i];
+        var vertexCount = vert.vertexCount;
+        var weightValue = weight(i, features[i]);
+        // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
+        for (let yOffset = -weightValue; yOffset < weightValue; yOffset += 0.5) {
+          for (let xOffset = -weightValue; xOffset < weightValue; xOffset += 0.5) {
+            // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
+            mapMatrix
+              .set(pixelsToWebGLMatrix)
+              .scaleMatrix(scale)
+              .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
+            // -- attach matrix value to 'mapMatrix' uniform in shader
+            gl.uniformMatrix4fv(this.matrix, false, mapMatrix);
+
+            gl.drawArrays(gl.LINES, allVertexCount, vertexCount);
+          }
+        }
+        allVertexCount += vertexCount; // number of vertexes is features.length * 2, but not first or last (5 each) in array of each set of features
+      }
+    }
     return this;
   },
 
@@ -346,7 +398,7 @@ Lines.tryClick = function(e, map) {
     var dot = A * C + B * D;
     var len_sq = C * C + D * D;
     var param = -1;
-    if (len_sq != 0) //in case of 0 length line
+    if (len_sq !== 0) //in case of 0 length line
         param = dot / len_sq;
 
     var xx, yy;
