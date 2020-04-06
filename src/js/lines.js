@@ -420,13 +420,24 @@ Lines.tryClick = function(e, map) {
     var dy = y - yy;
     return Math.sqrt(dx * dx + dy * dy);
   }
-
   var foundFeature = false;
   var instance = false;
-  var record = 0.0005;
+  var record = 1;
   var settings;
+  var latitudeKey, longitudeKey;
   Lines.instances.forEach(function (_instance) {
     settings = _instance.settings;
+    latitudeKey = settings.latitudeKey,
+    longitudeKey = settings.longitudeKey;
+
+    var c_zoom = settings.map.getZoom();
+    record =  c_zoom >= 18 ?  0.00008 :
+              c_zoom >= 16 ?  0.0002 : 0.0003;
+    //           c_zoom >= 14 ?  0.0004 :
+    //           c_zoom >= 12 ?  0.002 :
+    //           c_zoom >= 10 ?  0.010 :
+    //           c_zoom >= 7 ?  0.4 : 0.8;
+
     if (!_instance.active) return;
     if (settings.map !== map) return;
     if (!settings.click) return;
@@ -435,8 +446,8 @@ Lines.tryClick = function(e, map) {
       if(feature.geometry.type === 'LineString'){
         for (var i = 1; i < feature.geometry.coordinates.length; i++) {
           var distance = pDistance(e.latlng.lng, e.latlng.lat,
-            feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
-            feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+            feature.geometry.coordinates[i - 1][longitudeKey], feature.geometry.coordinates[i - 1][latitudeKey],
+            feature.geometry.coordinates[i][longitudeKey], feature.geometry.coordinates[i][latitudeKey]);
           if (distance < record) {
             record = distance;
             foundFeature = feature;
@@ -445,12 +456,11 @@ Lines.tryClick = function(e, map) {
         }
       }
       else if(feature.geometry.type === 'MultiLineString'){
-        console.log(feature);
         for (var j = 0; j < feature.geometry.coordinates.length; j++) {
           for (var i = 1; i < feature.geometry.coordinates[j].length; i++) {
             var distance = pDistance(e.latlng.lng, e.latlng.lat,
-              feature.geometry.coordinates[j][i - 1][0], feature.geometry.coordinates[j][i - 1][1],
-              feature.geometry.coordinates[j][i][0], feature.geometry.coordinates[j][i][1]);
+              feature.geometry.coordinates[j][i - 1][longitudeKey], feature.geometry.coordinates[j][i - 1][latitudeKey],
+              feature.geometry.coordinates[j][i][longitudeKey], feature.geometry.coordinates[j][i][latitudeKey]);
             if (distance < record) {
               record = distance;
               foundFeature = feature;
