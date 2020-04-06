@@ -423,7 +423,7 @@ Lines.tryClick = function(e, map) {
 
   var foundFeature = false;
   var instance = false;
-  var record = 0.1;
+  var record = 0.0005;
   var settings;
   Lines.instances.forEach(function (_instance) {
     settings = _instance.settings;
@@ -432,16 +432,33 @@ Lines.tryClick = function(e, map) {
     if (!settings.click) return;
 
     settings.data.features.map(feature => {
-      for (var i = 0; i < feature.geometry.coordinates.length; i++) {
-        var distance = pDistance(e.latlng.lng, e.latlng.lat,
-          feature.geometry.coordinates[i][0][0], feature.geometry.coordinates[i][0][1],
-          feature.geometry.coordinates[i][1][0], feature.geometry.coordinates[i][1][1]);
-        if (distance < record) {
-          record = distance;
-          foundFeature = feature;
-          instance = _instance;
+      if(feature.geometry.type === 'LineString'){
+        for (var i = 1; i < feature.geometry.coordinates.length; i++) {
+          var distance = pDistance(e.latlng.lng, e.latlng.lat,
+            feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
+            feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+          if (distance < record) {
+            record = distance;
+            foundFeature = feature;
+            instance = _instance;
+          }
         }
       }
+      else if(feature.geometry.type === 'MultiLineString'){
+        console.log(feature);
+        for (var j = 0; j < feature.geometry.coordinates.length; j++) {
+          for (var i = 1; i < feature.geometry.coordinates[j].length; i++) {
+            var distance = pDistance(e.latlng.lng, e.latlng.lat,
+              feature.geometry.coordinates[j][i - 1][0], feature.geometry.coordinates[j][i - 1][1],
+              feature.geometry.coordinates[j][i][0], feature.geometry.coordinates[j][i][1]);
+            if (distance < record) {
+              record = distance;
+              foundFeature = feature;
+              instance = _instance;
+            }
+          }
+        }
+      }    
     });
   });
 
