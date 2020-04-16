@@ -1,5 +1,5 @@
 # Leaflet.glify
-web gl renderer plugin for leaflet
+web gl renderer plugin for leaflet in typescript
 
 _Pronounced leaflet-G.L.-Ify, or leaflet-glify, or L.-G.L.-Ify, or L-glify, or elglify_
 
@@ -12,37 +12,57 @@ inspired by http://bl.ocks.org/Sumbera/c6fed35c377a46ff74c3 & need.
 * Remaining as simple as possible with current fastest libs
 * Providing the same sort of user experience one would get using standard html and elements
 
+## Usage
+### Browser
+```html
+<script src="dist/glify-browser.js"></script>
+<script>
+  // namespace
+  L.glify
+</script>
+```
+### Typescript
+```ts
+import glify from 'leaflet.glify';
+```
+### Node
+```html
+const { glify } = require('leaflet.glify');
+```
 
 ## Simple Polygon Usage
-```javascript
+```ts
 L.glify.shapes({
-  map: map,
+  map,
   data: geoJson,
-  click: function(e, feature) {
-    //do something when a shape is clicked
+  click: (e, feature): boolean | void => {
+    // do something when a shape is clicked
+    // return false to continue traversing
   }
 });
 ```
 
 ## Simple Points Usage
-```javascript
+```ts
 L.glify.points({
-  map: map,
-  data: points,
-  click: function(e, point, xy) {
-    //do something when a point is clicked
+  map,
+  data: pointsOrGeoJson,
+  click: (e, pointOrGeoJsonFeature, xy): boolean | void => {
+    // do something when a point is clicked
+    // return false to continue traversing
   }
 });
 ```
 
 ## Simple Lines Usage
-```javascript
+```ts
 L.glify.lines({
   map: map,
   data: geojson,
   size: 2,
-  click: function(e, feature, xy) {
-    //do something when a line is clicked
+  click: (e, feature): boolean | void => {
+    // do something when a line is clicked
+    // return false to continue traversing
   }
 });
 ```
@@ -98,11 +118,6 @@ L.glify.lines({
 * `instances`
 * `points(options)`
 * `shapes(options)`
-* `flattenData(data)`
-
-
-## Roadmap
-Soon to come: limitless styles.
 
 ## Contributors
 

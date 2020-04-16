@@ -1,6 +1,9 @@
-import { latLng, LatLng } from './leaflet-bindings';
 import { Base, IBaseSettings } from './base';
+import { IUserDrawFuncContext } from './canvas-overlay';
+import { Color, IColor } from './color';
+import { Map, LeafletMouseEvent, LatLng } from './leaflet-bindings';
 import { LineFeatureVertices } from './line-feature-vertices';
+import { pDistance } from './utils';
 
 export interface ILinesSettings extends IBaseSettings {
   weight: ((i: number, feature: any) => number) | number;
@@ -11,16 +14,15 @@ const defaults: ILinesSettings = {
   data: [],
   longitudeKey: null,
   latitudeKey: null,
-  attachShaderVars: null,
   setupClick: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   click: null,
-  color: 'random',
+  color: Color.random,
   className: '',
   opacity: 0.5,
   weight: 2,
-  shaderVars: {
+  shaderVariables: {
     color: {
       type: 'FLOAT',
       start: 2,
@@ -34,7 +36,7 @@ export class Lines extends Base<ILinesSettings> {
   static instances: Lines[] = [];
 
   allVertices: number[];
-  verts: LineFeatureVertices[];
+  vertices: LineFeatureVertices[];
   aPointSize: number;
 
   constructor(settings: ILinesSettings) {
@@ -58,17 +60,13 @@ export class Lines extends Base<ILinesSettings> {
 
     const pixelsToWebGLMatrix = this.pixelsToWebGLMatrix
       , settings = this.settings
-      , canvas = this.canvas
-      , gl = this.gl
-      , glLayer = this.glLayer
-      , verts = this.verts
+      , { canvas, gl, layer, vertices, program } = this
       , vertexBuffer = gl.createBuffer()
-      , program = this.program
       , vertex = gl.getAttribLocation(program, 'vertex')
       , opacity = gl.getUniformLocation(program, 'opacity')
       ;
 
-    gl.uniform1f(opacity, this.settings.opacity);
+    gl.uniform1f(opacity, settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 
     /*
@@ -79,28 +77,28 @@ export class Lines extends Base<ILinesSettings> {
     [[0,0],[1,1],[2,2]] => [[0,0],[1,1],[1,1],[2,2]]
     3. Do this for all lines and put all coordinates in array
     */
-    let size = verts.length;
+    let size = vertices.length;
     const allVertices = [];
     for (let i = 0; i < size; i++) {
-      const vertices = verts[i].array;
-      const length = vertices.length / 5;
+      const vertexArray = vertices[i].array;
+      const length = vertexArray.length / 5;
       for (let j = 0; j < length; j++) {
         const vertexIndex = j * 5;
         if (j !== 0 && j !== (length - 1)) {
           allVertices.push(
-            vertices[vertexIndex],
-            vertices[vertexIndex + 1],
-            vertices[vertexIndex + 2],
-            vertices[vertexIndex + 3],
-            vertices[vertexIndex + 4]
+            vertexArray[vertexIndex],
+            vertexArray[vertexIndex + 1],
+            vertexArray[vertexIndex + 2],
+            vertexArray[vertexIndex + 3],
+            vertexArray[vertexIndex + 4]
           );
         }
         allVertices.push(
-          vertices[vertexIndex],
-          vertices[vertexIndex + 1],
-          vertices[vertexIndex + 2],
-          vertices[vertexIndex + 3],
-          vertices[vertexIndex + 4]
+          vertexArray[vertexIndex],
+          vertexArray[vertexIndex + 1],
+          vertexArray[vertexIndex + 2],
+          vertexArray[vertexIndex + 3],
+          vertexArray[vertexIndex + 4]
         );
       }
     }
@@ -125,20 +123,18 @@ export class Lines extends Base<ILinesSettings> {
 
     gl.uniformMatrix4fv(this.matrix, false, pixelsToWebGLMatrix);
 
-    if (settings.shaderVars !== null) {
-      settings.attachShaderVars(size, gl, program, settings.shaderVars);
-    }
+    this.attachShaderVariables(size);
 
-    glLayer.redraw();
+    layer.redraw();
 
     return this;
   }
 
   resetVertices(): this {
     this.allVertices = [];
-    this.verts = [];
+    this.vertices = [];
 
-    const verts = this.verts
+    const vertices = this.vertices
       , settings = this.settings
       , data = settings.data
       , features = data.features
@@ -149,16 +145,16 @@ export class Lines extends Base<ILinesSettings> {
       ;
 
     let feature
-      , color = settings.color
-      , colorFn
+      , { color } = settings
+      , colorFn: (i: number, feature: any) => IColor
+      , chosenColor
       , featureIndex = 0
       ;
 
-    if (color === null) {
+    if (!color) {
       throw new Error('color is not properly defined');
     } else if (typeof color === 'function') {
       colorFn = color;
-      color = undefined;
     }
 
     // -- data
@@ -166,27 +162,28 @@ export class Lines extends Base<ILinesSettings> {
       feature = features[featureIndex];
       //use colorFn function here if it exists
       if (colorFn) {
-        color = colorFn(featureIndex, feature);
+        chosenColor = colorFn(featureIndex, feature);
+      } else {
+        chosenColor = color as IColor;
       }
+
       const featureVertices = new LineFeatureVertices({
         project: map.project.bind(map),
         latitudeKey,
         longitudeKey,
-        color,
+        color: chosenColor,
       });
       featureVertices.fillFromCoordinates(feature.geometry.coordinates);
-      verts.push(featureVertices);
+      vertices.push(featureVertices);
     }
 
     return this;
   }
 
-  drawOnCanvas(): this {
-    if (this.gl == null) return this;
+  drawOnCanvas(context: IUserDrawFuncContext): this {
+    if (!this.gl) return this;
 
-    const gl = this.gl
-      , settings = this.settings
-      , canvas = this.canvas
+    const { gl, settings, canvas, mapMatrix, matrix, pixelsToWebGLMatrix, allVertices, vertices } = this
       , map = settings.map
       , weight = settings.weight
       , zoom = map.getZoom()
@@ -196,8 +193,6 @@ export class Lines extends Base<ILinesSettings> {
         // -- Scale to current zoom
       , scale = Math.pow(2, zoom)
       , offset = map.project(topLeft, 0)
-      , mapMatrix = this.mapMatrix
-      , pixelsToWebGLMatrix = this.pixelsToWebGLMatrix
       ;
 
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -211,9 +206,9 @@ export class Lines extends Base<ILinesSettings> {
         .scaleMatrix(scale)
         .translateMatrix(-offset.x, -offset.y);
       // -- attach matrix value to 'mapMatrix' uniform in shader
-      gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
+      gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
-      gl.drawArrays(gl.LINES, 0, this.allVertices.length / 5);
+      gl.drawArrays(gl.LINES, 0, allVertices.length / 5);
     } else if (typeof weight === 'number') {
       // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
       for (let yOffset = -weight; yOffset < weight; yOffset += 0.5) {
@@ -224,17 +219,16 @@ export class Lines extends Base<ILinesSettings> {
             .scaleMatrix(scale)
             .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
           // -- attach matrix value to 'mapMatrix' uniform in shader
-          gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
+          gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
-          gl.drawArrays(gl.LINES, 0, this.allVertices.length / 5);
+          gl.drawArrays(gl.LINES, 0, allVertices.length / 5);
         }
       }
     } else if (typeof weight === 'function') {
       let allVertexCount = 0;
-      const features = this.settings.data.features;
-      const { verts } = this;
-      for (let i = 0; i < verts.length; i++) {
-        const featureVertices = verts[i];
+      const features = settings.data.features;
+      for (let i = 0; i < vertices.length; i++) {
+        const featureVertices = vertices[i];
         const vertexCount = featureVertices.vertexCount;
         const weightValue = weight(i, features[i]);
         // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
@@ -257,7 +251,7 @@ export class Lines extends Base<ILinesSettings> {
     return this;
   }
 
-  static tryClick(e, map): void {
+  static tryClick(e: LeafletMouseEvent, map: Map): void {
     let foundFeature = false
       , instance = null
       , record = 0.1
@@ -289,34 +283,4 @@ export class Lines extends Base<ILinesSettings> {
       return;
     }
   }
-}
-
-function pDistance(x, y, x1, y1, x2, y2): number {
-  const A = x - x1;
-  const B = y - y1;
-  const C = x2 - x1;
-  const D = y2 - y1;
-
-  const dot = A * C + B * D;
-  const len_sq = C * C + D * D;
-  let param = -1;
-  if (len_sq !== 0) //in case of 0 length line
-    param = dot / len_sq;
-
-  let xx, yy;
-
-  if (param < 0) {
-    xx = x1;
-    yy = y1;
-  } else if (param > 1) {
-    xx = x2;
-    yy = y2;
-  } else {
-    xx = x1 + param * C;
-    yy = y1 + param * D;
-  }
-
-  let dx = x - xx;
-  let dy = y - yy;
-  return Math.sqrt(dx * dx + dy * dy);
 }

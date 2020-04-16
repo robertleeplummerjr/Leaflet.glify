@@ -43,7 +43,7 @@ export class Color {
     return { r: r / 255, g: g / 255, b: b / 255 };
   }
 
-  random(): IColor {
+  static random(): IColor {
     return {
       r: Math.random(),
       g: Math.random(),
@@ -51,7 +51,7 @@ export class Color {
     };
   }
 
-  pallet(): IColor {
+  static pallet(): IColor {
     switch (Math.round(Math.random() * 4)) {
       case 0:
         return green;

@@ -1,34 +1,30 @@
-import { Map } from 'leaflet';
-import { FeatureCollection } from 'geojson';
-
-import { CanvasOverlay } from './canvasoverlay';
-import { MapMatrix } from './map-matrix';
 import { IColor } from './color';
+import { Map, Point } from './leaflet-bindings';
+import { MapMatrix } from './map-matrix';
+import { CanvasOverlay, IUserDrawFuncContext } from './canvas-overlay';
+
+export interface IShaderVariable {
+  type: 'FLOAT';
+  start: number;
+  size: number;
+  bytes?: number;
+  normalize?: boolean;
+}
 
 export interface IBaseSettings {
   map: Map;
-  shaderVars: {
-    [name: string]: {
-      type: 'FLOAT';
-      start: number;
-      size: number;
-      bytes?: number;
-    }
-  }
   data: any;
+  shaderVariables?: {
+    [name: string]: IShaderVariable
+  }
   longitudeKey?: number;
   latitudeKey?: number;
-  attachShaderVars?:
-    (byteCount: number,
-     gl: WebGLRenderingContext,
-     program: WebGLProgram,
-     attributes: object) => void;
   setupClick?: (map: Map) => void;
   vertexShaderSource?: (() => string) | string;
   fragmentShaderSource?: (() => string) | string;
-  canvas: HTMLCanvasElement;
-  click?: (e, feature) => void;
-  color?: (featureIndex: number, feature) => void | IColor | string;
+  canvas?: HTMLCanvasElement;
+  click?: (e, feature, xy: Point) => boolean | void;
+  color?: ((featureIndex: number, feature: any) => IColor) | IColor;
   className?: string;
   opacity?: number;
   preserveDrawingBuffer?: boolean;
@@ -39,14 +35,14 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
   fragmentShader: any;
   canvas: HTMLCanvasElement;
   gl: WebGLRenderingContext;
-  glLayer: CanvasOverlay;
+  layer: CanvasOverlay;
   mapMatrix: MapMatrix;
   matrix: WebGLUniformLocation;
   pixelsToWebGLMatrix: Float32Array;
   program: WebGLProgram;
   settings: T;
   vertexShader: any;
-  verts: any;
+  vertices: any;
 
   abstract render();
 
@@ -58,24 +54,52 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     this.fragmentShader = null;
     this.program = null;
     this.matrix = null;
-    this.verts = null;
+    this.vertices = null;
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
-    const glLayer = this.glLayer = new CanvasOverlay(() => {
-      this.drawOnCanvas();
-    })
+    const layer = this.layer = new CanvasOverlay((context) => this.drawOnCanvas(context))
       .addTo(settings.map);
-    const canvas = this.canvas = glLayer.canvas;
+    const canvas = this.canvas = layer.canvas;
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
     canvas.style.position = 'absolute';
     if (settings.className) {
       canvas.className += ' ' + settings.className;
     }
-    this.gl = (canvas.getContext('webgl', { preserveDrawingBuffer })
+    this.gl = (
+      canvas.getContext('webgl2', { preserveDrawingBuffer })
+      || canvas.getContext('webgl', { preserveDrawingBuffer })
       || canvas.getContext('experimental-webgl', { preserveDrawingBuffer })) as WebGLRenderingContext;
   }
 
-  abstract drawOnCanvas(): this;
+  abstract drawOnCanvas(context: IUserDrawFuncContext): this;
+
+  attachShaderVariables(byteCount: number): this {
+    if (!this.settings.shaderVariables) {
+      return this;
+    }
+    const bytes = 5;
+
+    const { gl, program } = this;
+    const { shaderVariables } = this.settings;
+    for (const name in shaderVariables) {
+      if (!shaderVariables.hasOwnProperty(name)) continue;
+      const shaderVariable = shaderVariables[name];
+      const loc = gl.getAttribLocation(program, name);
+      if (loc < 0) {
+        throw new Error('shader variable ' + name + ' not found');
+      }
+      gl.vertexAttribPointer(
+        loc,
+        shaderVariable.size,
+        gl[shaderVariable.type],
+        !!shaderVariable.normalize,
+        byteCount * (shaderVariable.bytes || bytes),
+        byteCount * shaderVariable.start);
+      gl.enableVertexAttribArray(loc);
+    }
+
+    return this;
+  }
 
   setData(data): this {
     this.settings.data = data;
@@ -147,13 +171,13 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
   }
 
   addTo(map) {
-    this.glLayer.addTo(map || this.settings.map);
+    this.layer.addTo(map || this.settings.map);
     this.active = true;
     return this.render();
   }
 
   remove() {
-    this.settings.map.removeLayer(this.glLayer as any);
+    this.settings.map.removeLayer(this.layer as any);
     this.active = false;
     return this;
   }

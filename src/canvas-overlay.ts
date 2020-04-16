@@ -8,42 +8,63 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  - fixed resize map bug
  inspired & portions taken from  :   https://github.com/Leaflet/Leaflet.heat
  */
-import { LatLngBounds, Map, Point as PointReference } from 'leaflet';
-import { Layer, Point, setOptions, Browser, DomUtil, Util } from './leaflet-bindings';
 
-interface IUserDrawFuncContext {
-  canvas   : HTMLCanvasElement;
-  bounds   : LatLngBounds;
-  size     : PointReference;
+import {
+  // @ts-ignore
+  LatLngBounds,
+  // @ts-ignore
+  Map,
+  // @ts-ignore
+  Point,
+  // @ts-ignore
+  Layer,
+  // @ts-ignore
+  Util,
+  // @ts-ignore
+  Browser,
+  // @ts-ignore
+  DomUtil
+} from './leaflet-bindings';
+
+export interface IUserDrawFuncContext {
+  canvas: HTMLCanvasElement;
+  bounds: LatLngBounds;
+  size: Point;
+  offset: Point;
   zoomScale: number;
-  zoom     : number;
-  options  : any;
+  zoom: number;
+}
+
+export interface IUserDrawFunc {
+  (context: IUserDrawFuncContext): void
 }
 
 export class CanvasOverlay extends Layer {
-  _userDrawFunc: (overlayInstance: CanvasOverlay, context: IUserDrawFuncContext) => void;
+  _userDrawFunc: IUserDrawFunc;
   _map: Map;
-  _frame?: AnimationFrameProvider;
   _redrawCallbacks: Function[];
   canvas: HTMLCanvasElement;
-  options: any;
 
-  constructor(userDrawFunc: (overlayInstance: CanvasOverlay, context: IUserDrawFuncContext) => void, options = {}) {
+  _frame?: number;
+  _offset?: Point;
+
+  constructor(
+    userDrawFunc: IUserDrawFunc, options
+  ) {
     super();
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
+    this._offset = null;
     this._redrawCallbacks = [];
-    this.options = options;
-    setOptions(this, options);
   }
 
-  drawing(userDrawFunc) {
+  drawing(userDrawFunc): this {
     this._userDrawFunc = userDrawFunc;
     return this;
   }
 
-  params(options){
-    setOptions(this, options);
+  params(options): this {
+    Util.setOptions(this, options);
     return this;
   }
 
@@ -57,12 +78,12 @@ export class CanvasOverlay extends Layer {
     return this;
   }
 
-  onAdd(map) {
+  onAdd(map): this {
     this._map = map;
     this.canvas = this.canvas || document.createElement('canvas');
 
-    const size = this._map.getSize()
-      , animated = this._map.options.zoomAnimation && Browser.any3d
+    const size = map.getSize()
+      , animated = map.options.zoomAnimation && Browser.any3d
       ;
 
     this.canvas.width = size.x;
@@ -75,55 +96,58 @@ export class CanvasOverlay extends Layer {
     map.on('moveend', this._reset, this);
     map.on('resize',  this._resize, this);
 
-    if (map.options.zoomAnimation && Browser.any3d) {
+    if (animated) {
       map.on('zoomanim', this._animateZoom, this);
     }
 
     this._reset();
+    return this;
   }
 
-  onRemove(map) {
+  onRemove(map): this {
     map.getPanes().overlayPane.removeChild(this.canvas);
 
     map.off('moveend', this._reset, this);
     map.off('resize', this._resize, this);
 
-    if (map.options.zoomAnimation) {
+    if (map.options.zoomAnimation && Browser.any3d) {
       map.off('zoomanim', this._animateZoom, this);
     }
+    return this;
   }
 
-  addTo(map) {
+  addTo(map): this {
     map.addLayer(this);
     return this;
   }
 
-  _resize(resizeEvent) {
+  _resize(resizeEvent): void {
     this.canvas.width  = resizeEvent.newSize.x;
     this.canvas.height = resizeEvent.newSize.y;
   }
 
-  _reset() {
+  _reset(): void {
     const topLeft = this._map.containerPointToLayerPoint([0, 0]);
     DomUtil.setPosition(this.canvas, topLeft);
     this._redraw();
   }
 
-  _redraw() {
-    const size    = this._map.getSize()
-      , bounds    = this._map.getBounds()
+  _redraw(): void {
+    const { _map } = this
+      , size = _map.getSize()
+      , bounds = _map.getBounds()
       , zoomScale = (size.x * 180) / (20037508.34  * (bounds.getEast() - bounds.getWest())) // resolution = 1/zoomScale
-      , zoom      = this._map.getZoom()
+      , zoom = _map.getZoom()
       ;
 
     if (this._userDrawFunc) {
-      this._userDrawFunc(this, {
-        canvas   :this.canvas,
-        bounds   : bounds,
-        size     : size,
+      this._userDrawFunc({
+        canvas: this.canvas,
+        offset: this._offset,
+        bounds: bounds,
+        size: size,
         zoomScale: zoomScale,
-        zoom     : zoom,
-        options  : this.options
+        zoom: zoom,
       });
     }
 
@@ -134,32 +158,19 @@ export class CanvasOverlay extends Layer {
     this._frame = null;
   }
 
-  _animateZoom(e) {
-    // @ts-ignore
-    const scale = this._map.getZoomScale(e.zoom)
-        , offset = Layer
-          // @ts-ignore
-          ? this._map._latLngBoundsToNewLayerBounds(this._map.getBounds(), e.zoom, e.center).min
-          // @ts-ignore
-          : this._map._getCenterOffset(e.center)
-              ._multiplyBy(-scale)
-              // @ts-ignore
-              .subtract(this._map._getMapPanePos())
+  _animateZoom(e): void {
+    const { _map } = this
+      , scale = _map.getZoomScale(e.zoom, _map.getZoom())
+      , offset = Layer
+        // @ts-ignore
+        ? _map._latLngBoundsToNewLayerBounds(_map.getBounds(), e.zoom, e.center).min
+        // @ts-ignore
+        : _map._getCenterOffset(e.center)
+            ._multiplyBy(-scale)
+            // @ts-ignore
+            .subtract(_map._getMapPanePos())
       ;
 
-    DomUtil.setTransform(this.canvas, offset, scale);
+    DomUtil.setTransform(this.canvas, this._offset = offset, scale);
   }
-
-  setTransform(el, offset, scale) {
-    var pos = offset || new Point(0, 0);
-    el.style[DomUtil.TRANSFORM] =
-      (Browser.ie3d ?
-        'translate(' + pos.x + 'px,' + pos.y + 'px)' :
-        'translate3d(' + pos.x + 'px,' + pos.y + 'px,0)') +
-      (scale ? ' scale(' + scale + ')' : '');
-  }
-}
-
-export function canvasOverlay(userDrawFunc, options?) {
-  return new CanvasOverlay(userDrawFunc, options);
 }

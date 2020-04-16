@@ -1,10 +1,10 @@
-import { Map, LatLng } from 'leaflet';
-import { latLng } from './leaflet-bindings';
+import { LatLng } from './leaflet-bindings';
+import { IColor } from './color';
 import { IPixel } from './pixel';
 
 interface ILineFeatureVerticesSettings {
   project: (coordinates: LatLng, distance: number) => IPixel;
-  color: any;
+  color: IColor;
   latitudeKey?: number;
   longitudeKey?: number;
 }
@@ -13,7 +13,7 @@ export class LineFeatureVertices {
   project: (coordinates: LatLng, distance: number) => IPixel;
   latitudeKey?: number;
   longitudeKey?: number;
-  color: any;
+  color: IColor;
   vertexCount: number;
   array: number[];
   length: number;
@@ -33,7 +33,7 @@ export class LineFeatureVertices {
         continue;
       }
       const pixel = this.project(
-        latLng(
+        new LatLng(
           coordinates[i][this.latitudeKey],
           coordinates[i][this.longitudeKey]
         ), 0);

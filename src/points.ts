@@ -1,11 +1,16 @@
-import { pointInCircle } from './utils';
-import { latLng, LatLng } from './leaflet-bindings';
+import { Feature, Point as GeoPoint } from 'geojson';
+
 import { Base, IBaseSettings } from './base';
+import { IUserDrawFuncContext } from './canvas-overlay';
+import { Color, IColor } from './color';
+import { LeafletMouseEvent, Map, Point, LatLng } from './leaflet-bindings';
+import { IPixel } from './pixel';
+import { locationDistance, pointInCircle } from './utils';
 
 export interface IPointsSettings extends IBaseSettings {
-  closest: (targetLocation, points, map) => Points;
-  size: (i: number, latLng: typeof LatLng) => number;
-  eachVertex?: (dataLatLng, pixel, color) => void;
+  size: ((i: number, latLng: LatLng) => number) | number;
+  eachVertex?: (this: Points, latLng: LatLng, pixel: IPixel, color: IColor) => void;
+  sensitivity?: number;
 }
 
 const defaults: IPointsSettings = {
@@ -13,19 +18,17 @@ const defaults: IPointsSettings = {
   data: [],
   longitudeKey: null,
   latitudeKey: null,
-  closest: null,
-  attachShaderVars: null,
   setupClick: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   eachVertex: null,
   click: null,
-  color: 'random',
+  color: Color.random,
   opacity: 0.8,
   size: null,
   className: '',
   sensitivity: 2,
-  shaderVars: {
+  shaderVariables: {
     vertex: {
       type: 'FLOAT',
       start: 0,
@@ -47,12 +50,25 @@ const defaults: IPointsSettings = {
   }
 };
 
+export interface IPointLookup {
+  latLng: LatLng;
+  pixel: IPixel;
+  chosenColor: IColor;
+  chosenSize: number;
+  key: string;
+  feature?: any;
+}
+
 export class Points extends Base<IPointsSettings> {
   static instances: Points[] = [];
   static defaults = defaults;
   static maps = [];
-  latLngLookup: { [key: string]: number[] };
-  verts: number[];
+  latLngLookup: {
+    [key: string]: IPointLookup[];
+  };
+  allLatLngLookup: IPointLookup[];
+  vertices: number[];
+  dataFormat: 'Array' | 'GeoJson.FeatureCollection';
 
   constructor(settings) {
     super(settings);
@@ -64,6 +80,15 @@ export class Points extends Base<IPointsSettings> {
 
     this.active = true;
 
+    const { data } = this.settings;
+    if (Array.isArray(data)) {
+      this.dataFormat = 'Array';
+    } else if (data.type === 'FeatureCollection') {
+      this.dataFormat = 'GeoJson.FeatureCollection';
+    } else {
+      throw new Error('unhandled data type. Supported types are Array and GeoJson.FeatureCollection');
+    }
+
     this
       .setup()
       .render();
@@ -74,130 +99,148 @@ export class Points extends Base<IPointsSettings> {
     this.resetVertices();
 
     //look up the locations for the inputs to our shaders.
-    const gl = this.gl
-      , settings = this.settings
-      , canvas = this.canvas
-      , program = this.program
-      , glLayer = this.glLayer
+    const { gl, settings, canvas, program, layer, vertices, pixelsToWebGLMatrix } = this
       , matrix = this.matrix = gl.getUniformLocation(program, 'matrix')
       , opacity = gl.getUniformLocation(program, 'opacity')
       , vertexBuffer = gl.createBuffer()
-      , vertexArray = new Float32Array(this.verts)
+      , vertexArray = new Float32Array(vertices)
       , byteCount = vertexArray.BYTES_PER_ELEMENT
       ;
 
     //set the matrix to some that makes 1 unit 1 pixel.
-    this.pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniformMatrix4fv(matrix, false, this.pixelsToWebGLMatrix);
-    gl.uniform1f(opacity, this.settings.opacity);
+    gl.uniformMatrix4fv(matrix, false, pixelsToWebGLMatrix);
+    gl.uniform1f(opacity, settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
 
-    if (settings.shaderVars !== null) {
-      this.settings.attachShaderVars(byteCount, gl, program, settings.shaderVars);
-    }
+    this.attachShaderVariables(byteCount);
 
-    glLayer.redraw();
+    layer.redraw();
 
     return this;
   }
 
   resetVertices() {
-    //empty verts and repopulate
+    //empty vertices and repopulate
     this.latLngLookup = {};
-    this.verts = [];
+    this.allLatLngLookup = [];
+    this.vertices = [];
 
-    // -- data
-    const verts = this.verts
-      , settings = this.settings
-      , data = settings.data
-      , max = data.length
-      , latLngLookup = this.latLngLookup
-      , latitudeKey = settings.latitudeKey
-      , longitudeKey = settings.longitudeKey
+    const { vertices, latLngLookup } = this
+      , { latitudeKey, longitudeKey, data, map, eachVertex } = this.settings
       ;
-    let colorFn
-      , color = settings.color
-      , size = settings.size
+    let colorFn: (i: number, latLng: LatLng | any) => IColor
+      , { color, size } = this.settings
+      , chosenColor
+      , chosenSize
       , sizeFn
-      , dataLatLng
-      , pixel
-      , lookup
+      , latLng
+      , pixel: Point
       , key
-      , i = 0
       ;
 
-    if (color === null) {
+    if (!color) {
       throw new Error('color is not properly defined');
     } else if (typeof color === 'function') {
-      colorFn = color;
-      color = undefined;
+      colorFn = color as (i: number, latLng: LatLng) => IColor;
     }
 
-    if (size === null) {
+    if (!size) {
       throw new Error('size is not properly defined');
     } else if (typeof size === 'function') {
       sizeFn = size;
-      size = undefined;
     }
 
-    for (; i < max; i++) {
-      dataLatLng = data[i];
-      key = dataLatLng[latitudeKey].toFixed(2) + 'x' + dataLatLng[longitudeKey].toFixed(2);
-      lookup = latLngLookup[key];
-      pixel = settings.map.project(latLng(dataLatLng[latitudeKey], dataLatLng[longitudeKey]), 0);
+    if (this.dataFormat === 'Array') {
+      const max = data.length;
+      for (let i = 0; i < max; i++) {
+        latLng = data[i];
+        key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
+        pixel = map.project(new LatLng(latLng[latitudeKey], latLng[longitudeKey]), 0);
 
-      if (lookup === undefined) {
-        lookup = latLngLookup[key] = [];
+        if (colorFn) {
+          chosenColor = colorFn(i, latLng) as IColor;
+        } else {
+          chosenColor = color as IColor;
+        }
+
+        if (sizeFn) {
+          chosenSize = sizeFn(i, latLng) as number;
+        } else {
+          chosenSize = size as number;
+        }
+
+        //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
+        vertices.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b, chosenSize);
+
+        const lookup = { latLng, key, pixel, chosenColor, chosenSize };
+        (latLngLookup[key] || (latLngLookup[key] = []))
+          .push(lookup);
+        this.allLatLngLookup.push(lookup);
+        if (eachVertex) {
+          eachVertex.call(this, latLng, pixel, chosenSize);
+        }
       }
+    } else if (this.dataFormat === 'GeoJson.FeatureCollection') {
+      const max = data.features.length;
+      for (let i = 0; i < max; i++) {
+        const feature = data.features[i] as Feature<GeoPoint>;
+        latLng = feature.geometry.coordinates;
+        key = latLng[latitudeKey].toFixed(2) + 'x' + latLng[longitudeKey].toFixed(2);
+        pixel = map.project(new LatLng(latLng[latitudeKey], latLng[longitudeKey]), 0);
 
-      lookup.push(dataLatLng);
+        if (colorFn) {
+          chosenColor = colorFn(i, feature) as IColor;
+        } else {
+          chosenColor = color as IColor;
+        }
 
-      if (colorFn) {
-        color = colorFn(i, dataLatLng);
-      }
+        if (sizeFn) {
+          chosenSize = sizeFn(i, latLng) as number;
+        } else {
+          chosenSize = size as number;
+        }
 
-      if (sizeFn) {
-        size = sizeFn(i, dataLatLng);
-      }
+        //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
+        vertices.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b, chosenSize);
 
-      //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
-      verts.push(pixel.x, pixel.y, color.r, color.g, color.b, size);
-      if (settings.eachVertex !== null) {
-        settings.eachVertex.call(this, dataLatLng, pixel, color);
+        const lookup = { latLng, key, pixel, chosenColor, chosenSize, feature, };
+        (latLngLookup[key] || (latLngLookup[key] = []))
+          .push(lookup);
+        this.allLatLngLookup.push(lookup);
+        if (eachVertex) {
+          eachVertex.call(this, latLng, pixel, chosenSize);
+        }
       }
     }
 
     return this;
   }
 
-  pointSize(pointIndex) {
-    const settings = this.settings,
-      map = settings.map,
-      size = settings.size,
-      pointSize = typeof size === 'function' ? size(pointIndex, null) : size,
+  pointSize(pointIndex): number {
+    const { map, size } = this.settings
+      , pointSize = typeof size === 'function' ? size(pointIndex, null) : size
       // -- Scale to current zoom
-      zoom = map.getZoom();
+      , zoom = map.getZoom()
+      ;
 
     return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize;
   }
 
-  drawOnCanvas(): this {
-    if (this.gl == null) return this;
+  drawOnCanvas(context: IUserDrawFuncContext): this {
+    if (!this.gl) return this;
 
-    const gl = this.gl,
-      canvas = this.canvas,
-      settings = this.settings,
-      map = settings.map,
-      bounds = map.getBounds(),
-      topLeft = new LatLng(bounds.getNorth(), bounds.getWest()),
-      offset = map.project(topLeft, 0),
-      zoom = map.getZoom(),
-      scale = Math.pow(2, zoom),
-      mapMatrix = this.mapMatrix,
-      pixelsToWebGLMatrix = this.pixelsToWebGLMatrix;
+    const { gl, canvas, settings, mapMatrix, matrix, pixelsToWebGLMatrix, vertices } = this
+      , map = settings.map
+      , bounds = map.getBounds()
+      , topLeft = new LatLng(bounds.getNorth(), bounds.getWest())
+      , offset = map.project(topLeft, 0)
+      , zoom = map.getZoom()
+      , scale = Math.pow(2, zoom)
+      ;
 
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
 
@@ -209,23 +252,23 @@ export class Points extends Base<IPointsSettings> {
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
-    gl.drawArrays(gl.POINTS, 0, settings.data.length);
+    gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
+    gl.drawArrays(gl.POINTS, 0, vertices.length / 6);
 
     return this;
   }
 
-  lookup(coords): typeof LatLng {
+  lookup(coords): IPointLookup {
     const xMax = coords.lat + 0.03
       , yMax = coords.lng + 0.03
-      , matches = []
+      , matches: IPointLookup[] = []
       ;
     let x = coords.lat - 0.03
-      , y
-      , foundI
-      , foundMax
-      , found
-      , key
+      , y: number
+      , foundI: number
+      , foundMax: number
+      , found: IPointLookup[]
+      , key: string
       ;
 
     for (; x <= xMax; x += 0.01) {
@@ -243,50 +286,72 @@ export class Points extends Base<IPointsSettings> {
       }
     }
 
+    const { map } = this.settings;
+
     //try matches first, if it is empty, try the data, and hope it isn't too big
-    return this.settings.closest(coords, matches.length === 0 ? this.settings.data.slice(0) : matches, this.settings.map);
+    return Points.closest(
+      coords,
+      matches.length > 0
+        ? matches
+        : this.allLatLngLookup,
+      map
+    );
   }
 
-  static tryClick(e, map) {
-    const closestFromEach = []
+  static closest(targetLocation: LatLng, points: IPointLookup[], map: Map): IPointLookup {
+    if (points.length < 1) return null;
+    return points.reduce((prev, curr) => {
+      const prevDistance = locationDistance(targetLocation, prev.latLng, map)
+        , currDistance = locationDistance(targetLocation, curr.latLng, map)
+      ;
+      return (prevDistance < currDistance) ? prev : curr;
+    });
+  }
+
+  static tryClick(e: LeafletMouseEvent, map: Map): boolean | void {
+    const closestFromEach: IPointLookup[] = []
       , instancesLookup = {}
       ;
     let result
-      , settings
-      , instance
-      , point
-      , xy
-      , found
+      , settings: IPointsSettings
+      , instance: Points
+      , pointLookup: IPointLookup
+      , xy: Point
+      , found: IPointLookup
       , foundLatLng
       ;
 
-    Points.instances.forEach(function (_instance) {
+    Points.instances.forEach((_instance) => {
       settings = _instance.settings;
       if (!_instance.active) return;
       if (settings.map !== map) return;
       if (!settings.click) return;
 
-      point = _instance.lookup(e.latlng);
-      instancesLookup[point] = _instance;
-      closestFromEach.push(point);
+      pointLookup = _instance.lookup(e.latlng);
+      instancesLookup[pointLookup.key] = _instance;
+      closestFromEach.push(pointLookup);
     });
 
     if (closestFromEach.length < 1) return;
     if (!settings) return;
 
-    found = settings.closest(e.latlng, closestFromEach, map);
+    found = this.closest(e.latlng, closestFromEach, map);
 
     if (found === null) return;
 
-    instance = instancesLookup[found];
+    instance = instancesLookup[found.key];
     if (!instance) return;
+    const { latitudeKey, longitudeKey, sensitivity, click } = instance.settings;
 
-    foundLatLng = latLng(found[settings.latitudeKey], found[settings.longitudeKey]);
+    foundLatLng = new LatLng(found.latLng[latitudeKey], found.latLng[longitudeKey]);
     xy = map.latLngToLayerPoint(foundLatLng);
 
-    const pointIndex = typeof instance.settings.size === 'function' ? instance.settings.data.indexOf(found) : null;
-    if (pointInCircle(xy, e.layerPoint, instance.pointSize(pointIndex) * instance.settings.sensitivity)) {
-      result = instance.settings.click(e, found, xy);
+    if (pointInCircle(
+      xy,
+      e.layerPoint,
+      found.chosenSize * sensitivity
+    )) {
+      result = click(e, found.feature || found.latLng, xy);
       return result !== undefined ? result : true;
     }
   }

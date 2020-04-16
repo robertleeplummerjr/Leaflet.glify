@@ -1,9 +1,9 @@
-import { Map } from 'leaflet';
-import { Points, IPointsSettings } from './points';
-import { IShapeSettings, Shapes} from './shapes';
+import { LeafletMouseEvent, Map } from './leaflet-bindings';
+
 import { Lines, ILinesSettings } from './lines';
 import { MapMatrix } from './map-matrix';
-import { Color } from './color';
+import { Points, IPointsSettings } from './points';
+import { IShapeSettings, Shapes } from './shapes';
 
 // @ts-ignore
 import vertex from './shader/vertex/default.glsl';
@@ -33,7 +33,6 @@ const shader = {
 };
 
 class Glify {
-  color: Color = new Color();
   longitudeKey: number = 1;
   latitudeKey: number = 0;
   maps: Map[] = [];
@@ -42,7 +41,6 @@ class Glify {
   Points: typeof Points = Points;
   Shapes: typeof Shapes = Shapes;
   Lines: typeof Lines = Lines;
-  mapMatrix: MapMatrix;
 
   longitudeFirst(): this {
     this.longitudeKey = 0;
@@ -59,15 +57,14 @@ class Glify {
   get instances() {
     return [
       ...Points.instances,
+      ...Lines.instances,
       ...Shapes.instances,
-      ...Lines.instances
     ];
   }
 
   points(settings: IPointsSettings): Points {
-    return new Points({
+    return new this.Points({
       setupClick: glify.setupClick.bind(this),
-      attachShaderVars: glify.attachShaderVars.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
       vertexShaderSource: () => {
@@ -76,16 +73,13 @@ class Glify {
       fragmentShaderSource: () => {
         return this.shader.fragment.point;
       },
-      color: this.color.random,
-      closest: this.closest.bind(this),
       ...settings,
     });
   }
 
   shapes(settings: IShapeSettings): Shapes {
-    return new Shapes({
+    return new this.Shapes({
       setupClick: this.setupClick.bind(this),
-      attachShaderVars: this.attachShaderVars.bind(this),
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
       vertexShaderSource: () => {
@@ -94,15 +88,13 @@ class Glify {
       fragmentShaderSource: () => {
         return this.shader.fragment.polygon;
       },
-      color: this.color.random,
       ...settings
     });
   }
 
   lines(settings: ILinesSettings): Lines {
-    return new Lines({
+    return new this.Lines({
       setupClick: this.setupClick.bind(this),
-      attachShaderVars: this.attachShaderVars.bind(this),
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
       vertexShaderSource: () => {
@@ -111,7 +103,6 @@ class Glify {
       fragmentShaderSource: () => {
         return this.shader.fragment.polygon;
       },
-      color: this.color.random,
       ...settings
     });
   }
@@ -119,7 +110,7 @@ class Glify {
   setupClick(map?: Map): void {
     if (this.maps.indexOf(map) < 0) {
       this.maps.push(map);
-      map.on('click', function (e) {
+      map.on('click', (e: LeafletMouseEvent) => {
         let hit;
         hit = Points.tryClick(e, map);
         if (hit !== undefined) return hit;
@@ -131,76 +122,6 @@ class Glify {
         if (hit !== undefined) return hit;
       });
     }
-  }
-
-  pointInCircle(centerPoint, checkPoint, radius): boolean {
-    const distanceSquared = (centerPoint.x - checkPoint.x) * (centerPoint.x - checkPoint.x) + (centerPoint.y - checkPoint.y) * (centerPoint.y - checkPoint.y);
-    return distanceSquared <= radius * radius;
-  }
-
-  attachShaderVars(byteCount, gl, program, attributes): this {
-    const bytes = 5;
-
-    for (const name in attributes) if (attributes.hasOwnProperty(name)) {
-      const attribute = attributes[name];
-      const loc = gl.getAttribLocation(program, name);
-      if (loc < 0) {
-        console.log(name, attribute);
-        throw new Error('shader variable ' + name + ' not found');
-      }
-      gl.vertexAttribPointer(
-        loc,
-        attribute.size,
-        gl[attribute.type],
-        !!attribute.normalize,
-        byteCount * (attribute.bytes || bytes),
-        byteCount * attribute.start);
-      gl.enableVertexAttribArray(loc);
-    }
-
-    return this;
-  }
-
-  debugPoint(containerPoint): this {
-    const el = document.createElement('div')
-      , s = el.style
-      , x = containerPoint.x
-      , y = containerPoint.y
-      ;
-
-    s.left = x + 'px';
-    s.top = y + 'px';
-    s.width = '10px';
-    s.height = '10px';
-    s.position = 'absolute';
-    s.backgroundColor = '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
-
-    document.body.appendChild(el);
-
-    return this;
-  }
-
-  closest(targetLocation, points, map): Points {
-    if (points.length < 1) return null;
-    return points.reduce((prev, curr) => {
-      const prevDistance = this.locationDistance(targetLocation, prev, map)
-        , currDistance = this.locationDistance(targetLocation, curr, map)
-        ;
-      return (prevDistance < currDistance) ? prev : curr;
-    });
-  }
-
-  vectorDistance(dx, dy): number {
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  locationDistance(location1, location2, map): number {
-    const point1 = map.latLngToLayerPoint(location1)
-      , point2 = map.latLngToLayerPoint(location2)
-      , dx = point1.x - point2.x
-      , dy = point1.y - point2.y
-      ;
-    return this.vectorDistance(dx, dy);
   }
 }
 

@@ -1,31 +1,27 @@
-import { Map } from 'leaflet';
 import earcut from 'earcut';
-// import {FeatureCollection, GeoJsonObject} from 'geojson';
-import PolygonLookup from 'polygon-lookup';
 import geojsonFlatten from 'geojson-flatten';
+import PolygonLookup from 'polygon-lookup';
 
-import { LatLng, latLng } from './leaflet-bindings';
-import { CanvasOverlay } from './canvasoverlay';
-import { MapMatrix } from './map-matrix';
 import { Base, IBaseSettings } from './base';
+import { IUserDrawFuncContext } from './canvas-overlay';
+import { Color, IColor } from './color';
+import { LatLng, LeafletMouseEvent, Map } from './leaflet-bindings';
 
-export interface IShapeSettings extends IBaseSettings {
-}
+export interface IShapeSettings extends IBaseSettings {}
 
-const defaults: IShapeSettings = {
+export const defaults: IShapeSettings = {
   map: null,
   data: [],
   longitudeKey: null,
   latitudeKey: null,
-  attachShaderVars: null,
   setupClick: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   click: null,
-  color: 'random',
+  color: Color.random,
   className: '',
   opacity: 0.5,
-  shaderVars: {
+  shaderVariables: {
     color: {
       type: 'FLOAT',
       start: 2,
@@ -38,17 +34,7 @@ export class Shapes extends Base<IShapeSettings> {
   static instances: Shapes[] = [];
   static defaults = defaults;
   static maps: Map[];
-
-  active: boolean;
-  settings: IShapeSettings;
-  glLayer: CanvasOverlay;
-  canvas: HTMLCanvasElement;
-  pixelsToWebGLMatrix: Float32Array;
-  mapMatrix: MapMatrix;
-  matrix: WebGLUniformLocation;
-  verts: number[];
   polygonLookup: PolygonLookup;
-  aPointSize: number;
 
   constructor(settings: IShapeSettings) {
     super(settings);
@@ -68,30 +54,23 @@ export class Shapes extends Base<IShapeSettings> {
     this.resetVertices();
     // triangles or point count
 
-    const pixelsToWebGLMatrix = this.pixelsToWebGLMatrix
-      , settings = this.settings
-      , canvas = this.canvas
-      , gl = this.gl
-      , glLayer = this.glLayer
-      , verts = this.verts
+    const { pixelsToWebGLMatrix, settings, canvas, gl, layer, vertices, program } = this
       , vertexBuffer = gl.createBuffer()
-      , vertArray = new Float32Array(verts)
-      , size = vertArray.BYTES_PER_ELEMENT
-      , program = this.program
+      , vertArray = new Float32Array(vertices)
+      , byteCount = vertArray.BYTES_PER_ELEMENT
       , vertex = gl.getAttribLocation(program, 'vertex')
       , opacity = gl.getUniformLocation(program, 'opacity')
       ;
-    gl.uniform1f(opacity, this.settings.opacity);
+    gl.uniform1f(opacity, settings.opacity);
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
+    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, byteCount * 5, 0);
     gl.enableVertexAttribArray(vertex);
 
     //  gl.disable(gl.DEPTH_TEST);
     // ----------------------------
     // look up the locations for the inputs to our shaders.
     this.matrix = gl.getUniformLocation(program, 'matrix');
-    this.aPointSize = gl.getAttribLocation(program, 'pointSize');
 
     // Set the matrix to some that makes 1 unit 1 pixel.
     pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
@@ -99,22 +78,18 @@ export class Shapes extends Base<IShapeSettings> {
 
     gl.uniformMatrix4fv(this.matrix, false, pixelsToWebGLMatrix);
 
-    if (settings.shaderVars !== null) {
-      settings.attachShaderVars(size, gl, program, settings.shaderVars);
-    }
+    this.attachShaderVariables(byteCount);
 
-    glLayer.redraw();
+    layer.redraw();
 
     return this;
   }
 
   resetVertices(): this {
-    this.verts = [];
+    this.vertices = [];
     this.polygonLookup = new PolygonLookup();
 
-    const verts = this.verts
-      , polygonLookup = this.polygonLookup
-      , settings = this.settings
+    const { vertices, polygonLookup, settings } = this
       , data = settings.data as any
       ;
 
@@ -122,8 +97,9 @@ export class Shapes extends Base<IShapeSettings> {
       , index
       , features
       , feature
-      , color = settings.color
-      , colorFn
+      , { color } = settings
+      , colorFn: (i: number, feature: any) => IColor
+      , chosenColor: IColor
       , coordinates
       , featureIndex = 0
       , featureMax
@@ -156,14 +132,12 @@ export class Shapes extends Base<IShapeSettings> {
         polygonLookup.loadFeatureCollection(data);
         features = data.features;
     }
-    console.log(features, polygonLookup);
     featureMax = features.length;
 
-    if (color === null) {
+    if (!color) {
       throw new Error('color is not properly defined');
     } else if (typeof color === 'function') {
       colorFn = color;
-      color = undefined;
     }
 
     // -- data
@@ -173,13 +147,14 @@ export class Shapes extends Base<IShapeSettings> {
 
       //use colorFn function here if it exists
       if (colorFn) {
-        color = colorFn(featureIndex, feature);
+        chosenColor = colorFn(featureIndex, feature);
+      } else {
+        chosenColor = color as IColor;
       }
 
       coordinates = (feature.geometry || feature).coordinates;
       flat = earcut.flatten(coordinates);
       indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-      console.log(flat, indices);
       dim = coordinates[0][0].length;
       for (let i = 0, iMax = indices.length; i < iMax; i++) {
         index = indices[i];
@@ -191,21 +166,20 @@ export class Shapes extends Base<IShapeSettings> {
       }
 
       for (let i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = settings.map.project(latLng(triangles[i++], triangles[i++]), 0);
-        verts.push(pixel.x, pixel.y, color.r, color.g, color.b);
+        pixel = settings.map.project(new LatLng(triangles[i++], triangles[i++]), 0);
+        vertices.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b);
       }
     }
 
     return this;
   }
 
-  drawOnCanvas(): this {
+  drawOnCanvas(context: IUserDrawFuncContext): this {
     if (!this.gl) return this;
 
     const settings = this.settings
       , canvas = this.canvas
       , map = settings.map
-      , pointSize = Math.max(map.getZoom() - 4.0, 1.0)
       , bounds = map.getBounds()
       , topLeft = new LatLng(bounds.getNorth(), bounds.getWest())
       // -- Scale to current zoom
@@ -227,15 +201,14 @@ export class Shapes extends Base<IShapeSettings> {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    gl.vertexAttrib1f(this.aPointSize, pointSize);
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
-    gl.drawArrays(gl.TRIANGLES, 0, this.verts.length / 5);
+    gl.drawArrays(gl.TRIANGLES, 0, this.vertices.length / 5);
 
     return this;
   }
 
-  static tryClick(e, map): boolean {
+  static tryClick(e: LeafletMouseEvent, map: Map): boolean {
     let result
       , settings
       , feature
@@ -248,7 +221,7 @@ export class Shapes extends Base<IShapeSettings> {
       if (!settings.click) return;
 
       feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
-      if (feature !== undefined) {
+      if (feature) {
         result = settings.click(e, feature);
       }
     });
