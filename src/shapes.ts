@@ -3,9 +3,9 @@ import geojsonFlatten from 'geojson-flatten';
 import PolygonLookup from 'polygon-lookup';
 
 import { Base, IBaseSettings } from './base';
-import { IUserDrawFuncContext } from './canvas-overlay';
+import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
-import { LatLng, LeafletMouseEvent, Map } from './leaflet-bindings';
+import { LatLng, LeafletMouseEvent, Map, Point } from './leaflet-bindings';
 
 export interface IShapeSettings extends IBaseSettings {}
 
@@ -174,22 +174,20 @@ export class Shapes extends Base<IShapeSettings> {
     return this;
   }
 
-  drawOnCanvas(context: IUserDrawFuncContext): this {
+  drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    const settings = this.settings
-      , canvas = this.canvas
-      , map = settings.map
-      , bounds = map.getBounds()
-      , topLeft = new LatLng(bounds.getNorth(), bounds.getWest())
-      // -- Scale to current zoom
-      , scale = Math.pow(2, map.getZoom())
-      , offset = map.project(topLeft, 0)
+    const { scale, offset, canvas } = e
       , mapMatrix = this.mapMatrix
       , pixelsToWebGLMatrix = this.pixelsToWebGLMatrix
       ;
 
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    pixelsToWebGLMatrix.set([
+      2 / canvas.width, 0, 0, 0,
+      0, -2 / canvas.height, 0, 0,
+      0, 0, 0, 0,
+      -1, 1, 0, 1
+    ]);
 
     // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix

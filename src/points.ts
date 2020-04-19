@@ -1,9 +1,9 @@
 import { Feature, Point as GeoPoint } from 'geojson';
 
 import { Base, IBaseSettings } from './base';
-import { IUserDrawFuncContext } from './canvas-overlay';
+import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
-import { LeafletMouseEvent, Map, Point, LatLng } from './leaflet-bindings';
+import { LeafletMouseEvent, Map, Point, LatLng, Projection } from './leaflet-bindings';
 import { IPixel } from './pixel';
 import { locationDistance, pointInCircle } from './utils';
 
@@ -89,6 +89,11 @@ export class Points extends Base<IPointsSettings> {
       throw new Error('unhandled data type. Supported types are Array and GeoJson.FeatureCollection');
     }
 
+    // @ts-ignore
+    if (this.settings.map.options.crs.projection.project !== Projection.SphericalMercator.project) {
+      console.warn('layer designed for SphericalMercator, alternate detected');
+    }
+
     this
       .setup()
       .render();
@@ -108,7 +113,12 @@ export class Points extends Base<IPointsSettings> {
       ;
 
     //set the matrix to some that makes 1 unit 1 pixel.
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    pixelsToWebGLMatrix.set([
+      2 / canvas.width, 0, 0, 0,
+      0, -2 / canvas.height, 0, 0,
+      0, 0, 0, 0,
+      -1, 1, 0, 1
+    ]);
 
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniformMatrix4fv(matrix, false, pixelsToWebGLMatrix);
@@ -230,19 +240,22 @@ export class Points extends Base<IPointsSettings> {
     return pointSize === null ? Math.max(zoom - 4.0, 1.0) : pointSize;
   }
 
-  drawOnCanvas(context: IUserDrawFuncContext): this {
+  drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
     const { gl, canvas, settings, mapMatrix, matrix, pixelsToWebGLMatrix, vertices } = this
       , map = settings.map
-      , bounds = map.getBounds()
-      , topLeft = new LatLng(bounds.getNorth(), bounds.getWest())
-      , offset = map.project(topLeft, 0)
+      , { offset } = e
       , zoom = map.getZoom()
       , scale = Math.pow(2, zoom)
       ;
 
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    pixelsToWebGLMatrix.set([
+      2 / canvas.width, 0, 0, 0,
+      0, -2 / canvas.height, 0, 0,
+      0, 0, 0, 0,
+      -1, 1, 0, 1
+    ]);
 
     //set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
@@ -258,9 +271,9 @@ export class Points extends Base<IPointsSettings> {
     return this;
   }
 
-  lookup(coords): IPointLookup {
-    const xMax = coords.lat + 0.03
-      , yMax = coords.lng + 0.03
+  lookup(coords: LatLng): IPointLookup {
+    const xMax: number = coords.lat + 0.03
+      , yMax: number = coords.lng + 0.03
       , matches: IPointLookup[] = []
       ;
     let x = coords.lat - 0.03
@@ -303,7 +316,7 @@ export class Points extends Base<IPointsSettings> {
     return points.reduce((prev, curr) => {
       const prevDistance = locationDistance(targetLocation, prev.latLng, map)
         , currDistance = locationDistance(targetLocation, curr.latLng, map)
-      ;
+        ;
       return (prevDistance < currDistance) ? prev : curr;
     });
   }

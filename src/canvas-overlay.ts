@@ -10,33 +10,30 @@ originally taken from: http://www.sumbera.com/gist/js/leaflet/canvas/L.CanvasOve
  */
 
 import {
-  // @ts-ignore
   LatLngBounds,
-  // @ts-ignore
   Map,
-  // @ts-ignore
   Point,
-  // @ts-ignore
   Layer,
-  // @ts-ignore
   Util,
-  // @ts-ignore
   Browser,
-  // @ts-ignore
-  DomUtil
+  Bounds,
+  DomUtil,
+  LatLng,
+  ZoomAnimEvent,
 } from './leaflet-bindings';
 
-export interface IUserDrawFuncContext {
+export interface ICanvasOverlayDrawEvent {
   canvas: HTMLCanvasElement;
   bounds: LatLngBounds;
-  size: Point;
   offset: Point;
+  scale: number;
+  size: Point;
   zoomScale: number;
   zoom: number;
 }
 
 export interface IUserDrawFunc {
-  (context: IUserDrawFuncContext): void
+  (event: ICanvasOverlayDrawEvent): void
 }
 
 export class CanvasOverlay extends Layer {
@@ -46,15 +43,13 @@ export class CanvasOverlay extends Layer {
   canvas: HTMLCanvasElement;
 
   _frame?: number;
-  _offset?: Point;
 
   constructor(
-    userDrawFunc: IUserDrawFunc, options
+    userDrawFunc: IUserDrawFunc
   ) {
     super();
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
-    this._offset = null;
     this._redrawCallbacks = [];
   }
 
@@ -97,7 +92,7 @@ export class CanvasOverlay extends Layer {
     map.on('resize',  this._resize, this);
 
     if (animated) {
-      map.on('zoomanim', this._animateZoom, this);
+      map.on('zoomanim', Layer ? this._animateZoom : this._animateZoomNoLayer, this);
     }
 
     this._reset();
@@ -111,7 +106,7 @@ export class CanvasOverlay extends Layer {
     map.off('resize', this._resize, this);
 
     if (map.options.zoomAnimation && Browser.any3d) {
-      map.off('zoomanim', this._animateZoom, this);
+      map.off('zoomanim', Layer ? this._animateZoom : this._animateZoomNoLayer, this);
     }
     return this;
   }
@@ -133,21 +128,24 @@ export class CanvasOverlay extends Layer {
   }
 
   _redraw(): void {
-    const { _map } = this
+    const { _map, canvas } = this
       , size = _map.getSize()
       , bounds = _map.getBounds()
       , zoomScale = (size.x * 180) / (20037508.34  * (bounds.getEast() - bounds.getWest())) // resolution = 1/zoomScale
       , zoom = _map.getZoom()
+      , topLeft = new LatLng(bounds.getNorth(), bounds.getWest())
+      , offset = this._unclampedProject(topLeft, 0)
       ;
 
     if (this._userDrawFunc) {
       this._userDrawFunc({
-        canvas: this.canvas,
-        offset: this._offset,
-        bounds: bounds,
-        size: size,
-        zoomScale: zoomScale,
-        zoom: zoom,
+        bounds,
+        canvas,
+        offset,
+        scale: Math.pow(2, zoom),
+        size,
+        zoomScale,
+        zoom,
       });
     }
 
@@ -158,19 +156,58 @@ export class CanvasOverlay extends Layer {
     this._frame = null;
   }
 
-  _animateZoom(e): void {
+  _animateZoom(e: ZoomAnimEvent): void {
     const { _map } = this
       , scale = _map.getZoomScale(e.zoom, _map.getZoom())
-      , offset = Layer
-        // @ts-ignore
-        ? _map._latLngBoundsToNewLayerBounds(_map.getBounds(), e.zoom, e.center).min
-        // @ts-ignore
-        : _map._getCenterOffset(e.center)
-            ._multiplyBy(-scale)
-            // @ts-ignore
-            .subtract(_map._getMapPanePos())
+      // @ts-ignore
+      , offset = this._unclampedLatLngBoundsToNewLayerBounds(_map.getBounds(), e.zoom, e.center).min
       ;
+    DomUtil.setTransform(this.canvas, offset, scale);
+  }
 
-    DomUtil.setTransform(this.canvas, this._offset = offset, scale);
+  _animateZoomNoLayer(e: ZoomAnimEvent): void {
+    const { _map } = this
+      , scale = _map.getZoomScale(e.zoom, _map.getZoom())
+      // @ts-ignore
+      , offset = _map._getCenterOffset(e.center)
+        ._multiplyBy(-scale)
+        // @ts-ignore
+        .subtract(_map._getMapPanePos())
+      ;
+    DomUtil.setTransform(this.canvas, offset, scale);
+  }
+
+  _unclampedProject(latlng: LatLng, zoom: number): Point {
+    // imported partly from https://github.com/Leaflet/Leaflet/blob/1ae785b73092fdb4b97e30f8789345e9f7c7c912/src/geo/projection/Projection.SphericalMercator.js#L21
+    // used because they clamp the latitude
+    const { crs } = this._map.options
+      // @ts-ignore
+      , { R } = crs.projection
+      , d = Math.PI / 180
+      , lat = latlng.lat
+      , sin = Math.sin(lat * d)
+      , projectedPoint = new Point(
+          // @ts-ignore
+          R * latlng.lng * d,
+          // @ts-ignore
+          R * Math.log((1 + sin) / (1 - sin)) / 2
+        )
+      , scale = crs.scale(zoom)
+      ;
+    // @ts-ignore
+    return crs.transformation._transform(projectedPoint, scale);
+  }
+
+  _unclampedLatLngBoundsToNewLayerBounds(latLngBounds: LatLngBounds, zoom: number, center: LatLng): Bounds {
+    // imported party from https://github.com/Leaflet/Leaflet/blob/84bc05bbb6e4acc41e6f89ff7421dd7c6520d256/src/map/Map.js#L1500
+    // used because it uses crs.projection.project, which clamp the latitude
+    // @ts-ignore
+    const topLeft = this._map._getNewPixelOrigin(center, zoom);
+    return new Bounds([
+      this._unclampedProject(latLngBounds.getSouthWest(), zoom).subtract(topLeft),
+      this._unclampedProject(latLngBounds.getNorthWest(), zoom).subtract(topLeft),
+      this._unclampedProject(latLngBounds.getSouthEast(), zoom).subtract(topLeft),
+      this._unclampedProject(latLngBounds.getNorthEast(), zoom).subtract(topLeft)
+    ]);
   }
 }

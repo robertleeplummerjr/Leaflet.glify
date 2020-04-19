@@ -1,5 +1,5 @@
 import { Base, IBaseSettings } from './base';
-import { IUserDrawFuncContext } from './canvas-overlay';
+import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
 import { Map, LeafletMouseEvent, LatLng } from './leaflet-bindings';
 import { LineFeatureVertices } from './line-feature-vertices';
@@ -180,19 +180,13 @@ export class Lines extends Base<ILinesSettings> {
     return this;
   }
 
-  drawOnCanvas(context: IUserDrawFuncContext): this {
+  drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
     const { gl, settings, canvas, mapMatrix, matrix, pixelsToWebGLMatrix, allVertices, vertices } = this
-      , map = settings.map
       , weight = settings.weight
-      , zoom = map.getZoom()
+      , { scale, offset, zoom } = e
       , pointSize = Math.max(zoom - 4.0, 4.0)
-      , bounds = map.getBounds()
-      , topLeft = new LatLng(bounds.getNorth(), bounds.getWest())
-        // -- Scale to current zoom
-      , scale = Math.pow(2, zoom)
-      , offset = map.project(topLeft, 0)
       ;
 
     gl.clear(gl.COLOR_BUFFER_BIT);

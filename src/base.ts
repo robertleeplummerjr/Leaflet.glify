@@ -1,7 +1,7 @@
 import { IColor } from './color';
 import { Map, Point } from './leaflet-bindings';
 import { MapMatrix } from './map-matrix';
-import { CanvasOverlay, IUserDrawFuncContext } from './canvas-overlay';
+import { CanvasOverlay, ICanvasOverlayDrawEvent } from './canvas-overlay';
 
 export interface IShaderVariable {
   type: 'FLOAT';
@@ -71,7 +71,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
       || canvas.getContext('experimental-webgl', { preserveDrawingBuffer })) as WebGLRenderingContext;
   }
 
-  abstract drawOnCanvas(context: IUserDrawFuncContext): this;
+  abstract drawOnCanvas(context: ICanvasOverlayDrawEvent): this;
 
   attachShaderVariables(byteCount: number): this {
     if (!this.settings.shaderVariables) {
