@@ -36635,7 +36635,7 @@ function (_super) {
 }(base_1.Base);
 
 exports.Shapes = Shapes;
-},{"earcut":"node_modules/earcut/src/earcut.js","geojson-flatten":"node_modules/geojson-flatten/dist/index.es.js","polygon-lookup":"node_modules/polygon-lookup/index.js","./base":"src/base.ts","./color":"src/color.ts","./leaflet-bindings":"src/leaflet-bindings.js"}],"shader/vertex/default.glsl":[function(require,module,exports) {
+},{"earcut":"node_modules/earcut/src/earcut.js","geojson-flatten":"node_modules/geojson-flatten/dist/index.es.js","polygon-lookup":"node_modules/polygon-lookup/index.js","./base":"src/base.ts","./color":"src/color.ts","./leaflet-bindings":"src/leaflet-bindings.js"}],"src/shader/vertex/default.glsl":[function(require,module,exports) {
 module.exports = `uniform mat4 matrix;
 attribute vec4 vertex;
 attribute float pointSize;
@@ -36652,7 +36652,7 @@ void main() {
   //pass the color to the fragment shader
   _color = color;
 }`
-},{}],"shader/fragment/dot.glsl":[function(require,module,exports) {
+},{}],"src/shader/fragment/dot.glsl":[function(require,module,exports) {
 module.exports = `precision mediump float;
 uniform vec4 color;
 uniform float opacity;
@@ -36678,7 +36678,7 @@ void main() {
     //works for overlapping circles if blending is enabled
     gl_FragColor = mix(color0, color1, t);
 }`
-},{}],"shader/fragment/point.glsl":[function(require,module,exports) {
+},{}],"src/shader/fragment/point.glsl":[function(require,module,exports) {
 module.exports = `precision mediump float;
 varying vec4 _color;
 uniform float opacity;
@@ -36720,7 +36720,7 @@ void main() {
 
   gl_FragColor = mix(mix(borderColor, clearColor, t2), pointColor, t1);
 }`
-},{}],"shader/fragment/puck.glsl":[function(require,module,exports) {
+},{}],"src/shader/fragment/puck.glsl":[function(require,module,exports) {
 module.exports = `precision mediump float;
 varying vec4 _color;
 uniform float opacity;
@@ -36762,7 +36762,7 @@ void main() {
   puck.rgb = pow(puck.rgb, vec3(1.0 / gamma));
   gl_FragColor = puck;
 }`
-},{}],"shader/fragment/simple-circle.glsl":[function(require,module,exports) {
+},{}],"src/shader/fragment/simple-circle.glsl":[function(require,module,exports) {
 module.exports = `precision mediump float;
 varying vec4 _color;
 uniform float opacity;
@@ -36778,7 +36778,7 @@ void main() {
         discard;
     }
 }`
-},{}],"shader/fragment/square.glsl":[function(require,module,exports) {
+},{}],"src/shader/fragment/square.glsl":[function(require,module,exports) {
 module.exports = `precision mediump float;
 varying vec4 _color;
 uniform float opacity;
@@ -36787,7 +36787,7 @@ void main() {
     //squares
     gl_FragColor = vec4(_color[0], _color[1], _color[2], opacity);
 }`
-},{}],"shader/fragment/polygon.glsl":[function(require,module,exports) {
+},{}],"src/shader/fragment/polygon.glsl":[function(require,module,exports) {
 module.exports = `precision mediump float;
 uniform float opacity;
 varying vec4 _color;
@@ -36985,7 +36985,7 @@ if (typeof window !== 'undefined' && window.L) {
 
   window['L'].Glify = Glify;
 }
-},{"./lines":"src/lines.ts","./points":"src/points.ts","./shapes":"src/shapes.ts","./shader/vertex/default.glsl":"shader/vertex/default.glsl","./shader/fragment/dot.glsl":"shader/fragment/dot.glsl","./shader/fragment/point.glsl":"shader/fragment/point.glsl","./shader/fragment/puck.glsl":"shader/fragment/puck.glsl","./shader/fragment/simple-circle.glsl":"shader/fragment/simple-circle.glsl","./shader/fragment/square.glsl":"shader/fragment/square.glsl","./shader/fragment/polygon.glsl":"shader/fragment/polygon.glsl"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"./lines":"src/lines.ts","./points":"src/points.ts","./shapes":"src/shapes.ts","./shader/vertex/default.glsl":"src/shader/vertex/default.glsl","./shader/fragment/dot.glsl":"src/shader/fragment/dot.glsl","./shader/fragment/point.glsl":"src/shader/fragment/point.glsl","./shader/fragment/puck.glsl":"src/shader/fragment/puck.glsl","./shader/fragment/simple-circle.glsl":"src/shader/fragment/simple-circle.glsl","./shader/fragment/square.glsl":"src/shader/fragment/square.glsl","./shader/fragment/polygon.glsl":"src/shader/fragment/polygon.glsl"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -37013,7 +37013,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58662" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64603" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
@@ -37190,4 +37190,4 @@ function hmrAcceptRun(bundle, id) {
   }
 }
 },{}]},{},["node_modules/parcel-bundler/src/builtins/hmr-runtime.js","src/index.ts"], null)
-//# sourceMappingURL=/src.f10117fe.js.map
+//# sourceMappingURL=src.f10117fe.js.map
