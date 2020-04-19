@@ -1,9 +1,8 @@
 <!doctype html>
 <html>
 <head>
-    <title>Many Points with leaflet WebGL</title>
+    <title>Leaflet Glify</title>
     <meta charset="utf-8">
-
     <style>
         html, body {
             height: 100%;
@@ -11,7 +10,6 @@
             margin: 0;
             background: rgb(14, 21, 30);
         }
-
         #map {
             position: absolute;
             height: 100%;
@@ -30,79 +28,8 @@
       alt="Fork me on GitHub"
       data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_white_ffffff.png"></a>
 </body>
-<link rel="stylesheet" href="bower_components/leaflet/dist/leaflet.css" />
-<script src="bower_components/leaflet/dist/leaflet.js"></script>
-<script src="glify.js"></script>
-<script>
-  var map = L.map('map')
-          .setView([50.00, 14.44], 7);
-
-  L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference],$fff[@23],$fff[hsl-saturation@20],toner-lines[destination-in])/{z}/{x}/{y}.png")
-    //L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png")
-    .addTo(map);
-
-  wget(['86T.json', 'CZDistricts.json', 'rivers.json'], function(points, districts, rivers) {
-    L.glify.shapes({
-      map: map,
-      click: function (e, feature) {
-        L.popup()
-          .setLatLng(e.latlng)
-          .setContent("You clicked on " + feature.properties.NAZKR_ENG)
-          .openOn(map);
-
-        console.log(feature);
-        console.log(e);
-      },
-      data: JSON.parse(districts)
-    });
-
-    L.glify.lines({
-      map: map,
-      latitudeKey: 1,
-      longitudeKey: 0,
-      click: function (e, feature) {
-        L.popup()
-          .setLatLng(e.latlng)
-          .setContent("You clicked on " + feature.properties.name)
-          .openOn(map);
-
-        console.log(feature);
-        console.log(e);
-      },
-      data: JSON.parse(rivers)
-    });
-
-    L.glify.points({
-      map: map,
-      click: function (e, point, xy) {
-        //set up a standalone popup (use a popup as a layer)
-        L.popup()
-            .setLatLng(point)
-            .setContent("You clicked the point at longitude:" + point[L.glify.longitudeKey] + ', latitude:' + point[L.glify.latitudeKey])
-            .openOn(map);
-
-        console.log(point);
-      },
-      data: JSON.parse(points)
-    });
-  });
-
-  function wget(urls, fn) {
-    var results = [],
-      complete = 0,
-      total = urls.length;
-
-    urls.forEach(function(url, i) {
-      var request = new XMLHttpRequest();
-      request.open('GET', url, true);
-      request.onload = function () {
-        if (request.status < 200 && request.status > 400) return;
-        results[i] = request.responseText;
-        complete++;
-        if (complete === total) fn.apply(null, results);
-      };
-      request.send();
-    });
-  }
-</script>
+<link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css" />
+<!--this file is meant to be run as a development aid with the cli command `yarn serve`-->
+<script src="src/index.ts"></script>
+<script src="example.ts"></script>
 </html>
