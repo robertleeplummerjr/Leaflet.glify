@@ -133,7 +133,7 @@ export class Shapes extends Base<IShapeSettings> {
         features = data.features;
     }
     featureMax = features.length;
-
+    
     if (!color) {
       throw new Error('color is not properly defined');
     } else if (typeof color === 'function') {
@@ -151,17 +151,25 @@ export class Shapes extends Base<IShapeSettings> {
       } else {
         chosenColor = color as IColor;
       }
-
+      
       coordinates = (feature.geometry || feature).coordinates;
-      flat = earcut.flatten(coordinates);
-      indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-      dim = coordinates[0][0].length;
-      for (let i = 0, iMax = indices.length; i < iMax; i++) {
-        index = indices[i];
-        if (typeof flat.vertices[0] === 'number') {
-          triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
-        } else {
-          throw new Error('unhandled polygon');
+      //coorinates Array Structure depends on whether feature is multipart or not.
+      //Multi: [ [],[],[]... ], Single: [], [], []...
+      //Wrap Single Array to treat two types with same method
+      if (feature.geometry.type !== 'MultiPolygon') {
+        coordinates = [coordinates]
+      }
+      for (let num in coordinates) {
+        flat = earcut.flatten(coordinates[num]);
+        indices = earcut(flat.vertices, flat.holes, flat.dimensions);
+        dim = coordinates[num][0][0].length;
+        for (let i = 0, iMax = indices.length; i < iMax; i++) {
+          index = indices[i];
+          if (typeof flat.vertices[0] === 'number') {
+            triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
+          } else {
+            throw new Error('unhandled polygon');
+          }
         }
       }
 
