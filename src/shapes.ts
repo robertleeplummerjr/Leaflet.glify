@@ -153,7 +153,6 @@ export class Shapes extends Base<IShapeSettings> {
       }
       
       coordinates = (feature.geometry || feature).coordinates;
-      console.log(coordinates)
       //coorinates Array Structure depends on whether feature is multipart or not.
       //Multi: [ [[],[],[]...], [[],[],[]...], [[],[],[]...]... ], Single: [ [[],[],[]...] ]
       //Wrap Single Array to treat two types with same method
