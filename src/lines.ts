@@ -149,6 +149,7 @@ export class Lines extends Base<ILinesSettings> {
       , colorFn: (i: number, feature: any) => IColor
       , chosenColor
       , featureIndex = 0
+      , coordinates
       ;
 
     if (!color) {
@@ -167,14 +168,24 @@ export class Lines extends Base<ILinesSettings> {
         chosenColor = color as IColor;
       }
 
-      const featureVertices = new LineFeatureVertices({
-        project: map.project.bind(map),
-        latitudeKey,
-        longitudeKey,
-        color: chosenColor,
-      });
-      featureVertices.fillFromCoordinates(feature.geometry.coordinates);
-      vertices.push(featureVertices);
+      //coorinates Array Structure depends on whether feature is multipart or not.
+      //Multi: [ [],[],[]... ], Single: []
+      //Wrap Single Array to treat two types with same method
+      coordinates = (feature.geometry || feature).coordinates;
+      if (feature.geometry.type !== 'MultiLineString') {
+        coordinates = [coordinates]
+      }
+
+      for (let num in coordinates) {
+        const featureVertices = new LineFeatureVertices({
+          project: map.project.bind(map),
+          latitudeKey,
+          longitudeKey,
+          color: chosenColor,
+        });
+        featureVertices.fillFromCoordinates(coordinates[num]);
+        vertices.push(featureVertices);
+      }
     }
 
     return this;
