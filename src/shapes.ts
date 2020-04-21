@@ -154,7 +154,7 @@ export class Shapes extends Base<IShapeSettings> {
       
       coordinates = (feature.geometry || feature).coordinates;
       //coorinates Array Structure depends on whether feature is multipart or not.
-      //Multi: [ [],[],[]... ], Single: [], [], []...
+      //Multi: [ [],[],[]... ], Single: []
       //Wrap Single Array to treat two types with same method
       if (feature.geometry.type !== 'MultiPolygon') {
         coordinates = [coordinates]
