@@ -169,7 +169,7 @@ export class Lines extends Base<ILinesSettings> {
       }
 
       //coorinates Array Structure depends on whether feature is multipart or not.
-      //Multi: [ [],[],[]... ], Single: []
+      //Multi: [ [[],[],[]...], [[],[],[]...], [[],[],[]...]... ], Single: [ [[],[],[]...] ]
       //Wrap Single Array to treat two types with same method
       coordinates = (feature.geometry || feature).coordinates;
       if (feature.geometry.type !== 'MultiLineString') {
