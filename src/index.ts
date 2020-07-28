@@ -128,7 +128,7 @@ class Glify {
     }
   }
 
-  setupHover(map?: Map, hoverWait?: 250, immediate?: false): void {
+  setupHover(map?: Map, hoverWait?: 500, immediate?: true): void {
     this.maps.push(map);
     map.on('mousemove', debounce((e: LeafletMouseEvent) => {
       let hit;

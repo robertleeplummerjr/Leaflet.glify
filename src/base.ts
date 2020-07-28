@@ -31,6 +31,11 @@ export interface IBaseSettings {
   opacity?: number;
   preserveDrawingBuffer?: boolean;
   hoverWait?: number;
+  highlight?: {
+    size?: number,
+    opacity?: number,
+    color?: IColor
+  };
 }
 
 export abstract class Base<T extends IBaseSettings = IBaseSettings> {
