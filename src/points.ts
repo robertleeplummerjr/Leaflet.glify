@@ -11,6 +11,7 @@ export interface IPointsSettings extends IBaseSettings {
   size: ((i: number, latLng: LatLng) => number) | number;
   eachVertex?: (this: Points, latLng: LatLng, pixel: IPixel, color: IColor) => void;
   sensitivity?: number;
+  sensitivityHover?: number;
 }
 
 const defaults: IPointsSettings = {
@@ -19,15 +20,18 @@ const defaults: IPointsSettings = {
   longitudeKey: null,
   latitudeKey: null,
   setupClick: null,
+  setupHover: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   eachVertex: null,
   click: null,
+  hover: null,
   color: Color.random,
   opacity: 0.8,
   size: null,
   className: '',
   sensitivity: 2,
+  sensitivityHover: 0.03,
   shaderVariables: {
     vertex: {
       type: 'FLOAT',
@@ -365,6 +369,54 @@ export class Points extends Base<IPointsSettings> {
       found.chosenSize * sensitivity
     )) {
       result = click(e, found.feature || found.latLng, xy);
+      return result !== undefined ? result : true;
+    }
+  }
+
+  static tryHover(e: LeafletMouseEvent, map: Map): boolean | void {
+    const closestFromEach: IPointLookup[] = []
+      , instancesLookup = {}
+      ;
+    let result
+      , settings: IPointsSettings
+      , instance: Points
+      , pointLookup: IPointLookup
+      , xy: Point
+      , found: IPointLookup
+      , foundLatLng
+      ;
+
+    Points.instances.forEach((_instance) => {
+      settings = _instance.settings;
+      if (!_instance.active) return;
+      if (settings.map !== map) return;
+      if (!settings.hover) return;
+
+      pointLookup = _instance.lookup(e.latlng);
+      instancesLookup[pointLookup.key] = _instance;
+      closestFromEach.push(pointLookup);
+    });
+
+    if (closestFromEach.length < 1) return;
+    if (!settings) return;
+
+    found = this.closest(e.latlng, closestFromEach, map);
+
+    if (found === null) return;
+
+    instance = instancesLookup[found.key];
+    if (!instance) return;
+    const { latitudeKey, longitudeKey, sensitivityHover, hover } = instance.settings;
+
+    foundLatLng = new LatLng(found.latLng[latitudeKey], found.latLng[longitudeKey]);
+    xy = map.latLngToLayerPoint(foundLatLng);
+
+    if (pointInCircle(
+      xy,
+      e.layerPoint,
+      found.chosenSize * sensitivityHover
+    )) {
+      result = hover(e, found.feature || found.latLng, xy);
       return result !== undefined ? result : true;
     }
   }

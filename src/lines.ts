@@ -1,12 +1,14 @@
 import { Base, IBaseSettings } from './base';
 import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
-import { Map, LeafletMouseEvent, LatLng } from './leaflet-bindings';
+import { Map, LeafletMouseEvent, LatLng, geoJSON } from './leaflet-bindings';
 import { LineFeatureVertices } from './line-feature-vertices';
-import { pDistance } from './utils';
+import { pDistance, inBounds } from './utils';
 
 export interface ILinesSettings extends IBaseSettings {
   weight: ((i: number, feature: any) => number) | number;
+  sensitivity?: number;
+  sensitivityHover?: number;
 }
 
 const defaults: ILinesSettings = {
@@ -15,13 +17,17 @@ const defaults: ILinesSettings = {
   longitudeKey: null,
   latitudeKey: null,
   setupClick: null,
+  setupHover: null,
   vertexShaderSource: null,
   fragmentShaderSource: null,
   click: null,
+  hover: null,
   color: Color.random,
   className: '',
   opacity: 0.5,
   weight: 2,
+  sensitivity: 0.1,
+  sensitivityHover: 0.03,
   shaderVariables: {
     color: {
       type: 'FLOAT',
@@ -248,11 +254,12 @@ export class Lines extends Base<ILinesSettings> {
   static tryClick(e: LeafletMouseEvent, map: Map): void {
     let foundFeature = false
       , instance = null
-      , record = 0.1
+      , sensitivity
       , settings
       ;
     Lines.instances.forEach(function (_instance) {
       settings = _instance.settings;
+      sensitivity = settings.sensitivity;
       if (!_instance.active) return;
       if (settings.map !== map) return;
       if (!settings.click) return;
@@ -262,8 +269,8 @@ export class Lines extends Base<ILinesSettings> {
           let distance = pDistance(e.latlng.lng, e.latlng.lat,
             feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
             feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
-          if (distance < record) {
-            record = distance;
+          if (distance < sensitivity) {
+            sensitivity = distance;
             foundFeature = feature;
             instance = _instance;
           }
@@ -273,6 +280,48 @@ export class Lines extends Base<ILinesSettings> {
 
     if (instance) {
       instance.settings.click(e, foundFeature);
+    } else {
+      return;
+    }
+  }
+
+  static tryHover(e: LeafletMouseEvent, map: Map): void {
+    let foundFeature = false
+      , instance = null
+      , settings
+      , sensitivityHover
+      ;
+    Lines.instances.forEach(function (_instance) {
+      settings = _instance.settings;
+      sensitivityHover = settings.sensitivityHover;
+      if (!_instance.active) return;
+      if (settings.map !== map) return;
+      if (!settings.hover) return;
+      // Check if e.latlng is inside the bbox of the features
+      let bounds = geoJSON(settings.data.features).getBounds();
+      
+      if (inBounds(e.latlng, bounds)) {
+        settings.data.features.map(feature => {
+          for (let i = 1; i < feature.geometry.coordinates.length; i++) {
+            let distance = pDistance(e.latlng.lng,
+                                    e.latlng.lat,
+                                    feature.geometry.coordinates[i - 1][0],
+                                    feature.geometry.coordinates[i - 1][1],
+                                    feature.geometry.coordinates[i][0],
+                                    feature.geometry.coordinates[i][1]);
+
+            if (distance < sensitivityHover) {
+              sensitivityHover = distance;
+              foundFeature = feature;
+              instance = _instance;
+            }
+          }
+        });
+      }
+    })
+
+    if (instance) {
+      instance.settings.hover(e, foundFeature);
     } else {
       return;
     }

@@ -87,3 +87,24 @@ export function debugPoint(containerPoint) {
 
   document.body.appendChild(el);
 }
+
+export function debounce(func, wait: number, immediate: Boolean) {
+  let timeout;
+  return function() {
+      let context = this, args = arguments;
+      let later = function() {
+          timeout = null;
+          if (!immediate) func.apply(context, args);
+      };
+      let callNow = immediate && !timeout;
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+      if (callNow) func.apply(context, args);
+  };
+}
+
+export function inBounds(e, bounds) {
+  let cond = ((bounds._northEast.lat > e.lat) && (e.lat > bounds._southWest.lat) &&
+   (bounds._northEast.lng > e.lng) && (e.lng > bounds._southWest.lng));
+  return cond;
+}

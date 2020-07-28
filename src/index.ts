@@ -4,6 +4,7 @@ import { Lines, ILinesSettings } from './lines';
 import { MapMatrix } from './map-matrix';
 import { Points, IPointsSettings } from './points';
 import { IShapeSettings, Shapes } from './shapes';
+import { debounce } from './utils';
 
 // @ts-ignore
 import vertex from './shader/vertex/default.glsl';
@@ -65,6 +66,7 @@ class Glify {
   points(settings: IPointsSettings): Points {
     return new this.Points({
       setupClick: glify.setupClick.bind(this),
+      setupHover: this.setupHover.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
       vertexShaderSource: () => {
@@ -80,6 +82,7 @@ class Glify {
   shapes(settings: IShapeSettings): Shapes {
     return new this.Shapes({
       setupClick: this.setupClick.bind(this),
+      setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
       vertexShaderSource: () => {
@@ -95,6 +98,7 @@ class Glify {
   lines(settings: ILinesSettings): Lines {
     return new this.Lines({
       setupClick: this.setupClick.bind(this),
+      setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
       vertexShaderSource: () => {
@@ -122,6 +126,21 @@ class Glify {
         if (hit !== undefined) return hit;
       });
     }
+  }
+
+  setupHover(map?: Map, hoverWait?: 250, immediate?: false): void {
+    this.maps.push(map);
+    map.on('mousemove', debounce((e: LeafletMouseEvent) => {
+      let hit;
+      hit = Points.tryHover(e, map);
+      if (hit !== undefined) return hit;
+
+      hit = Lines.tryHover(e, map);
+      if (hit !== undefined) return hit;
+
+      hit = Shapes.tryHover(e, map);
+      if (hit !== undefined) return hit;
+    }, hoverWait, immediate));
   }
 }
 
