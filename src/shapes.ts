@@ -5,9 +5,12 @@ import PolygonLookup from 'polygon-lookup';
 import { Base, IBaseSettings } from './base';
 import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
+import { latLonToPixel } from './utils';
 import { LatLng, LeafletMouseEvent, Map, Point } from './leaflet-bindings';
 
-export interface IShapeSettings extends IBaseSettings {}
+export interface IShapeSettings extends IBaseSettings {
+  border: boolean
+}
 
 export const defaults: IShapeSettings = {
   map: null,
@@ -19,6 +22,7 @@ export const defaults: IShapeSettings = {
   fragmentShaderSource: null,
   click: null,
   color: Color.random,
+  border: false,
   className: '',
   opacity: 0.5,
   shaderVariables: {
@@ -54,7 +58,8 @@ export class Shapes extends Base<IShapeSettings> {
     this.resetVertices();
     // triangles or point count
 
-    const { pixelsToWebGLMatrix, settings, canvas, gl, layer, vertices, program } = this
+    const { pixelsToWebGLMatrix, settings, canvas, gl, layer, vertices, vertsLines, program } = this
+      // , vertsLines = new Array
       , vertexBuffer = gl.createBuffer()
       , vertArray = new Float32Array(vertices)
       , byteCount = vertArray.BYTES_PER_ELEMENT
@@ -87,9 +92,10 @@ export class Shapes extends Base<IShapeSettings> {
 
   resetVertices(): this {
     this.vertices = [];
+    this.vertsLines = [];
     this.polygonLookup = new PolygonLookup();
 
-    const { vertices, polygonLookup, settings } = this
+    const { vertices, vertsLines, polygonLookup, settings } = this
       , data = settings.data as any
       ;
 
@@ -156,6 +162,7 @@ export class Shapes extends Base<IShapeSettings> {
       flat = earcut.flatten(coordinates);
       indices = earcut(flat.vertices, flat.holes, flat.dimensions);
       dim = coordinates[0][0].length;
+
       for (let i = 0, iMax = indices.length; i < iMax; i++) {
         index = indices[i];
         if (typeof flat.vertices[0] === 'number') {
@@ -168,6 +175,19 @@ export class Shapes extends Base<IShapeSettings> {
       for (let i = 0, iMax = triangles.length; i < iMax; i) {
         pixel = settings.map.project(new LatLng(triangles[i++], triangles[i++]), 0);
         vertices.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b);
+      }
+
+      if (settings.border) {
+        let lines = [];
+        for (let i = 1, iMax = flat.vertices.length; i < iMax; i=i+2) {
+          lines.push(flat.vertices[i], flat.vertices[i-1]);
+          lines.push(flat.vertices[i+2], flat.vertices[i+1]);
+        }
+
+        for (let i = 0, iMax = lines.length; i < iMax; i) {
+          pixel = latLonToPixel(lines[i++],lines[i++]);
+          vertsLines.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b);
+        }
       }
     }
 
@@ -198,9 +218,57 @@ export class Shapes extends Base<IShapeSettings> {
     const gl = this.gl;
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-
+    
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
+    
+    if (this.settings.border) {
+      var vertsLines = this.vertsLines,
+      vertexBuffer = gl.createBuffer(),
+      vertArray = new Float32Array(vertsLines),
+      size = vertArray.BYTES_PER_ELEMENT,
+      program = this.program,
+      vertex = gl.getAttribLocation(program, 'vertex'),
+      opacity = gl.getUniformLocation(program, 'opacity');
+
+      gl.uniform1f(opacity, 1);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
+
+      if (this.settings.shaderVariables !== null) {
+        this.attachShaderVariables(size);
+      }
+
+      gl.vertexAttribPointer(vertex, 3, gl.FLOAT, false, size *5, 0);
+      gl.enableVertexAttribArray(vertex);
+      gl.enable(gl.DEPTH_TEST);
+      gl.viewport(0,0,canvas.width, canvas.height);
+      gl.drawArrays(gl.LINES, 0, this.vertsLines.length / 5);
+    
+      var vertices = this.vertices,
+      vertexBuffer = gl.createBuffer(),
+      vertArray = new Float32Array(vertices),
+      size = vertArray.BYTES_PER_ELEMENT,
+      program = this.program,
+      vertex = gl.getAttribLocation(program, 'vertex'),
+      opacity = gl.getUniformLocation(program, 'opacity');
+
+      gl.uniform1f(opacity, this.settings.opacity);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
+
+      if (this.settings.shaderVariables !== null) {
+        this.attachShaderVariables(size);
+      }
+
+      gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size *5, 0);
+      gl.enableVertexAttribArray(vertex);
+      gl.enable(gl.DEPTH_TEST);
+      gl.viewport(0,0,canvas.width, canvas.height);
+    }
+
     gl.drawArrays(gl.TRIANGLES, 0, this.vertices.length / 5);
 
     return this;
