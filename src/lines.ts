@@ -4,6 +4,7 @@ import { Color, IColor } from './color';
 import { Map, LeafletMouseEvent, LatLng, geoJSON } from './leaflet-bindings';
 import { LineFeatureVertices } from './line-feature-vertices';
 import { pDistance, inBounds } from './utils';
+import L from 'leaflet';
 
 export interface ILinesSettings extends IBaseSettings {
   weight: ((i: number, feature: any) => number) | number;
@@ -291,6 +292,7 @@ export class Lines extends Base<ILinesSettings> {
       , settings
       , sensitivityHover
       ;
+
     Lines.instances.forEach(function (_instance) {
       settings = _instance.settings;
       sensitivityHover = settings.sensitivityHover;
@@ -322,7 +324,35 @@ export class Lines extends Base<ILinesSettings> {
 
     if (instance) {
       instance.settings.hover(e, foundFeature);
+
+      // Add hovered/highlighted Glify Lines 
+      let highlight = instance.settings.highlight;
+      if (highlight) {
+        if (map["highlightLines"]) {
+          map["highlightLines"].remove();
+          delete map["highlightLines"];
+        }
+
+        let data = {"type":"FeatureCollection",
+                    "features":[{"type":"Feature","geometry":{
+                    "type":"LineString","coordinates": foundFeature["geometry"].coordinates}}]}
+        
+        map["highlightLines"] = L.glify.lines({
+          map: map,
+          data: data,
+          latitudeKey: instance.settings.latitudeKey,
+          longitudeKey: instance.settings.longitudeKey,
+          color: highlight.color ? highlight.color : {"r":1, "g":0, "b":0},
+          weight: Number(instance.settings.weight) * (highlight && highlight.size ? highlight.size : 1.5),
+          opacity: highlight.opacity ? highlight.opacity : 0.8
+        })
+      }
     } else {
+      // Remove the highlighted line again if highlight is activated and no feature was hovered
+      if (map["highlightLines"]) {
+        map["highlightLines"].remove()
+        delete map["highlightLines"];
+      }
       return;
     }
   }

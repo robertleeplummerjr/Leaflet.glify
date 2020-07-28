@@ -6,6 +6,7 @@ import { Base, IBaseSettings } from './base';
 import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
 import { LatLng, LeafletMouseEvent, Map, Point } from './leaflet-bindings';
+import L from 'leaflet';
 
 export interface IShapeSettings extends IBaseSettings {}
 
@@ -233,6 +234,7 @@ export class Shapes extends Base<IShapeSettings> {
     let result
       , settings
       , feature
+      , highlight
       ;
 
     Shapes.instances.forEach(function (_instance) {
@@ -242,9 +244,34 @@ export class Shapes extends Base<IShapeSettings> {
       if (!settings.hover) return;
 
       feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+      highlight = settings.highlight;
 
       if (feature) {
         result = settings.hover(e, feature);
+
+        // Add hovered/highlighted Glify Shapes
+        if (highlight) {
+          if (map["highlightPolygon"]) {
+            map["highlightPolygon"].remove();
+            delete map["highlightPolygon"];
+          }
+    
+          var data = Object.assign({"type":"FeatureCollection",
+                                    "features": [feature]});
+
+          map["highlightPolygon"] = L.glify.shapes({
+            map: map,
+            data: data,
+            color: highlight.color ? highlight.color : {"r":1, "g":0, "b":0},
+            opacity: highlight.opacity ? highlight.opacity : 0.8
+          })
+        }
+      } else {
+        // Remove the highlighted shape again if highlight is activated and no feature was hovered
+        if (highlight && map["highlightPolygon"]) {
+          map["highlightPolygon"].remove();
+          delete map["highlightPolygon"];
+        }
       }
     });
 

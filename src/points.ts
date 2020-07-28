@@ -6,6 +6,7 @@ import { Color, IColor } from './color';
 import { LeafletMouseEvent, Map, Point, LatLng, Projection } from './leaflet-bindings';
 import { IPixel } from './pixel';
 import { locationDistance, pointInCircle } from './utils';
+import L from 'leaflet';
 
 export interface IPointsSettings extends IBaseSettings {
   size: ((i: number, latLng: LatLng) => number) | number;
@@ -411,13 +412,37 @@ export class Points extends Base<IPointsSettings> {
     foundLatLng = new LatLng(found.latLng[latitudeKey], found.latLng[longitudeKey]);
     xy = map.latLngToLayerPoint(foundLatLng);
 
+    var highlight = instance.settings.highlight;
+
     if (pointInCircle(
       xy,
       e.layerPoint,
       found.chosenSize * sensitivityHover
     )) {
       result = hover(e, found.feature || found.latLng, xy);
+
+      if (highlight) {
+        if (map["highlightPoints"]) {
+          map["highlightPoints"].remove();
+          delete map["highlightPoints"];
+        }
+        
+        map["highlightPoints"] = L.glify.points({
+          map: map,
+          data: [found.latLng],
+          color: highlight.color ? highlight.color : {"r":1, "g":0, "b":0},
+          size: Number(instance.settings.size) * (highlight && highlight.size ? highlight.size : 1.5),
+          opacity: highlight.opacity ? highlight.opacity : 0.8
+        })
+      }
       return result !== undefined ? result : true;
+    } else {
+      // Remove the highlighted Point again if no feature was hovered
+      if (highlight && map["highlightPoints"]) {
+        map["highlightPoints"].remove();
+        delete map["highlightPoints"];
+      }   
+      return;
     }
   }
 }
