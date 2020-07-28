@@ -20,14 +20,17 @@ export interface IBaseSettings {
   longitudeKey?: number;
   latitudeKey?: number;
   setupClick?: (map: Map) => void;
+  setupHover?: (map: Map, hoverWait: number) => void;
   vertexShaderSource?: (() => string) | string;
   fragmentShaderSource?: (() => string) | string;
   canvas?: HTMLCanvasElement;
   click?: (e, feature, xy: Point) => boolean | void;
+  hover?: (e, feature, xy: Point) => boolean | void;
   color?: ((featureIndex: number, feature: any) => IColor) | IColor;
   className?: string;
   opacity?: number;
   preserveDrawingBuffer?: boolean;
+  hoverWait?: number;
 }
 
 export abstract class Base<T extends IBaseSettings = IBaseSettings> {
@@ -110,6 +113,9 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     const settings = this.settings;
     if (settings.click) {
       settings.setupClick(settings.map);
+    }
+    if (settings.hover) {
+      settings.setupHover(settings.map, settings.hoverWait);
     }
 
     return this
