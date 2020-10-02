@@ -5,7 +5,7 @@ import PolygonLookup from 'polygon-lookup';
 import { Base, IBaseSettings } from './base';
 import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
-import { LatLng, LeafletMouseEvent, Map, Point } from './leaflet-bindings';
+import { LatLng, LeafletMouseEvent, Map} from 'leaflet';
 
 export interface IShapeSettings extends IBaseSettings {}
 

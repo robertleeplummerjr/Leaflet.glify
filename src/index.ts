@@ -1,7 +1,6 @@
-import { LeafletMouseEvent, Map } from './leaflet-bindings';
+import { LeafletMouseEvent, Map } from 'leaflet';
 
 import { Lines, ILinesSettings } from './lines';
-import { MapMatrix } from './map-matrix';
 import { Points, IPointsSettings } from './points';
 import { IShapeSettings, Shapes } from './shapes';
 import { debounce } from './utils';
@@ -144,8 +143,8 @@ class Glify {
   }
 }
 
-const glify = new Glify();
-export default module.exports = glify;
+export const glify = new Glify();
+export default glify;
 if (typeof window !== 'undefined' && window.L) {
   // @ts-ignore
   window['L'].glify = glify;

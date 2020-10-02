@@ -1,4 +1,4 @@
-import { LatLng } from './leaflet-bindings';
+import { LatLng } from 'leaflet';
 import { IColor } from './color';
 import { IPixel } from './pixel';
 

@@ -135,6 +135,13 @@ L.glify.lines({
 * `shapes(options)`
 * `lines(options)`
 
+## Building
+
+There are two ways to package this application: Parcel and WebPack.
+
+You can build the parcel version by running ``yarn run build-browser``
+You can build the webpack version by running ``yarn run build-browser-webpack``
+
 ## Contributors
 
 This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].

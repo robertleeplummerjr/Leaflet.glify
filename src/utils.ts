@@ -1,4 +1,4 @@
-import { LatLng, Map } from './leaflet-bindings';
+import { LatLng, Map } from 'leaflet';
 
 export function defaults(userSettings, defaults) {
   const settings = {};

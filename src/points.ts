@@ -3,7 +3,7 @@ import { Feature, Point as GeoPoint } from 'geojson';
 import { Base, IBaseSettings } from './base';
 import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
-import { LeafletMouseEvent, Map, Point, LatLng, Projection } from './leaflet-bindings';
+import { LeafletMouseEvent, Map, Point, LatLng, Projection } from 'leaflet';
 import { IPixel } from './pixel';
 import { locationDistance, pointInCircle } from './utils';
 

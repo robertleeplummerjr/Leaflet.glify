@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import { FeatureCollection } from 'geojson';
-import glify from './src';
+import glify from './src/index';
 
 const map = L.map('map')
   .setView([50.00, 14.44], 7);
@@ -9,9 +9,9 @@ L.tileLayer('http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference
   .addTo(map);
 
 Promise.all([
-  wget<number[][]>('86T.json'),
-  wget<FeatureCollection>('CZDistricts.json'),
-  wget<FeatureCollection>('rivers.json')
+  wget<number[][]>('data/86T.json'),
+  wget<FeatureCollection>('data/CZDistricts.json'),
+  wget<FeatureCollection>('data/rivers.json')
 ])
   .then(([points, districts, rivers]) => {
     glify.shapes({
