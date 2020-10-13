@@ -182,9 +182,23 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     return this.render();
   }
 
-  remove() {
-    this.settings.map.removeLayer(this.layer as any);
-    this.active = false;
-    return this;
+  remove(indices: any) {
+    if (indices === undefined) {
+      this.settings.map.removeLayer(this.layer as any);
+      this.active = false;
+      return this;
+    } else {
+      var feat = this.settings.data.features || this.settings.data;
+      if (typeof indices === "number") indices = [indices];
+      indices.sort().reverse();
+      indices.forEach((index: number) => {feat.splice(index, 1)});
+      this.render();
+    }
+  }
+
+  update(data: any, index: number) {
+    var feat = this.settings.data.features || this.settings.data;
+    feat[index] = data;
+    this.render();
   }
 }
