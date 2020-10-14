@@ -90,6 +90,7 @@ L.glify.lines({
 * `border` `{Boolean}` optional, default `false`. When set to `true`, a border with an opacity of 1 is displayed.
 * `preserveDrawingBuffer` `{Boolean}` optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets.
+* `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 
 ## `L.glify.points` Options
 * `map` `{Object}` required leaflet map
@@ -108,6 +109,7 @@ L.glify.lines({
 * `sensitivityHover` `{Number}` exaggerates the size of the hoverable area to make it easier to hover a point
 * `preserveDrawingBuffer` `{Boolean}` optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets.
+* `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 
 ## `L.glify.lines` Options
 * `map` `{Object}` required leaflet map
@@ -127,6 +129,7 @@ L.glify.lines({
 * `weight` `{Number|Function}` a value in pixels of how thick lines should be drawn
   * When `weight` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being drawn
   * CAUTION: Zoom of more than 18 will turn weight internally to 1 to prevent WebGL precision rendering issues.
+* `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 
 ## `L.glify` methods
 * `longitudeFirst()`
