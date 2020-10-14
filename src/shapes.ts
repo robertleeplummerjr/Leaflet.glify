@@ -9,7 +9,7 @@ import { LatLng, LeafletMouseEvent, Map, Point } from './leaflet-bindings';
 import { latLonToPixel } from './utils';
 
 export interface IShapeSettings extends IBaseSettings {
-  border: boolean
+  border?: boolean
 }
 
 export const defaults: IShapeSettings = {
@@ -60,7 +60,7 @@ export class Shapes extends Base<IShapeSettings> {
     this.resetVertices();
     // triangles or point count
 
-    const { pixelsToWebGLMatrix, settings, canvas, gl, layer, vertices, vertsLines, program } = this
+    const { pixelsToWebGLMatrix, settings, canvas, gl, layer, vertices, program } = this
       , vertexBuffer = gl.createBuffer()
       , vertArray = new Float32Array(vertices)
       , byteCount = vertArray.BYTES_PER_ELEMENT
@@ -221,14 +221,15 @@ export class Shapes extends Base<IShapeSettings> {
 
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
+    const { vertices } = this;
     if (this.settings.border) {
-      var vertsLines = this.vertsLines,
-      vertexBuffer = gl.createBuffer(),
-      vertArray = new Float32Array(vertsLines),
-      size = vertArray.BYTES_PER_ELEMENT,
-      program = this.program,
-      vertex = gl.getAttribLocation(program, 'vertex'),
-      opacity = gl.getUniformLocation(program, 'opacity');
+      const { vertsLines, program, settings } = this;
+      let vertexBuffer = gl.createBuffer()
+        , vertArray = new Float32Array(vertsLines)
+        , size = vertArray.BYTES_PER_ELEMENT
+        , vertex = gl.getAttribLocation(program, 'vertex')
+        , opacity = gl.getUniformLocation(program, 'opacity')
+        ;
 
       gl.uniform1f(opacity, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -243,22 +244,20 @@ export class Shapes extends Base<IShapeSettings> {
       gl.enableVertexAttribArray(vertex);
       gl.enable(gl.DEPTH_TEST);
       gl.viewport(0,0,canvas.width, canvas.height);
-      gl.drawArrays(gl.LINES, 0, this.vertsLines.length / 5);
+      gl.drawArrays(gl.LINES, 0, vertsLines.length / 5);
 
-      var vertices = this.vertices,
-      vertexBuffer = gl.createBuffer(),
-      vertArray = new Float32Array(vertices),
-      size = vertArray.BYTES_PER_ELEMENT,
-      program = this.program,
-      vertex = gl.getAttribLocation(program, 'vertex'),
+      vertexBuffer = gl.createBuffer();
+      vertArray = new Float32Array(vertices);
+      size = vertArray.BYTES_PER_ELEMENT;
+      vertex = gl.getAttribLocation(program, 'vertex');
       opacity = gl.getUniformLocation(program, 'opacity');
 
-      gl.uniform1f(opacity, this.settings.opacity);
+      gl.uniform1f(opacity, settings.opacity);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
       gl.bufferData(gl.ARRAY_BUFFER,vertArray, gl.STATIC_DRAW );
 
-      if (this.settings.shaderVariables !== null) {
+      if (settings.shaderVariables !== null) {
         this.attachShaderVariables(size);
       }
 
@@ -267,7 +266,7 @@ export class Shapes extends Base<IShapeSettings> {
       gl.enable(gl.DEPTH_TEST);
       gl.viewport(0,0,canvas.width, canvas.height);
     }
-    gl.drawArrays(gl.TRIANGLES, 0, this.vertices.length / 5);
+    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 5);
 
     return this;
   }

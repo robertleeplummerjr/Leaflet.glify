@@ -25,7 +25,8 @@ Promise.all([
         console.log(feature);
         console.log(e);
       },
-      data: districts
+      data: districts,
+      border: true,
     });
 
     glify.lines({
