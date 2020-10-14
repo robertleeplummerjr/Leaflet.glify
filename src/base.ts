@@ -46,6 +46,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
   settings: T;
   vertexShader: any;
   vertices: any;
+  vertsLines: any;
 
   abstract render();
 
@@ -58,6 +59,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     this.program = null;
     this.matrix = null;
     this.vertices = null;
+    this.vertsLines = null;
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
     const layer = this.layer = new CanvasOverlay((context) => this.drawOnCanvas(context))
       .addTo(settings.map);
