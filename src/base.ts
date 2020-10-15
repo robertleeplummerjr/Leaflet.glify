@@ -31,6 +31,7 @@ export interface IBaseSettings {
   opacity?: number;
   preserveDrawingBuffer?: boolean;
   hoverWait?: number;
+  pane?: string;
 }
 
 export abstract class Base<T extends IBaseSettings = IBaseSettings> {
@@ -51,6 +52,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
   abstract render();
 
   constructor(settings: T) {
+    if (!settings.pane) settings.pane = "overlayPane";
     this.pixelsToWebGLMatrix = new Float32Array(16);
     this.mapMatrix = new MapMatrix();
     this.active = true;
@@ -61,8 +63,9 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     this.vertices = null;
     this.vertsLines = null;
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
-    const layer = this.layer = new CanvasOverlay((context) => this.drawOnCanvas(context))
-      .addTo(settings.map);
+    const layer = this.layer = new CanvasOverlay((context) => {
+      return this.drawOnCanvas(context);
+    }, settings.pane).addTo(settings.map);
     const canvas = this.canvas = layer.canvas;
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
