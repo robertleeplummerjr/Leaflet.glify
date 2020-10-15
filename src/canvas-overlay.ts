@@ -41,16 +41,19 @@ export class CanvasOverlay extends Layer {
   _map: Map;
   _redrawCallbacks: Function[];
   canvas: HTMLCanvasElement;
+  _pane: string;
 
   _frame?: number;
 
   constructor(
-    userDrawFunc: IUserDrawFunc
+    userDrawFunc: IUserDrawFunc,
+    pane: string
   ) {
     super();
     this._userDrawFunc = userDrawFunc;
     this._frame = null;
     this._redrawCallbacks = [];
+    this._pane = pane;
   }
 
   drawing(userDrawFunc): this {
@@ -86,7 +89,7 @@ export class CanvasOverlay extends Layer {
 
     this.canvas.className = 'leaflet-zoom-' + (animated ? 'animated' : 'hide');
 
-    map._panes.overlayPane.appendChild(this.canvas);
+    map._panes[this._pane].appendChild(this.canvas);
 
     map.on('moveend', this._reset, this);
     map.on('resize',  this._resize, this);
@@ -100,7 +103,7 @@ export class CanvasOverlay extends Layer {
   }
 
   onRemove(map): this {
-    map.getPanes().overlayPane.removeChild(this.canvas);
+    map.getPanes()[this._pane].removeChild(this.canvas);
 
     map.off('moveend', this._reset, this);
     map.off('resize', this._resize, this);

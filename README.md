@@ -84,11 +84,13 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a shape
 * `hover` `{Function}` optional event handler for hovering a shape
 * `color` `{Function|Object|String}` optional, default is 'random'
-  * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being colored
-* `opacity` {Number} a value from 0 to 1, default is 0.5
-* `className` {String} a class name applied to canvas, default is ''
-* `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
+  * When `color` is a `Function` its arguments are the `index`:`number` and the `feature`:`object` that is being colored
+* `opacity` `{Number}` a value from 0 to 1, default is 0.5
+* `className` `{String}` a class name applied to canvas, default is ''
+* `border` `{Boolean}` optional, default `false`. When set to `true`, a border with an opacity of 1 is displayed.
+* `preserveDrawingBuffer` `{Boolean}` optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets.
+* `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 
 ## `L.glify.points` Options
 * `map` `{Object}` required leaflet map
@@ -98,15 +100,16 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a point
 * `hover` `{Function}` optional event handler for hovering a point
 * `color` `{Function|Object|String}` optional, default is 'random'
-  * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `point`:`array` that is being colored 
-* `opacity` {Number} a value from 0 to 1, default is 0.8
-* `className` {String} a class name applied to canvas, default is ''
-* `size` {Number|Function} pixel size of point
+  * When `color` is a `Function` its arguments are the `index`:`number` and the `point`:`array` that is being colored 
+* `opacity` `{Number}` a value from 0 to 1, default is 0.8
+* `className` `{String}` a class name applied to canvas, default is ''
+* `size` `{Number|Function}` pixel size of point
   * When `size` is a `Function` its arguments are `index`:`number`, and the `point`:`array` that is being sized
-* `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a point
-* `sensitivityHover` {Number} exaggerates the size of the hoverable area to make it easier to hover a point
-* `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
+* `sensitivity` `{Number}` exaggerates the size of the clickable area to make it easier to click a point
+* `sensitivityHover` `{Number}` exaggerates the size of the hoverable area to make it easier to hover a point
+* `preserveDrawingBuffer` `{Boolean}` optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets.
+* `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 
 ## `L.glify.lines` Options
 * `map` `{Object}` required leaflet map
@@ -116,16 +119,17 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a line
 * `hover` `{Function}` optional event handler for hovering a line
 * `color` `{Function|Object|String}` optional, default is 'random'
-  * When `color` is a `Function` its arguments are gets the `index`:`number`, and the `point`:`array` that is being colored 
-* `opacity` {Number} a value from 0 to 1, default is 0.5
-* `className` {String} a class name applied to canvas, default is ''
-* `sensitivity` {Number} exaggerates the size of the clickable area to make it easier to click a line
-* `sensitivityHover` {Number} exaggerates the size of the hoverable area to make it easier to hover a line
-* `preserveDrawingBuffer` {Boolean} optional, default `false`, perverse draw buffer on webgl context.
+  * When `color` is a `Function` its arguments are the `index`:`number` and the `feature`:`object` that is being colored 
+* `opacity` `{Number}` a value from 0 to 1, default is 0.5
+* `className` `{String}` a class name applied to canvas, default is ''
+* `sensitivity` `{Number}` exaggerates the size of the clickable area to make it easier to click a line
+* `sensitivityHover` `{Number}` exaggerates the size of the hoverable area to make it easier to hover a line
+* `preserveDrawingBuffer` `{Boolean}` optional, default `false`, perverse draw buffer on webgl context.
   * CAUTION: May cause performance issue with large data sets. 
-* `weight` {Number|Function} a value in pixels of how thick lines should be drawn
+* `weight` `{Number|Function}` a value in pixels of how thick lines should be drawn
   * When `weight` is a `Function` its arguments are gets the `index`:`number`, and the `feature`:`object` that is being drawn
   * CAUTION: Zoom of more than 18 will turn weight internally to 1 to prevent WebGL precision rendering issues.
+* `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 
 ## `L.glify` methods
 * `longitudeFirst()`
