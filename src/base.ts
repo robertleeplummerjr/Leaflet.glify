@@ -187,7 +187,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     return this.render();
   }
 
-  remove(indices?: number[]) {
+  remove(indices?: number | number[]) {
     if (indices === undefined) {
       this.settings.map.removeLayer(this.layer as any);
       this.active = false;
