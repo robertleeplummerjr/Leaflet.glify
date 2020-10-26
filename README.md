@@ -139,6 +139,15 @@ L.glify.lines({
 * `shapes(options)`
 * `lines(options)`
 
+## Update & Remove Data
+L.glify instances can be updated using the `update(data, index)` method.
+* `data` `{Object}` Lines and Shapes require a single GeoJSON feature. Points require the same data structure as the original object and therefore also accept an array of coordinates.
+* `index` `{number}` An integer indicating the index of the element to be updated.
+
+An object or some elements of an object are removed using the `remove(index)` method.
+* `index` `{number|Array}` optional - An integer or an array of integers specifying the indices of the elements to be removed.
+  If `index` is not defined, the entire object is removed.
+
 ## Contributors
 
 This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
