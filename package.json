@@ -1,10 +1,10 @@
 {
   "name": "leaflet.glify",
   "version": "3.0.2",
-  "type": "module",
   "description": "web gl renderer plugin for leaflet",
   "main": "dist/glify.js",
   "browser": "dist/glify-browser.js",
+  "module": "dist/glify-browser.js",
   "files": [
     "/src",
     "/dist"
@@ -12,9 +12,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build-browser": "parcel build src/index.ts --out-file glify-browser.js --target browser",
+    "build-browser-webpack": "webpack --config webpack.config.js",
     "build-node": "parcel build src/index.ts --out-file glify.js --target node",
     "build": "npm run build-node && npm run build-browser",
-    "serve": "rm -rf .build && mkdir .build && cp data/* .build/ && parcel serve index.html --out-dir .build",
+    "serve": "rm -rf .build && mkdir .build && cp data/* .build/data && cp node_modules/leaflet/dist/leaflet.css ./build/css/leaflet.css && parcel serve index.html --out-dir .build",
+    "serve-webpack": "webpack-dev-server --config webpack.config.dev.js --open",
     "publish-gh-pages": "gh-pages -d .build"
   },
   "repository": {
@@ -31,7 +33,7 @@
     "@types/geojson": "^7946.0.7",
     "earcut": "^2.1.3",
     "geojson-flatten": "^1.0.4",
-    "leaflet": "^1.6.0",
+    "leaflet": "1.7.1",
     "point-in-polygon": "^1.0.1",
     "polygon-lookup": "^2.4.0",
     "rbush": "^2.0.2"
@@ -39,7 +41,7 @@
   "devDependencies": {
     "@babel/core": "^7.3.4",
     "@babel/preset-env": "^7.3.4",
-    "@types/leaflet": "^1.5.12",
+    "@types/leaflet": "^1.5.17",
     "brfs": "^2.0.1",
     "gh-pages": "^2.2.0",
     "glslify-bundle": "^5.1.1",
@@ -49,6 +51,13 @@
     "parcel-bundler": "^1.12.4",
     "parcel-plugin-bundle-visualiser": "^1.2.0",
     "parcel-plugin-glsl": "^0.1.0",
+    "webpack": "^4.43.0",
+    "webpack-dev-server": "^3.11.0",
+    "webpack-cli": "^3.3.12",
+    "copy-webpack-plugin": "^6.0.3",
+    "glslify-loader": "^2.0.0",
+    "raw-loader": "^4.0.1",
+    "ts-loader": "^8.0.1",
     "typescript": "^3.8.3"
   }
 }

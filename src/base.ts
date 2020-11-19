@@ -1,5 +1,5 @@
 import { IColor } from './color';
-import { Map, Point } from './leaflet-bindings';
+import { Map, Point } from 'leaflet';
 import { MapMatrix } from './map-matrix';
 import { CanvasOverlay, ICanvasOverlayDrawEvent } from './canvas-overlay';
 

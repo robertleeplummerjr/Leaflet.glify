@@ -1,7 +1,7 @@
 import { Base, IBaseSettings } from './base';
 import { ICanvasOverlayDrawEvent } from './canvas-overlay';
 import { Color, IColor } from './color';
-import { Map, LeafletMouseEvent, LatLng, geoJSON } from './leaflet-bindings';
+import { Map, LeafletMouseEvent, geoJSON } from 'leaflet';
 import { LineFeatureVertices } from './line-feature-vertices';
 import { pDistance, inBounds } from './utils';
 

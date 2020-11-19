@@ -4,3 +4,8 @@ bower_components
 .dev
 dist/report.html
 yarn.lock
+.cache
+.dev-server
+.build
+dist/src
+dist/example.d.ts

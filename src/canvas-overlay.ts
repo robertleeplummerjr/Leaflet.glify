@@ -20,7 +20,7 @@ import {
   DomUtil,
   LatLng,
   ZoomAnimEvent,
-} from './leaflet-bindings';
+} from 'leaflet';
 
 export interface ICanvasOverlayDrawEvent {
   canvas: HTMLCanvasElement;

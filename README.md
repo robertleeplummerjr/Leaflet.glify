@@ -139,6 +139,14 @@ L.glify.lines({
 * `shapes(options)`
 * `lines(options)`
 
+
+## Building
+
+There are two ways to package this application: Parcel and WebPack.
+
+You can build the parcel version by running ``yarn run build-browser``
+You can build the webpack version by running ``yarn run build-browser-webpack``
+
 ## Update & Remove Data
 L.glify instances can be updated using the `update(data, index)` method.
 * `data` `{Object}` Lines and Shapes require a single GeoJSON feature. Points require the same data structure as the original object and therefore also accept an array of coordinates.
