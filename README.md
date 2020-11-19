@@ -1,4 +1,4 @@
-# Leaflet.glify [Leaflet.glify logo](logo.svg)
+# Leaflet.glify ![Leaflet.glify logo](logo.svg)
 web gl renderer plugin for leaflet in typescript
 
 _Pronounced leaflet-G.L.-Ify, or leaflet-glify, or L.-G.L.-Ify, or L-glify, or elglify_
