@@ -3,11 +3,18 @@ export class MapMatrix {
   constructor() {
     this.array = new Float32Array(16);
   }
-  set(array: ArrayLike<number>, offset?: number): this {
-    this.array.set(array, offset);
+
+  setSize(width: number, height: number, offset?: number): this {
+    this.array.set([
+      2 / width, 0, 0, 0,
+      0, -2 / height, 0, 0,
+      0, 0, 0, 0,
+      -1, 1, 0, 1
+    ]);
     return this;
   }
-  translateMatrix(tx: number, ty: number) {
+
+  translateMatrix(tx: number, ty: number): this {
     const { array } = this;
     // translation is in last column of matrix
     array[12] += array[0] * tx + array[4] * ty;

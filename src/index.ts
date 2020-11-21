@@ -54,7 +54,7 @@ class Glify {
     return this;
   }
 
-  get instances() {
+  get instances(): Array<Points | Lines | Shapes> {
     return [
       ...Points.instances,
       ...Lines.instances,

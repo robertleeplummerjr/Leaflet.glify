@@ -32,7 +32,7 @@ const defaults: ILinesSettings = {
     color: {
       type: 'FLOAT',
       start: 2,
-      size: 3
+      size: 4
     }
   }
 };
@@ -41,6 +41,7 @@ export class Lines extends Base<ILinesSettings> {
   static defaults = defaults;
   static instances: Lines[] = [];
 
+  bytes = 6;
   allVertices: number[];
   vertices: LineFeatureVertices[];
   aPointSize: number;
@@ -64,12 +65,10 @@ export class Lines extends Base<ILinesSettings> {
   render(): this {
     this.resetVertices();
 
-    const pixelsToWebGLMatrix = this.pixelsToWebGLMatrix
-      , settings = this.settings
-      , { canvas, gl, layer, vertices, program } = this
-      , vertexBuffer = gl.createBuffer()
-      , vertex = gl.getAttribLocation(program, 'vertex')
-      , opacity = gl.getUniformLocation(program, 'opacity')
+    const { canvas, gl, layer, vertices, settings, mapMatrix } = this
+      , vertexBuffer = this.getBuffer('vertex')
+      , vertex = this.getAttributeLocation('vertex')
+      , opacity = this.getUniformLocation('opacity')
       ;
 
     gl.uniform1f(opacity, settings.opacity);
@@ -87,16 +86,17 @@ export class Lines extends Base<ILinesSettings> {
     const allVertices = [];
     for (let i = 0; i < size; i++) {
       const vertexArray = vertices[i].array;
-      const length = vertexArray.length / 5;
+      const length = vertexArray.length / this.bytes;
       for (let j = 0; j < length; j++) {
-        const vertexIndex = j * 5;
+        const vertexIndex = j * this.bytes;
         if (j !== 0 && j !== (length - 1)) {
           allVertices.push(
             vertexArray[vertexIndex],
             vertexArray[vertexIndex + 1],
             vertexArray[vertexIndex + 2],
             vertexArray[vertexIndex + 3],
-            vertexArray[vertexIndex + 4]
+            vertexArray[vertexIndex + 4],
+            vertexArray[vertexIndex + 5]
           );
         }
         allVertices.push(
@@ -104,7 +104,8 @@ export class Lines extends Base<ILinesSettings> {
           vertexArray[vertexIndex + 1],
           vertexArray[vertexIndex + 2],
           vertexArray[vertexIndex + 3],
-          vertexArray[vertexIndex + 4]
+          vertexArray[vertexIndex + 4],
+          vertexArray[vertexIndex + 5]
         );
       }
     }
@@ -114,20 +115,20 @@ export class Lines extends Base<ILinesSettings> {
     const vertArray = new Float32Array(allVertices);
     size = vertArray.BYTES_PER_ELEMENT;
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * 5, 0);
+    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * this.bytes, 0);
     gl.enableVertexAttribArray(vertex);
 
     //  gl.disable(gl.DEPTH_TEST);
     // ----------------------------
     // look up the locations for the inputs to our shaders.
-    this.matrix = gl.getUniformLocation(program, 'matrix');
-    this.aPointSize = gl.getAttribLocation(program, 'pointSize');
+    this.matrix = this.getUniformLocation('matrix');
+    this.aPointSize = this.getAttributeLocation('pointSize');
 
     // Set the matrix to some that makes 1 unit 1 pixel.
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
+    mapMatrix.setSize(canvas.width, canvas.height);
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    gl.uniformMatrix4fv(this.matrix, false, pixelsToWebGLMatrix);
+    gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
 
     this.attachShaderVariables(size);
 
@@ -151,9 +152,9 @@ export class Lines extends Base<ILinesSettings> {
       ;
 
     let feature
-      , { color } = settings
+      , { color, opacity } = settings
       , colorFn: (i: number, feature: any) => IColor
-      , chosenColor
+      , chosenColor: IColor
       , featureIndex = 0
       ;
 
@@ -178,6 +179,7 @@ export class Lines extends Base<ILinesSettings> {
         latitudeKey,
         longitudeKey,
         color: chosenColor,
+        opacity,
       });
       featureVertices.fillFromCoordinates(feature.geometry.coordinates);
       vertices.push(featureVertices);
@@ -189,39 +191,35 @@ export class Lines extends Base<ILinesSettings> {
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    const { gl, settings, canvas, mapMatrix, matrix, pixelsToWebGLMatrix, allVertices, vertices } = this
-      , weight = settings.weight
+    const { gl, settings, canvas, mapMatrix, matrix, allVertices, vertices } = this
+      , { weight } = settings
       , { scale, offset, zoom } = e
       , pointSize = Math.max(zoom - 4.0, 4.0)
       ;
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    pixelsToWebGLMatrix.set([2 / canvas.width, 0, 0, 0, 0, -2 / canvas.height, 0, 0, 0, 0, 0, 0, -1, 1, 0, 1]);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.vertexAttrib1f(this.aPointSize, pointSize);
+    mapMatrix
+      .setSize(canvas.width, canvas.height)
+      .scaleMatrix(scale);
     if (zoom > 18) {
-      mapMatrix
-        .set(pixelsToWebGLMatrix)
-        .scaleMatrix(scale)
-        .translateMatrix(-offset.x, -offset.y);
+      mapMatrix.translateMatrix(-offset.x, -offset.y);
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
-      gl.drawArrays(gl.LINES, 0, allVertices.length / 5);
+      gl.drawArrays(gl.LINES, 0, allVertices.length / this.bytes);
     } else if (typeof weight === 'number') {
       // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
       for (let yOffset = -weight; yOffset < weight; yOffset += 0.5) {
         for (let xOffset = -weight; xOffset < weight; xOffset += 0.5) {
           // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-          mapMatrix
-            .set(pixelsToWebGLMatrix)
-            .scaleMatrix(scale)
-            .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
+          mapMatrix.translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
           // -- attach matrix value to 'mapMatrix' uniform in shader
           gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
-          gl.drawArrays(gl.LINES, 0, allVertices.length / 5);
+          gl.drawArrays(gl.LINES, 0, allVertices.length / this.bytes);
         }
       }
     } else if (typeof weight === 'function') {
@@ -235,10 +233,7 @@ export class Lines extends Base<ILinesSettings> {
         for (let yOffset = -weightValue; yOffset < weightValue; yOffset += 0.5) {
           for (let xOffset = -weightValue; xOffset < weightValue; xOffset += 0.5) {
             // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-            mapMatrix
-              .set(pixelsToWebGLMatrix)
-              .scaleMatrix(scale)
-              .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
+            mapMatrix.translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
             // -- attach matrix value to 'mapMatrix' uniform in shader
             gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
 

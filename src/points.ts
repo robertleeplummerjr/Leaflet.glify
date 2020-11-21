@@ -37,19 +37,16 @@ const defaults: IPointsSettings = {
       type: 'FLOAT',
       start: 0,
       size: 2,
-      bytes: 6
     },
     color: {
       type: 'FLOAT',
       start: 2,
-      size: 3,
-      bytes: 6
+      size: 4,
     },
     pointSize: {
       type: 'FLOAT',
-      start: 5,
+      start: 6,
       size: 1,
-      bytes: 6
     },
   }
 };
@@ -67,13 +64,14 @@ export class Points extends Base<IPointsSettings> {
   static instances: Points[] = [];
   static defaults = defaults;
   static maps = [];
+  bytes = 7;
   latLngLookup: {
     [key: string]: IPointLookup[];
   };
   allLatLngLookup: IPointLookup[];
   vertices: number[];
+  typedVertices: Float32Array;
   dataFormat: 'Array' | 'GeoJson.FeatureCollection';
-
   constructor(settings) {
     super(settings);
     Points.instances.push(this);
@@ -104,31 +102,22 @@ export class Points extends Base<IPointsSettings> {
   }
 
   render(): this {
-
     this.resetVertices();
 
     //look up the locations for the inputs to our shaders.
-    const { gl, settings, canvas, program, layer, vertices, pixelsToWebGLMatrix } = this
-      , matrix = this.matrix = gl.getUniformLocation(program, 'matrix')
-      , opacity = gl.getUniformLocation(program, 'opacity')
-      , vertexBuffer = gl.createBuffer()
-      , vertexArray = new Float32Array(vertices)
-      , byteCount = vertexArray.BYTES_PER_ELEMENT
+    const { gl, canvas, layer, vertices, mapMatrix } = this
+      , matrix = this.matrix = this.getUniformLocation('matrix')
+      , verticesBuffer = this.getBuffer('vertices')
+      , verticesTypedArray = this.typedVertices = new Float32Array(vertices)
+      , byteCount = verticesTypedArray.BYTES_PER_ELEMENT
       ;
 
     //set the matrix to some that makes 1 unit 1 pixel.
-    pixelsToWebGLMatrix.set([
-      2 / canvas.width, 0, 0, 0,
-      0, -2 / canvas.height, 0, 0,
-      0, 0, 0, 0,
-      -1, 1, 0, 1
-    ]);
-
+    mapMatrix.setSize(canvas.width, canvas.height);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniformMatrix4fv(matrix, false, pixelsToWebGLMatrix);
-    gl.uniform1f(opacity, settings.opacity);
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
+    gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
+    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, verticesTypedArray, gl.STATIC_DRAW);
 
     this.attachShaderVariables(byteCount);
 
@@ -137,19 +126,28 @@ export class Points extends Base<IPointsSettings> {
     return this;
   }
 
-  resetVertices() {
+  getPointLookup(key: string): IPointLookup[] {
+    return (this.latLngLookup[key] || (this.latLngLookup[key] = []));
+  }
+
+  addLookup(lookup: IPointLookup): this {
+    this.getPointLookup(lookup.key).push(lookup);
+    this.allLatLngLookup.push(lookup);
+    return this;
+  }
+
+  resetVertices(): this {
     //empty vertices and repopulate
     this.latLngLookup = {};
     this.allLatLngLookup = [];
     this.vertices = [];
 
-    const { vertices, latLngLookup } = this
-      , { latitudeKey, longitudeKey, data, map, eachVertex } = this.settings
+    const { vertices, settings } = this
+      , { latitudeKey, longitudeKey, data, map, eachVertex, color, size, opacity } = settings
       ;
     let colorFn: (i: number, latLng: LatLng | any) => IColor
-      , { color, size } = this.settings
-      , chosenColor
-      , chosenSize
+      , chosenColor: IColor
+      , chosenSize: number
       , sizeFn
       , latLng
       , pixel: Point
@@ -181,19 +179,35 @@ export class Points extends Base<IPointsSettings> {
           chosenColor = color as IColor;
         }
 
+        chosenColor = { ...chosenColor, a: chosenColor.a || opacity };
+
         if (sizeFn) {
           chosenSize = sizeFn(i, latLng) as number;
         } else {
           chosenSize = size as number;
         }
 
-        //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
-        vertices.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b, chosenSize);
+        vertices.push(
+          // vertex
+          pixel.x,
+          pixel.y,
 
-        const lookup = { latLng, key, pixel, chosenColor, chosenSize };
-        (latLngLookup[key] || (latLngLookup[key] = []))
-          .push(lookup);
-        this.allLatLngLookup.push(lookup);
+          // color
+          chosenColor.r,
+          chosenColor.g,
+          chosenColor.b,
+          chosenColor.a,
+
+          // size
+          chosenSize
+        );
+        this.addLookup({
+          latLng,
+          key,
+          pixel,
+          chosenColor,
+          chosenSize
+        });
         if (eachVertex) {
           eachVertex.call(this, latLng, pixel, chosenSize);
         }
@@ -212,19 +226,36 @@ export class Points extends Base<IPointsSettings> {
           chosenColor = color as IColor;
         }
 
+        chosenColor = { ...chosenColor, a: chosenColor.a || opacity };
+
         if (sizeFn) {
           chosenSize = sizeFn(i, latLng) as number;
         } else {
           chosenSize = size as number;
         }
 
-        //-- 2 coord, 3 rgb colors, 1 size interleaved buffer
-        vertices.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b, chosenSize);
+        vertices.push(
+          // vertex
+          pixel.x,
+          pixel.y,
 
-        const lookup = { latLng, key, pixel, chosenColor, chosenSize, feature, };
-        (latLngLookup[key] || (latLngLookup[key] = []))
-          .push(lookup);
-        this.allLatLngLookup.push(lookup);
+          // color
+          chosenColor.r,
+          chosenColor.g,
+          chosenColor.b,
+          chosenColor.a,
+
+          // size
+          chosenSize
+        );
+        this.addLookup({
+          latLng,
+          key,
+          pixel,
+          chosenColor,
+          chosenSize,
+          feature
+        });
         if (eachVertex) {
           eachVertex.call(this, latLng, pixel, chosenSize);
         }
@@ -247,30 +278,23 @@ export class Points extends Base<IPointsSettings> {
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    const { gl, canvas, settings, mapMatrix, matrix, pixelsToWebGLMatrix, vertices } = this
-      , map = settings.map
+    const { gl, canvas, settings, mapMatrix, matrix } = this
+      , { map } = settings
       , { offset } = e
       , zoom = map.getZoom()
       , scale = Math.pow(2, zoom)
       ;
 
-    pixelsToWebGLMatrix.set([
-      2 / canvas.width, 0, 0, 0,
-      0, -2 / canvas.height, 0, 0,
-      0, 0, 0, 0,
-      -1, 1, 0, 1
-    ]);
-
     //set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
-      .set(pixelsToWebGLMatrix)
+      .setSize(canvas.width, canvas.height)
       .scaleMatrix(scale)
       .translateMatrix(-offset.x, -offset.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
-    gl.drawArrays(gl.POINTS, 0, vertices.length / 6);
+    gl.drawArrays(gl.POINTS, 0, this.allLatLngLookup.length);
 
     return this;
   }

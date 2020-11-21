@@ -1,14 +1,13 @@
 precision mediump float;
 varying vec4 _color;
-uniform float opacity;
 
 void main() {
   vec2 center = vec2(0.5);
   vec2 uv = gl_PointCoord.xy - center;
   float smoothing = 0.005;
-  vec4 _color1 = vec4(_color[0], _color[1], _color[2], opacity);
+  vec4 _color1 = vec4(_color[0], _color[1], _color[2], _color[3]);
   float radius1 = 0.3;
-  vec4 _color2 = vec4(_color[0], _color[1], _color[2], opacity);
+  vec4 _color2 = vec4(_color[0], _color[1], _color[2], _color[3]);
   float radius2 = 0.5;
   float dist = length(uv);
 

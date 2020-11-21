@@ -5,9 +5,8 @@ import { CanvasOverlay, ICanvasOverlayDrawEvent } from './canvas-overlay';
 
 export interface IShaderVariable {
   type: 'FLOAT';
-  start: number;
+  start?: number;
   size: number;
-  bytes?: number;
   normalize?: boolean;
 }
 
@@ -35,6 +34,7 @@ export interface IBaseSettings {
 }
 
 export abstract class Base<T extends IBaseSettings = IBaseSettings> {
+  bytes: number;
   active: boolean;
   fragmentShader: any;
   canvas: HTMLCanvasElement;
@@ -42,18 +42,20 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
   layer: CanvasOverlay;
   mapMatrix: MapMatrix;
   matrix: WebGLUniformLocation;
-  pixelsToWebGLMatrix: Float32Array;
   program: WebGLProgram;
   settings: T;
   vertexShader: any;
   vertices: any;
-  vertsLines: any;
+  vertexLines: any;
 
-  abstract render();
+  buffers: { [name: string]: WebGLBuffer } = {};
+  attributeLocations: { [name: string]: number } = {};
+  uniformLocations: { [name: string]: WebGLUniformLocation } = {};
+
+  abstract render(): this;
 
   constructor(settings: T) {
     if (!settings.pane) settings.pane = "overlayPane";
-    this.pixelsToWebGLMatrix = new Float32Array(16);
     this.mapMatrix = new MapMatrix();
     this.active = true;
     this.vertexShader = null;
@@ -61,7 +63,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     this.program = null;
     this.matrix = null;
     this.vertices = null;
-    this.vertsLines = null;
+    this.vertexLines = null;
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
     const layer = this.layer = new CanvasOverlay((context) => {
       return this.drawOnCanvas(context);
@@ -82,17 +84,17 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
   abstract drawOnCanvas(context: ICanvasOverlayDrawEvent): this;
 
   attachShaderVariables(byteCount: number): this {
-    if (!this.settings.shaderVariables) {
+    let variableCount = this.getShaderVariableCount();
+    if (variableCount === 0) {
       return this;
     }
-    const bytes = 5;
-
-    const { gl, program } = this;
-    const { shaderVariables } = this.settings;
+    const { gl, settings } = this;
+    const { shaderVariables } = settings;
+    let offset = 0;
     for (const name in shaderVariables) {
       if (!shaderVariables.hasOwnProperty(name)) continue;
       const shaderVariable = shaderVariables[name];
-      const loc = gl.getAttribLocation(program, name);
+      const loc = this.getAttributeLocation(name);
       if (loc < 0) {
         throw new Error('shader variable ' + name + ' not found');
       }
@@ -101,12 +103,18 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
         shaderVariable.size,
         gl[shaderVariable.type],
         !!shaderVariable.normalize,
-        byteCount * (shaderVariable.bytes || bytes),
-        byteCount * shaderVariable.start);
+        this.bytes * byteCount,
+        offset * byteCount
+      );
+      offset += shaderVariable.size;
       gl.enableVertexAttribArray(loc);
     }
 
     return this;
+  }
+
+  getShaderVariableCount(): number {
+    return Object.keys(this.settings.shaderVariables).length;
   }
 
   setData(data): this {
@@ -114,7 +122,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     return this;
   }
 
-  setup() {
+  setup(): this {
     const settings = this.settings;
     if (settings.click) {
       settings.setupClick(settings.map);
@@ -129,7 +137,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
       .setupProgram();
   }
 
-  setupVertexShader() {
+  setupVertexShader(): this {
     const gl = this.gl
       , settings = this.settings
       , vertexShaderSource = typeof settings.vertexShaderSource === 'function'
@@ -146,7 +154,7 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     return this;
   }
 
-  setupFragmentShader() {
+  setupFragmentShader(): this {
     const gl = this.gl
       , settings = this.settings
       , fragmentShaderSource = typeof settings.fragmentShaderSource === 'function'
@@ -181,30 +189,53 @@ export abstract class Base<T extends IBaseSettings = IBaseSettings> {
     return this;
   }
 
-  addTo(map) {
+  addTo(map): this {
     this.layer.addTo(map || this.settings.map);
     this.active = true;
     return this.render();
   }
 
-  remove(indices?: number | number[]) {
+  remove(indices?: number | number[]): this {
     if (indices === undefined) {
       this.settings.map.removeLayer(this.layer as any);
       this.active = false;
-      return this;
     } else {
-      var feat = this.settings.data.features || this.settings.data;
+      const feat = this.settings.data.features || this.settings.data;
       indices = (indices instanceof Array) ? indices : [indices];
       if (typeof indices === "number") indices = [indices];
       indices.sort().reverse();
       indices.forEach((index: number) => {feat.splice(index, 1)});
       this.render();
     }
+    return this;
   }
 
-  update(data: any, index: number) {
-    var feat = this.settings.data.features || this.settings.data;
+  update(data: any, index: number): this {
+    const feat = this.settings.data.features || this.settings.data;
     feat[index] = data;
     this.render();
+    return this;
   }
+
+  getBuffer(name: string): WebGLBuffer {
+    if (!this.buffers[name]) {
+      this.buffers[name] = this.gl.createBuffer();
+    }
+    return this.buffers[name];
+  }
+
+  getAttributeLocation(name: string): number {
+    if (this.attributeLocations[name] !== undefined) {
+      return this.attributeLocations[name];
+    }
+    return this.attributeLocations[name] = this.gl.getAttribLocation(this.program, name);
+  }
+
+  getUniformLocation(name: string): WebGLUniformLocation {
+    if (this.uniformLocations[name] !== undefined) {
+      return this.uniformLocations[name];
+    }
+    return this.uniformLocations[name] = this.gl.getUniformLocation(this.program, name);
+  }
+
 }

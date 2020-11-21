@@ -7,37 +7,35 @@ interface ILineFeatureVerticesSettings {
   color: IColor;
   latitudeKey?: number;
   longitudeKey?: number;
+  opacity: number;
 }
 
 export class LineFeatureVertices {
-  project: (coordinates: LatLng, distance: number) => IPixel;
-  latitudeKey?: number;
-  longitudeKey?: number;
-  color: IColor;
+  settings: ILineFeatureVerticesSettings;
   vertexCount: number;
   array: number[];
   length: number;
 
   constructor(settings: ILineFeatureVerticesSettings) {
-    Object.assign(this, settings);
+    this.settings = settings;
     this.vertexCount = 0;
     this.array = [];
     this.length = 0;
   }
 
   fillFromCoordinates(coordinates) {
-    const { color } = this;
+    const { color, opacity, project, latitudeKey, longitudeKey } = this.settings;
     for (let i = 0; i < coordinates.length; i++) {
       if (Array.isArray(coordinates[i][0])) {
         this.fillFromCoordinates(coordinates[i]);
         continue;
       }
-      const pixel = this.project(
+      const pixel = project(
         new LatLng(
-          coordinates[i][this.latitudeKey],
-          coordinates[i][this.longitudeKey]
+          coordinates[i][latitudeKey],
+          coordinates[i][longitudeKey]
         ), 0);
-      this.push(pixel.x, pixel.y, color.r, color.g, color.b);
+      this.push(pixel.x, pixel.y, color.r, color.g, color.b, color.a || opacity);
       if (i !== 0 && i !== coordinates.length - 1) {
         this.vertexCount += 1;
       }

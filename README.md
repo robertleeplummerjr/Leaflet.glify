@@ -84,8 +84,9 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a shape
 * `hover` `{Function}` optional event handler for hovering a shape
 * `color` `{Function|Object|String}` optional, default is 'random'
-  * When `color` is a `Function` its arguments are the `index`:`number` and the `feature`:`object` that is being colored
-* `opacity` `{Number}` a value from 0 to 1, default is 0.5
+  * When `color` is a `Function` its arguments are the `index`:`number` and the `feature`:`object` that is being colored, opacity can optionally be included as `{ a: number }`.
+    The result should be of interface `IColor`, example: `{r: number, g: number, b: number, a: number }`.
+* `opacity` `{Number}` a value from 0 to 1, default is 0.5.   Only used when opacity isn't included on color.
 * `className` `{String}` a class name applied to canvas, default is ''
 * `border` `{Boolean}` optional, default `false`. When set to `true`, a border with an opacity of 1 is displayed.
 * `preserveDrawingBuffer` `{Boolean}` optional, default `false`, perverse draw buffer on webgl context.
@@ -100,8 +101,9 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a point
 * `hover` `{Function}` optional event handler for hovering a point
 * `color` `{Function|Object|String}` optional, default is 'random'
-  * When `color` is a `Function` its arguments are the `index`:`number` and the `point`:`array` that is being colored 
-* `opacity` `{Number}` a value from 0 to 1, default is 0.8
+  * When `color` is a `Function` its arguments are the `index`:`number` and the `point`:`array` that is being colored, opacity can optionally be included as `{ a: number }`.
+    The result should be of interface `IColor`, example: `{r: number, g: number, b: number, a: number }`.
+* `opacity` `{Number}` a value from 0 to 1, default is 0.8.  Only used when opacity isn't included on color.
 * `className` `{String}` a class name applied to canvas, default is ''
 * `size` `{Number|Function}` pixel size of point
   * When `size` is a `Function` its arguments are `index`:`number`, and the `point`:`array` that is being sized
@@ -119,8 +121,9 @@ L.glify.lines({
 * `click` `{Function}` optional event handler for clicking a line
 * `hover` `{Function}` optional event handler for hovering a line
 * `color` `{Function|Object|String}` optional, default is 'random'
-  * When `color` is a `Function` its arguments are the `index`:`number` and the `feature`:`object` that is being colored 
-* `opacity` `{Number}` a value from 0 to 1, default is 0.5
+  * When `color` is a `Function` its arguments are the `index`:`number` and the `feature`:`object` that is being colored, opacity can optionally be included as `{ a: number }`.
+    The result should be of interface `IColor`, example: `{r: number, g: number, b: number, a: number }`.
+* `opacity` `{Number}` a value from 0 to 1, default is 0.5.  Only used when opacity isn't included on color.
 * `className` `{String}` a class name applied to canvas, default is ''
 * `sensitivity` `{Number}` exaggerates the size of the clickable area to make it easier to click a line
 * `sensitivityHover` `{Number}` exaggerates the size of the hoverable area to make it easier to hover a line
@@ -146,6 +149,10 @@ There are two ways to package this application: Parcel and WebPack.
 
 You can build the parcel version by running ``yarn run build-browser``
 You can build the webpack version by running ``yarn run build-browser-webpack``
+
+## Developing
+
+Use `yarn serve-webpack`
 
 ## Update & Remove Data
 L.glify instances can be updated using the `update(data, index)` method.
