@@ -201,11 +201,12 @@ export class Lines extends Base<ILinesSettings> {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.vertexAttrib1f(this.aPointSize, pointSize);
-    mapMatrix
-      .setSize(canvas.width, canvas.height)
-      .scaleMatrix(scale);
+
     if (zoom > 18) {
-      mapMatrix.translateMatrix(-offset.x, -offset.y);
+      mapMatrix
+        .setSize(canvas.width, canvas.height)
+        .scaleMatrix(scale)
+        .translateMatrix(-offset.x, -offset.y);
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
@@ -215,7 +216,10 @@ export class Lines extends Base<ILinesSettings> {
       for (let yOffset = -weight; yOffset < weight; yOffset += 0.5) {
         for (let xOffset = -weight; xOffset < weight; xOffset += 0.5) {
           // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-          mapMatrix.translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
+          mapMatrix
+            .setSize(canvas.width, canvas.height)
+            .scaleMatrix(scale)
+            .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
           // -- attach matrix value to 'mapMatrix' uniform in shader
           gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
@@ -233,7 +237,10 @@ export class Lines extends Base<ILinesSettings> {
         for (let yOffset = -weightValue; yOffset < weightValue; yOffset += 0.5) {
           for (let xOffset = -weightValue; xOffset < weightValue; xOffset += 0.5) {
             // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-            mapMatrix.translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
+            mapMatrix
+              .setSize(canvas.width, canvas.height)
+              .scaleMatrix(scale)
+              .translateMatrix(-offset.x + (xOffset / scale), -offset.y + (yOffset / scale));
             // -- attach matrix value to 'mapMatrix' uniform in shader
             gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
 
