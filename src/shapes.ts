@@ -27,6 +27,11 @@ export const defaults: IShapeSettings = {
   className: '',
   opacity: 0.5,
   shaderVariables: {
+    vertex: {
+      type: 'FLOAT',
+      start: 0,
+      size: 2,
+    },
     color: {
       type: 'FLOAT',
       start: 2,
