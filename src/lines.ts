@@ -29,6 +29,11 @@ const defaults: ILinesSettings = {
   sensitivity: 0.1,
   sensitivityHover: 0.03,
   shaderVariables: {
+    vertex: {
+      type: 'FLOAT',
+      start: 0,
+      size: 2,
+    },
     color: {
       type: 'FLOAT',
       start: 2,
