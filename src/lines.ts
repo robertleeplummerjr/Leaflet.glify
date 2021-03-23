@@ -255,6 +255,7 @@ export class Lines extends Base<ILinesSettings> {
     Lines.instances.forEach(function (_instance) {
       settings = _instance.settings;
       sensitivity = settings.sensitivity;
+      const {latitudeKey, longitudeKey } = settings;
       if (!_instance.active) return;
       if (settings.map !== map) return;
       if (!settings.click) return;
@@ -262,8 +263,8 @@ export class Lines extends Base<ILinesSettings> {
       settings.data.features.map(feature => {
         for (let i = 1; i < feature.geometry.coordinates.length; i++) {
           let distance = pDistance(e.latlng.lng, e.latlng.lat,
-            feature.geometry.coordinates[i - 1][0], feature.geometry.coordinates[i - 1][1],
-            feature.geometry.coordinates[i][0], feature.geometry.coordinates[i][1]);
+            feature.geometry.coordinates[i - 1][longitudeKey], feature.geometry.coordinates[i - 1][latitudeKey],
+            feature.geometry.coordinates[i][longitudeKey], feature.geometry.coordinates[i][latitudeKey]);
           if (distance < sensitivity) {
             sensitivity = distance;
             foundFeature = feature;
@@ -289,6 +290,7 @@ export class Lines extends Base<ILinesSettings> {
     Lines.instances.forEach(function (_instance) {
       settings = _instance.settings;
       sensitivityHover = settings.sensitivityHover;
+      const {latitudeKey, longitudeKey } = settings;
       if (!_instance.active) return;
       if (settings.map !== map) return;
       if (!settings.hover) return;
@@ -300,10 +302,10 @@ export class Lines extends Base<ILinesSettings> {
           for (let i = 1; i < feature.geometry.coordinates.length; i++) {
             let distance = pDistance(e.latlng.lng,
                                     e.latlng.lat,
-                                    feature.geometry.coordinates[i - 1][0],
-                                    feature.geometry.coordinates[i - 1][1],
-                                    feature.geometry.coordinates[i][0],
-                                    feature.geometry.coordinates[i][1]);
+                                    feature.geometry.coordinates[i - 1][longitudeKey],
+                                    feature.geometry.coordinates[i - 1][latitudeKey],
+                                    feature.geometry.coordinates[i][longitudeKey],
+                                    feature.geometry.coordinates[i][latitudeKey]);
 
             if (distance < sensitivityHover) {
               sensitivityHover = distance;
