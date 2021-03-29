@@ -20,7 +20,7 @@ import {
   LatLng,
   ZoomAnimEvent,
   Map,
-  ResizeEvent,
+  ResizeEvent, LayerOptions,
 } from "leaflet";
 
 export interface ICanvasOverlayDrawEvent {
@@ -44,6 +44,7 @@ export class CanvasOverlay extends Layer {
   _pane: string;
 
   _frame?: number | null;
+  options?: LayerOptions;
 
   constructor(userDrawFunc: IUserDrawFunc, pane: string) {
     super();
@@ -73,19 +74,25 @@ export class CanvasOverlay extends Layer {
     return this;
   }
 
+  isAnimated(): boolean {
+    return Boolean(this._map.options.zoomAnimation && Browser.any3d);
+  }
+
   onAdd(map: Map): this {
     this._map = map;
-    this.canvas = this.canvas ?? document.createElement("canvas");
+    const canvas = this.canvas = this.canvas ?? document.createElement("canvas");
 
     const size = map.getSize();
-    const animated = map.options.zoomAnimation && Browser.any3d;
-    this.canvas.width = size.x;
-    this.canvas.height = size.y;
+    const animated = this.isAnimated();
+    canvas.width = size.x;
+    canvas.height = size.y;
+    canvas.className = `leaflet-zoom-${animated ? "animated" : "hide"}`;
 
-    this.canvas.className = `leaflet-zoom-${animated ? "animated" : "hide"}`;
-
-    // @ts-expect-error
-    map._panes[this._pane].appendChild(this.canvas);
+    const pane = map.getPane(this._pane);
+    if (!pane) {
+      throw new Error('unable to find pane');
+    }
+    pane.appendChild(this.canvas);
 
     map.on("moveend", this._reset, this);
     map.on("resize", this._resize, this);
@@ -104,13 +111,17 @@ export class CanvasOverlay extends Layer {
 
   onRemove(map: Map): this {
     if (this.canvas) {
-      map.getPanes()[this._pane].removeChild(this.canvas);
+      const pane = map.getPane(this._pane);
+      if (!pane) {
+        throw new Error('unable to find pane');
+      }
+      pane.removeChild(this.canvas);
     }
 
     map.off("moveend", this._reset, this);
     map.off("resize", this._resize, this);
 
-    if (map.options.zoomAnimation && Browser.any3d) {
+    if (this.isAnimated()) {
       map.off(
         "zoomanim",
         Layer ? this._animateZoom : this._animateZoomNoLayer,
@@ -133,8 +144,8 @@ export class CanvasOverlay extends Layer {
   }
 
   _reset(): void {
-    const topLeft = this._map.containerPointToLayerPoint([0, 0]);
     if (this.canvas) {
+      const topLeft = this._map.containerPointToLayerPoint([0, 0]);
       DomUtil.setPosition(this.canvas, topLeft);
     }
     this._redraw();
@@ -149,7 +160,7 @@ export class CanvasOverlay extends Layer {
     const zoom = _map.getZoom();
     const topLeft = new LatLng(bounds.getNorth(), bounds.getWest());
     const offset = this._unclampedProject(topLeft, 0);
-    if (this._userDrawFunc && canvas) {
+    if (canvas) {
       this._userDrawFunc({
         bounds,
         canvas,
@@ -172,29 +183,29 @@ export class CanvasOverlay extends Layer {
   }
 
   _animateZoom(e: ZoomAnimEvent): void {
-    const { _map } = this;
+    const { _map, canvas } = this;
     const scale = _map.getZoomScale(e.zoom, _map.getZoom());
     const offset = this._unclampedLatLngBoundsToNewLayerBounds(
       _map.getBounds(),
       e.zoom,
       e.center
     ).min;
-    if (this.canvas && offset) {
-      DomUtil.setTransform(this.canvas, offset, scale);
+    if (canvas && offset) {
+      DomUtil.setTransform(canvas, offset, scale);
     }
   }
 
   _animateZoomNoLayer(e: ZoomAnimEvent): void {
-    const { _map } = this;
-    const scale = _map.getZoomScale(e.zoom, _map.getZoom());
-    const offset = _map
-      // @ts-expect-error
-      ._getCenterOffset(e.center)
-      ._multiplyBy(-scale)
-      // @ts-expect-error
-      .subtract(_map._getMapPanePos());
-    if (this.canvas) {
-      DomUtil.setTransform(this.canvas, offset, scale);
+    const { _map, canvas } = this;
+    if (canvas) {
+      const scale = _map.getZoomScale(e.zoom, _map.getZoom());
+      const offset = _map
+        // @ts-expect-error
+        ._getCenterOffset(e.center)
+        ._multiplyBy(-scale)
+        // @ts-expect-error
+        .subtract(_map._getMapPanePos());
+      DomUtil.setTransform(canvas, offset, scale);
     }
   }
 
