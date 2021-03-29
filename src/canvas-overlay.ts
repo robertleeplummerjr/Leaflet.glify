@@ -20,7 +20,8 @@ import {
   LatLng,
   ZoomAnimEvent,
   Map,
-  ResizeEvent, LayerOptions,
+  ResizeEvent,
+  LayerOptions,
 } from "leaflet";
 
 export interface ICanvasOverlayDrawEvent {
@@ -80,7 +81,8 @@ export class CanvasOverlay extends Layer {
 
   onAdd(map: Map): this {
     this._map = map;
-    const canvas = this.canvas = this.canvas ?? document.createElement("canvas");
+    const canvas = (this.canvas =
+      this.canvas ?? document.createElement("canvas"));
 
     const size = map.getSize();
     const animated = this.isAnimated();
@@ -90,7 +92,7 @@ export class CanvasOverlay extends Layer {
 
     const pane = map.getPane(this._pane);
     if (!pane) {
-      throw new Error('unable to find pane');
+      throw new Error("unable to find pane");
     }
     pane.appendChild(this.canvas);
 
@@ -113,7 +115,7 @@ export class CanvasOverlay extends Layer {
     if (this.canvas) {
       const pane = map.getPane(this._pane);
       if (!pane) {
-        throw new Error('unable to find pane');
+        throw new Error("unable to find pane");
       }
       pane.removeChild(this.canvas);
     }
@@ -134,6 +136,14 @@ export class CanvasOverlay extends Layer {
   addTo(map: Map): this {
     map.addLayer(this);
     return this;
+  }
+
+  get map(): Map {
+    return this._map;
+  }
+
+  set map(map: Map) {
+    this._map = map;
   }
 
   _resize(resizeEvent: ResizeEvent): void {
@@ -200,10 +210,10 @@ export class CanvasOverlay extends Layer {
     if (canvas) {
       const scale = _map.getZoomScale(e.zoom, _map.getZoom());
       const offset = _map
-        // @ts-expect-error
+        // @ts-expect-error experimental
         ._getCenterOffset(e.center)
         ._multiplyBy(-scale)
-        // @ts-expect-error
+        // @ts-expect-error  experimental
         .subtract(_map._getMapPanePos());
       DomUtil.setTransform(canvas, offset, scale);
     }
@@ -213,7 +223,7 @@ export class CanvasOverlay extends Layer {
     // imported partly from https://github.com/Leaflet/Leaflet/blob/1ae785b73092fdb4b97e30f8789345e9f7c7c912/src/geo/projection/Projection.SphericalMercator.js#L21
     // used because they clamp the latitude
     const { crs } = this._map.options;
-    // @ts-expect-error
+    // @ts-expect-error experimental
     const { R } = crs.projection;
     const d = Math.PI / 180;
     const lat = latlng.lat;
@@ -223,7 +233,7 @@ export class CanvasOverlay extends Layer {
       (R * Math.log((1 + sin) / (1 - sin))) / 2
     );
     const scale = crs?.scale(zoom) ?? 0;
-    // @ts-expect-error
+    // @ts-expect-error experimental
     return crs.transformation._transform(projectedPoint, scale);
   }
 
@@ -234,7 +244,7 @@ export class CanvasOverlay extends Layer {
   ): Bounds {
     // imported party from https://github.com/Leaflet/Leaflet/blob/84bc05bbb6e4acc41e6f89ff7421dd7c6520d256/src/map/Map.js#L1500
     // used because it uses crs.projection.project, which clamp the latitude
-    // @ts-expect-error
+    // @ts-expect-error experimental
     const topLeft = this._map._getNewPixelOrigin(center, zoom);
     return new Bounds([
       this._unclampedProject(latLngBounds.getSouthWest(), zoom).subtract(

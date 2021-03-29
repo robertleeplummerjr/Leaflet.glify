@@ -28,7 +28,10 @@ export interface IBaseGlLayerSettings {
   canvas?: HTMLCanvasElement;
   click?: (e: LeafletMouseEvent, feature: any) => (boolean | undefined) | void;
   hover?: (e: LeafletMouseEvent, feature: any) => (boolean | undefined) | void;
-  hoverOff?: (e: LeafletMouseEvent, feature: any) => (boolean | undefined) | void;
+  hoverOff?: (
+    e: LeafletMouseEvent,
+    feature: any
+  ) => (boolean | undefined) | void;
   color?: ((featureIndex: number, feature: any) => IColor) | IColor;
   className?: string;
   opacity?: number;
@@ -36,13 +39,15 @@ export interface IBaseGlLayerSettings {
   hoverWait?: number;
 }
 
-export const defaultPane = 'overlayPane';
+export const defaultPane = "overlayPane";
 export const defaultHoverWait = 250;
 const defaults: Partial<IBaseGlLayerSettings> = {
   pane: defaultPane,
 };
 
-export abstract class BaseGlLayer<T extends IBaseGlLayerSettings = IBaseGlLayerSettings> {
+export abstract class BaseGlLayer<
+  T extends IBaseGlLayerSettings = IBaseGlLayerSettings
+> {
   bytes = 0;
   active: boolean;
   fragmentShader: any;
@@ -77,7 +82,7 @@ export abstract class BaseGlLayer<T extends IBaseGlLayerSettings = IBaseGlLayerS
   }
 
   get className(): string {
-    return this.settings.className || "";
+    return this.settings.className ?? "";
   }
 
   get map(): Map {
@@ -144,9 +149,12 @@ export abstract class BaseGlLayer<T extends IBaseGlLayerSettings = IBaseGlLayerS
     this.vertices = null;
     this.vertexLines = null;
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
-    const layer = (this.layer = new CanvasOverlay((context: ICanvasOverlayDrawEvent) => {
-      return this.drawOnCanvas(context);
-    }, this.pane).addTo(this.map));
+    const layer = (this.layer = new CanvasOverlay(
+      (context: ICanvasOverlayDrawEvent) => {
+        return this.drawOnCanvas(context);
+      },
+      this.pane
+    ).addTo(this.map));
     if (!layer.canvas) {
       throw new Error("layer.canvas not correctly defined");
     }
@@ -157,8 +165,8 @@ export abstract class BaseGlLayer<T extends IBaseGlLayerSettings = IBaseGlLayerS
     if (this.className) {
       canvas.className += " " + this.className;
     }
-    this.gl = (canvas.getContext("webgl2", { preserveDrawingBuffer }) ||
-      canvas.getContext("webgl", { preserveDrawingBuffer }) ||
+    this.gl = (canvas.getContext("webgl2", { preserveDrawingBuffer }) ??
+      canvas.getContext("webgl", { preserveDrawingBuffer }) ??
       canvas.getContext("experimental-webgl", {
         preserveDrawingBuffer,
       })) as WebGLRenderingContext;
@@ -268,10 +276,10 @@ export abstract class BaseGlLayer<T extends IBaseGlLayerSettings = IBaseGlLayerS
       throw new Error("Not able to create program");
     }
     if (!vertexShader) {
-      throw new Error('this.vertexShader not correctly set');
+      throw new Error("this.vertexShader not correctly set");
     }
     if (!fragmentShader) {
-      throw new Error('this.fragmentShader not correctly set');
+      throw new Error("this.fragmentShader not correctly set");
     }
 
     gl.attachShader(program, vertexShader);
@@ -287,7 +295,7 @@ export abstract class BaseGlLayer<T extends IBaseGlLayerSettings = IBaseGlLayerS
   }
 
   addTo(map?: Map): this {
-    this.layer.addTo(map || this.map);
+    this.layer.addTo(map ?? this.map);
     this.active = true;
     return this.render();
   }
@@ -302,9 +310,14 @@ export abstract class BaseGlLayer<T extends IBaseGlLayerSettings = IBaseGlLayerS
       if (typeof indices === "number") {
         indices = [indices];
       }
-      indices.sort().reverse().forEach((index: number) => {
-        features.splice(index, 1);
-      });
+      indices
+        .sort((a: number, b: number): number => {
+          return a - b;
+        })
+        .reverse()
+        .forEach((index: number) => {
+          features.splice(index, 1);
+        });
       this.render();
     }
     return this;
@@ -372,7 +385,5 @@ export abstract class BaseGlLayer<T extends IBaseGlLayerSettings = IBaseGlLayerS
     }
   }
 
-  hoverOff(e: LeafletMouseEvent, feature: any): void {
-
-  }
+  hoverOff(e: LeafletMouseEvent, feature: any): void {}
 }

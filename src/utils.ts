@@ -1,4 +1,4 @@
-import { LatLng, LatLngBounds, Map } from "leaflet";
+import { LatLng, LatLngBounds, LeafletMouseEvent, Map } from "leaflet";
 import { IPixel } from "./pixel";
 
 // -- converts latlon to pixels at zoom level 0 (for 256x256 tile size) , inverts y coord )
@@ -96,22 +96,22 @@ export function debugPoint(containerPixel: IPixel): void {
 }
 
 export function debounce(
-  fn: (args?: any) => any,
+  fn: (e: LeafletMouseEvent) => void,
   waitMilliseconds: number,
   immediate?: boolean
-): () => void {
+): (e: LeafletMouseEvent) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  return function (...args) {
+  return function (e: LeafletMouseEvent): void {
     function later() {
       timeout = null;
-      if (!immediate) fn(...args);
+      if (!immediate) fn(e);
     }
     const callNow = immediate && !timeout;
     if (timeout !== null) {
       clearTimeout(timeout);
     }
     timeout = setTimeout(later, waitMilliseconds);
-    if (callNow) fn(...args);
+    if (callNow) fn(e);
   };
 }
 

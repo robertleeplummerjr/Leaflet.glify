@@ -90,11 +90,6 @@
     "webpack-dev-server": "^3.11.0",
     "leaflet": "1.7.1"
   },
-  "jest": {
-    "setupFiles": [
-      "jest-webgl-canvas-mock"
-    ]
-  },
   "peerDependencies": {
     "leaflet": "1.7.1"
   }

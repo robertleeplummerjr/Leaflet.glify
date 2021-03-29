@@ -5,19 +5,19 @@ import { Points, IPointsSettings } from "./points";
 import { Shapes, IShapeSettings } from "./shapes";
 import { debounce } from "./utils";
 
-// @ts-expect-error
+// @ts-expect-error import string
 import vertex from "./shader/vertex/default.glsl";
-// @ts-expect-error
+// @ts-expect-error import string
 import dot from "./shader/fragment/dot.glsl";
-// @ts-expect-error
+// @ts-expect-error import string
 import point from "./shader/fragment/point.glsl";
-// @ts-expect-error
+// @ts-expect-error import string
 import puck from "./shader/fragment/puck.glsl";
-// @ts-expect-error
+// @ts-expect-error import string
 import simpleCircle from "./shader/fragment/simple-circle.glsl";
-// @ts-expect-error
+// @ts-expect-error import string
 import square from "./shader/fragment/square.glsl";
-// @ts-expect-error
+// @ts-expect-error import string
 import polygon from "./shader/fragment/polygon.glsl";
 
 const shader = {
@@ -145,8 +145,8 @@ class Glify {
 export const glify = new Glify();
 export default glify;
 if (typeof window !== "undefined" && window.L) {
-  // @ts-expect-error
+  // @ts-expect-error exporting it to window
   window.L.glify = glify;
-  // @ts-expect-error
+  // @ts-expect-error exporting it to window
   window.L.Glify = Glify;
 }

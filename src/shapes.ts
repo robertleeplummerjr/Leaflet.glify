@@ -1,13 +1,13 @@
 import earcut from "earcut";
-import geojsonFlatten from "geojson-flatten";
 import PolygonLookup from "polygon-lookup";
 
 import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
-import { Color, IColor } from "./color";
+import * as Color from "./color";
 import { LatLng, LeafletMouseEvent, Map } from "leaflet";
 import { latLonToPixel } from "./utils";
 import { Geometry, Polygon } from "geojson";
+const geojsonFlatten = require("geojson-flatten");
 
 export interface IShapeSettings extends IBaseGlLayerSettings {
   border?: boolean;
@@ -118,8 +118,8 @@ export class Shapes extends BaseGlLayer {
     let index;
     let features;
     let feature;
-    let colorFn: ((i: number, feature: any) => IColor) | null = null;
-    let chosenColor: IColor;
+    let colorFn: ((i: number, feature: any) => Color.IColor) | null = null;
+    let chosenColor: Color.IColor;
     let coordinates;
     let featureIndex = 0;
     let triangles;
@@ -174,7 +174,7 @@ export class Shapes extends BaseGlLayer {
       if (colorFn !== null) {
         chosenColor = colorFn(featureIndex, feature);
       } else {
-        chosenColor = color as IColor;
+        chosenColor = color as Color.IColor;
       }
 
       coordinates = (feature.geometry || feature).coordinates;

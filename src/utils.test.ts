@@ -33,7 +33,7 @@ describe("utils", () => {
         expect(pixelDistance(1, 1, 2, 2, 3, 3)).toBeCloseTo(1.41421);
       });
     });
-    describe('when used with negative numbers', () => {
+    describe("when used with negative numbers", () => {
       it("calculates the distance correctly", () => {
         expect(pixelDistance(-1, -1, -2, -2, -3, -3)).toBeCloseTo(1.41421);
       });

@@ -1,6 +1,6 @@
 import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
-import { Color, IColor } from "./color";
+import * as color from "./color";
 import { Map, LeafletMouseEvent, geoJSON } from "leaflet";
 import { LineFeatureVertices } from "./line-feature-vertices";
 import { pixelDistance, inBounds } from "./utils";
@@ -14,7 +14,7 @@ export interface ILinesSettings extends IBaseGlLayerSettings {
 
 const defaults: Partial<ILinesSettings> = {
   data: [],
-  color: Color.random,
+  color: color.random,
   className: "",
   opacity: 0.5,
   weight: 2,
@@ -154,8 +154,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     const features = data.features;
     const featureMax = features.length;
     let feature: Feature<LineString | MultiLineString>;
-    let colorFn: ((i: number, feature: any) => IColor) | null = null;
-    let chosenColor: IColor;
+    let colorFn: ((i: number, feature: any) => color.IColor) | null = null;
+    let chosenColor: color.IColor;
     let featureIndex = 0;
     if (!color) {
       throw new Error("color is not properly defined");
@@ -170,7 +170,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       if (colorFn) {
         chosenColor = colorFn(featureIndex, feature);
       } else {
-        chosenColor = color as IColor;
+        chosenColor = color as color.IColor;
       }
 
       const featureVertices = new LineFeatureVertices({

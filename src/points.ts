@@ -2,7 +2,7 @@ import { Feature, Point as GeoPoint, Position } from "geojson";
 
 import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
-import { Color, IColor } from "./color";
+import * as Color from "./color";
 import { LeafletMouseEvent, Map, Point, LatLng, Projection } from "leaflet";
 import { IPixel } from "./pixel";
 import { locationDistance, pixelInCircle } from "./utils";
@@ -13,7 +13,7 @@ export interface IPointsSettings extends IBaseGlLayerSettings {
     this: Points,
     latLng: LatLng,
     pixel: IPixel,
-    color: IColor,
+    color: Color.IColor,
     size: number
   ) => void;
   sensitivity?: number;
@@ -48,7 +48,7 @@ const defaults: Partial<IPointsSettings> = {
 export interface IPointLookup {
   latLng: LatLng;
   pixel: IPixel;
-  chosenColor: IColor;
+  chosenColor: Color.IColor;
   chosenSize: number;
   key: string;
   feature?: any;
@@ -151,13 +151,21 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     this.allLatLngLookup = [];
     this.vertices = [];
 
-    const { vertices, settings, map, size, latitudeKey, longitudeKey, color, opacity } = this;
     const {
-      data,
-      eachVertex
-    } = settings;
-    let colorFn: ((i: number, latLng: LatLng | any) => IColor) | null = null;
-    let chosenColor: IColor;
+      vertices,
+      settings,
+      map,
+      size,
+      latitudeKey,
+      longitudeKey,
+      color,
+      opacity,
+    } = this;
+    const { data, eachVertex } = settings;
+    let colorFn:
+      | ((i: number, latLng: LatLng | any) => Color.IColor)
+      | null = null;
+    let chosenColor: Color.IColor;
     let chosenSize: number;
     let sizeFn;
     let rawLatLng: [number, number] | Position;
@@ -168,7 +176,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     if (!color) {
       throw new Error("color is not properly defined");
     } else if (typeof color === "function") {
-      colorFn = color as (i: number, latLng: LatLng) => IColor;
+      colorFn = color as (i: number, latLng: LatLng) => Color.IColor;
     }
 
     if (!size) {
@@ -198,7 +206,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
         if (colorFn) {
           chosenColor = colorFn(i, latLng);
         } else {
-          chosenColor = color as IColor;
+          chosenColor = color as Color.IColor;
         }
 
         chosenColor = { ...chosenColor, a: chosenColor.a ?? opacity ?? 0 };
@@ -249,7 +257,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
         if (colorFn) {
           chosenColor = colorFn(i, feature);
         } else {
-          chosenColor = color as IColor;
+          chosenColor = color as Color.IColor;
         }
 
         chosenColor = { ...chosenColor, a: chosenColor.a ?? opacity ?? 0 };
@@ -405,7 +413,6 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     if (
       pixelInCircle(xy, e.layerPoint, found.chosenSize * (sensitivity ?? 1))
     ) {
-
       result = instance.click(e, found.feature || found.latLng);
       return result !== undefined ? result : true;
     }
@@ -426,7 +433,10 @@ export class Points extends BaseGlLayer<IPointsSettings> {
           pointLookup.chosenSize * _instance.sensitivityHover * 30
         )
       ) {
-        const result = _instance.hover(e, pointLookup.feature || pointLookup.latLng);
+        const result = _instance.hover(
+          e,
+          pointLookup.feature || pointLookup.latLng
+        );
         if (result !== undefined) {
           results.push(result);
         }
