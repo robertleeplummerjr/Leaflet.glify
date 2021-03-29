@@ -7,5 +7,5 @@ yarn.lock
 .cache
 .dev-server
 .build
-dist/src
-dist/example.d.ts
+dist
+__coverage__

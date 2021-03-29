@@ -1,0 +1,15 @@
+{
+  "collectCoverage": false,
+  "collectCoverageFrom": ["src/**/*"],
+  "coverageDirectory": "__coverage__",
+  "coverageProvider": "v8",
+  "globalSetup": "",
+  "globals": {
+    "ts-jest": {
+      "tsconfig": "tsconfig.json"
+    }
+  },
+  "preset": "ts-jest/presets/js-with-ts",
+  "setupFiles": ["jest-webgl-canvas-mock"],
+  "testEnvironment": "jsdom"
+}

@@ -1,90 +1,94 @@
-import earcut from 'earcut';
-import geojsonFlatten from 'geojson-flatten';
-import PolygonLookup from 'polygon-lookup';
+import earcut from "earcut";
+import geojsonFlatten from "geojson-flatten";
+import PolygonLookup from "polygon-lookup";
 
-import { Base, IBaseSettings } from './base';
-import { ICanvasOverlayDrawEvent } from './canvas-overlay';
-import { Color, IColor } from './color';
-import { LatLng, LeafletMouseEvent, Map} from 'leaflet';
-import { latLonToPixel } from './utils';
+import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import { Color, IColor } from "./color";
+import { LatLng, LeafletMouseEvent, Map } from "leaflet";
+import { latLonToPixel } from "./utils";
+import { Geometry, Polygon } from "geojson";
 
-export interface IShapeSettings extends IBaseSettings {
-  border?: boolean
+export interface IShapeSettings extends IBaseGlLayerSettings {
+  border?: boolean;
 }
 
-export const defaults: IShapeSettings = {
-  map: null,
+export const defaults: Partial<IShapeSettings> = {
   data: [],
-  longitudeKey: null,
-  latitudeKey: null,
-  setupClick: null,
-  setupHover: null,
-  vertexShaderSource: null,
-  fragmentShaderSource: null,
-  click: null,
-  hover: null,
   color: Color.random,
-  className: '',
+  className: "",
   opacity: 0.5,
   shaderVariables: {
     vertex: {
-      type: 'FLOAT',
+      type: "FLOAT",
       start: 0,
       size: 2,
     },
     color: {
-      type: 'FLOAT',
+      type: "FLOAT",
       start: 2,
-      size: 4
-    }
+      size: 4,
+    },
   },
-  border: false
+  border: false,
 };
 
-export class Shapes extends Base<IShapeSettings> {
+export class Shapes extends BaseGlLayer {
   static instances: Shapes[] = [];
   static defaults = defaults;
   static maps: Map[];
+  settings: Partial<IShapeSettings>;
   bytes = 6;
-  polygonLookup: PolygonLookup;
+  polygonLookup: PolygonLookup | null = null;
 
-  constructor(settings: IShapeSettings) {
+  get border(): boolean {
+    if (typeof this.settings.border !== "boolean") {
+      throw new Error("settings.boarder not defined");
+    }
+    return this.settings.border;
+  }
+
+  constructor(settings: Partial<IShapeSettings>) {
     super(settings);
     Shapes.instances.push(this);
     this.settings = { ...Shapes.defaults, ...settings };
 
     if (!settings.data) throw new Error('no "data" array setting defined');
-    if (!settings.map) throw new Error('no leaflet "map" object setting defined');
-    this.polygonLookup = null;
+    if (!settings.map)
+      throw new Error('no leaflet "map" object setting defined');
 
-    this
-      .setup()
-      .render();
+    this.setup().render();
   }
 
   render(): this {
     this.resetVertices();
     // triangles or point count
 
-    const { canvas, gl, layer, vertices, mapMatrix } = this
-      , vertexBuffer = this.getBuffer('vertex')
-      , vertArray = new Float32Array(vertices)
-      , byteCount = vertArray.BYTES_PER_ELEMENT
-      , vertex = this.getAttributeLocation('vertex')
-      ;
+    const { canvas, gl, layer, vertices, mapMatrix } = this;
+    const vertexBuffer = this.getBuffer("vertex");
+    const vertArray = new Float32Array(vertices);
+    const byteCount = vertArray.BYTES_PER_ELEMENT;
+    const vertex = this.getAttributeLocation("vertex");
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
-    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, byteCount * this.bytes, 0);
+    gl.vertexAttribPointer(
+      vertex,
+      2,
+      gl.FLOAT,
+      false,
+      byteCount * this.bytes,
+      0
+    );
     gl.enableVertexAttribArray(vertex);
 
     //  gl.disable(gl.DEPTH_TEST);
     // ----------------------------
     // look up the locations for the inputs to our shaders.
-    this.matrix = this.getUniformLocation('matrix');
+    this.matrix = this.getUniformLocation("matrix");
 
     // Set the matrix to some that makes 1 unit 1 pixel.
     gl.viewport(0, 0, canvas.width, canvas.height);
-    mapMatrix.setSize(canvas.width, canvas.height)
+    mapMatrix.setSize(canvas.width, canvas.height);
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
 
     this.attachShaderVariables(byteCount);
@@ -99,54 +103,65 @@ export class Shapes extends Base<IShapeSettings> {
     this.vertexLines = [];
     this.polygonLookup = new PolygonLookup();
 
-    const { vertices, vertexLines, polygonLookup, settings } = this
-      , data = settings.data as any
-      ;
-
-    let pixel
-      , index
-      , features
-      , feature
-      , { color, opacity } = settings
-      , colorFn: (i: number, feature: any) => IColor
-      , chosenColor: IColor
-      , coordinates
-      , featureIndex = 0
-      , featureMax
-      , triangles
-      , indices
-      , flat
-      , dim
-      ;
+    const {
+      vertices,
+      vertexLines,
+      polygonLookup,
+      settings,
+      map,
+      border,
+      opacity,
+      color,
+    } = this;
+    const data = settings.data;
+    let pixel;
+    let index;
+    let features;
+    let feature;
+    let colorFn: ((i: number, feature: any) => IColor) | null = null;
+    let chosenColor: IColor;
+    let coordinates;
+    let featureIndex = 0;
+    let triangles;
+    let indices;
+    let flat;
+    let dim;
 
     switch (data.type) {
-      case 'Feature':
+      case "Feature":
         polygonLookup.loadFeatureCollection({
-          type: 'FeatureCollection',
-          features: [data]
+          type: "FeatureCollection",
+          features: [data],
         });
         features = geojsonFlatten(data);
         break;
-      case 'MultiPolygon':
+      case "MultiPolygon": {
+        const geometry: Geometry = {
+          type: "MultiPolygon",
+          coordinates: data.coordinates,
+        };
         polygonLookup.loadFeatureCollection({
-          type: 'FeatureCollection',
-          features: [{
-            type: 'Feature',
-            properties: { id: 'bar' },
-            geometry: { coordinates: data.coordinates }
-          }]
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature" as const,
+              properties: { id: "bar" },
+              geometry,
+            },
+          ],
         });
         features = geojsonFlatten(data);
         break;
+      }
       default:
         polygonLookup.loadFeatureCollection(data);
         features = data.features;
     }
-    featureMax = features.length;
+    const featureMax = features.length;
 
     if (!color) {
-      throw new Error('color is not properly defined');
-    } else if (typeof color === 'function') {
+      throw new Error("color is not properly defined");
+    } else if (typeof color === "function") {
       colorFn = color;
     }
 
@@ -155,8 +170,8 @@ export class Shapes extends Base<IShapeSettings> {
       feature = features[featureIndex];
       triangles = [];
 
-      //use colorFn function here if it exists
-      if (colorFn) {
+      // use colorFn function here if it exists
+      if (colorFn !== null) {
         chosenColor = colorFn(featureIndex, feature);
       } else {
         chosenColor = color as IColor;
@@ -166,30 +181,48 @@ export class Shapes extends Base<IShapeSettings> {
       flat = earcut.flatten(coordinates);
       indices = earcut(flat.vertices, flat.holes, flat.dimensions);
       dim = coordinates[0][0].length;
+      const { longitudeKey, latitudeKey } = this;
       for (let i = 0, iMax = indices.length; i < iMax; i++) {
         index = indices[i];
-        if (typeof flat.vertices[0] === 'number') {
-          triangles.push(flat.vertices[index * dim + settings.longitudeKey], flat.vertices[index * dim + settings.latitudeKey]);
+        if (typeof flat.vertices[0] === "number") {
+          triangles.push(
+            flat.vertices[index * dim + longitudeKey],
+            flat.vertices[index * dim + latitudeKey]
+          );
         } else {
-          throw new Error('unhandled polygon');
+          throw new Error("unhandled polygon");
         }
       }
 
       for (let i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = settings.map.project(new LatLng(triangles[i++], triangles[i++]), 0);
-        vertices.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b, chosenColor.a || opacity);
+        pixel = map.project(new LatLng(triangles[i++], triangles[i++]), 0);
+        vertices.push(
+          pixel.x,
+          pixel.y,
+          chosenColor.r,
+          chosenColor.g,
+          chosenColor.b,
+          chosenColor.a ?? opacity
+        );
       }
 
-      if (settings.border) {
-        let lines = [];
-        for (let i = 1, iMax = flat.vertices.length; i < iMax; i=i+2) {
-          lines.push(flat.vertices[i], flat.vertices[i-1]);
-          lines.push(flat.vertices[i+2], flat.vertices[i+1]);
+      if (border) {
+        const lines = [];
+        for (let i = 1, iMax = flat.vertices.length; i < iMax; i = i + 2) {
+          lines.push(flat.vertices[i], flat.vertices[i - 1]);
+          lines.push(flat.vertices[i + 2], flat.vertices[i + 1]);
         }
 
         for (let i = 0, iMax = lines.length; i < iMax; i) {
-          pixel = latLonToPixel(lines[i++],lines[i++]);
-          vertexLines.push(pixel.x, pixel.y, chosenColor.r, chosenColor.g, chosenColor.b, chosenColor.a || opacity);
+          pixel = latLonToPixel(lines[i++], lines[i++]);
+          vertexLines.push(
+            pixel.x,
+            pixel.y,
+            chosenColor.r,
+            chosenColor.g,
+            chosenColor.b,
+            chosenColor.a ?? opacity
+          );
         }
       }
     }
@@ -200,10 +233,8 @@ export class Shapes extends Base<IShapeSettings> {
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    const { scale, offset, canvas } = e
-      , { mapMatrix, gl, vertices, settings, vertexLines } = this
-      ;
-
+    const { scale, offset, canvas } = e;
+    const { mapMatrix, gl, vertices, settings, vertexLines, border } = this;
     // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
       .setSize(canvas.width, canvas.height)
@@ -215,13 +246,11 @@ export class Shapes extends Base<IShapeSettings> {
 
     // -- attach matrix value to 'mapMatrix' uniform in shader
     gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
-    if (settings.border) {
-      const vertexLinesBuffer = this.getBuffer('vertexLines')
-        , vertexLinesTypedArray = new Float32Array(vertexLines)
-        , size = vertexLinesTypedArray.BYTES_PER_ELEMENT
-        , vertex = this.getAttributeLocation('vertex')
-        ;
-
+    if (border) {
+      const vertexLinesBuffer = this.getBuffer("vertexLines");
+      const vertexLinesTypedArray = new Float32Array(vertexLines);
+      const size = vertexLinesTypedArray.BYTES_PER_ELEMENT;
+      const vertex = this.getAttributeLocation("vertex");
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexLinesBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, vertexLinesTypedArray, gl.STATIC_DRAW);
@@ -236,10 +265,8 @@ export class Shapes extends Base<IShapeSettings> {
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.drawArrays(gl.LINES, 0, vertexLines.length / this.bytes);
 
-      const vertexBuffer = this.getBuffer('vertex')
-        , verticesTypedArray = new Float32Array(vertices)
-        ;
-
+      const vertexBuffer = this.getBuffer("vertex");
+      const verticesTypedArray = new Float32Array(vertices);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, verticesTypedArray, gl.STATIC_DRAW);
@@ -251,53 +278,58 @@ export class Shapes extends Base<IShapeSettings> {
       gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, size * this.bytes, 0);
       gl.enableVertexAttribArray(vertex);
       gl.enable(gl.DEPTH_TEST);
-      gl.viewport(0,0,canvas.width, canvas.height);
+      gl.viewport(0, 0, canvas.width, canvas.height);
     }
     gl.drawArrays(gl.TRIANGLES, 0, vertices.length / this.bytes);
 
     return this;
   }
 
-  static tryClick(e: LeafletMouseEvent, map: Map): boolean {
-    let result
-      , settings
-      , feature
-      ;
-
-    Shapes.instances.forEach(function (_instance) {
-      settings = _instance.settings;
+  // attempts to click the top-most Shapes instance
+  static tryClick(e: LeafletMouseEvent, map: Map): boolean | undefined {
+    let foundPolygon: Polygon | null = null;
+    let foundShapes: Shapes | null = null;
+    Shapes.instances.forEach(function (_instance: Shapes): void {
       if (!_instance.active) return;
-      if (settings.map !== map) return;
-      if (!settings.click) return;
+      if (_instance.map !== map) return;
+      if (!_instance.polygonLookup) return;
 
-      feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
-      if (feature) {
-        result = settings.click(e, feature);
+      const polygon = _instance.polygonLookup.search(
+        e.latlng.lng,
+        e.latlng.lat
+      );
+      if (polygon) {
+        foundShapes = _instance;
+        foundPolygon = polygon;
       }
     });
 
-    return result !== undefined ? result : true;
+    if (foundShapes && foundPolygon) {
+      const result = (foundShapes as Shapes).click(e, foundPolygon);
+      return result !== undefined ? result : undefined;
+    }
   }
 
-  static tryHover(e: LeafletMouseEvent, map: Map): boolean {
-    let result
-      , settings
-      , feature
-      ;
+  // hovers all touching Shapes instances
+  static tryHover(e: LeafletMouseEvent, map: Map): boolean[] {
+    const results: boolean[] = [];
+    let feature;
 
-    Shapes.instances.forEach(function (_instance) {
-      settings = _instance.settings;
+    Shapes.instances.forEach((_instance: Shapes): void => {
       if (!_instance.active) return;
-      if (settings.map !== map) return;
-      if (!settings.hover) return;
+      if (_instance.map !== map) return;
+      if (!_instance.polygonLookup) return;
 
       feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
 
       if (feature) {
-        result = settings.hover(e, feature);
+        const result = _instance.hover(e, feature);
+        if (result !== undefined) {
+          results.push(result);
+        }
       }
     });
 
-    return result !== undefined ? result : true;
+    return results;
   }
 }

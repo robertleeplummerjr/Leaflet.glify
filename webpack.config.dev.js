@@ -10,7 +10,7 @@ module.exports = {
         compress: true,
         port: 9000
     },
-    mode: "development",
+    mode: 'development',
     module: {
         rules: [
             {
@@ -49,6 +49,6 @@ module.exports = {
     output: {
         filename: 'glify-browser.js',
         path: path.resolve(__dirname, '.dev-server'),
-        libraryTarget: "umd",
+        libraryTarget: 'umd',
     },
 };

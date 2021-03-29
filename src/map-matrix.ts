@@ -6,10 +6,22 @@ export class MapMatrix {
 
   setSize(width: number, height: number, offset?: number): this {
     this.array.set([
-      2 / width, 0, 0, 0,
-      0, -2 / height, 0, 0,
-      0, 0, 0, 0,
-      -1, 1, 0, 1
+      2 / width,
+      0,
+      0,
+      0,
+      0,
+      -2 / height,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      -1,
+      1,
+      0,
+      1,
     ]);
     return this;
   }
@@ -24,6 +36,7 @@ export class MapMatrix {
 
     return this;
   }
+
   scaleMatrix(scale: number) {
     const { array } = this;
     // scaling x and y, which is just scaling first two columns of matrix

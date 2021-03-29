@@ -8,7 +8,15 @@ module.exports = {
         compress: true,
         port: 9000
     },
-    mode: "production",
+    mode: 'production',
+    externals: {
+        leaflet: {
+            commonjs: 'leaflet',
+            commonjs2: 'leaflet',
+            amd: 'leaflet',
+            root: 'L', // indicates global variable
+        }
+    },
     module: {
         rules: [
             {
@@ -32,6 +40,6 @@ module.exports = {
     output: {
         filename: 'glify-browser.js',
         path: path.resolve(__dirname, 'dist'),
-        libraryTarget: "umd",
+        libraryTarget: 'umd',
     },
 };
