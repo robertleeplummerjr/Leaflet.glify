@@ -33,10 +33,12 @@
     "@types/geojson": "^7946.0.7",
     "earcut": "^2.1.3",
     "geojson-flatten": "^1.0.4",
-    "leaflet": "1.7.1",
     "point-in-polygon": "^1.0.1",
     "polygon-lookup": "^2.4.0",
     "rbush": "^2.0.2"
+  },
+  "peerDependencies": {
+    "leaflet": "1.7.1"
   },
   "devDependencies": {
     "@babel/core": "^7.3.4",

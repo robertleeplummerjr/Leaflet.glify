@@ -9,6 +9,9 @@ module.exports = {
         port: 9000
     },
     mode: "production",
+    externals: {
+      leaflet: 'leaflet'
+    },
     module: {
         rules: [
             {
