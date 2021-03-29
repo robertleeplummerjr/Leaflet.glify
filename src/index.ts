@@ -32,7 +32,7 @@ const shader = {
   },
 };
 
-class Glify {
+export class Glify {
   longitudeKey = 1;
   latitudeKey = 0;
   maps: Map[] = [];

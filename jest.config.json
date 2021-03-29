@@ -11,5 +11,8 @@
   },
   "preset": "ts-jest/presets/js-with-ts",
   "setupFiles": ["jest-webgl-canvas-mock"],
-  "testEnvironment": "jsdom"
+  "testEnvironment": "jsdom",
+  "transform": {
+    "^.+\\.glsl": "jest-raw-loader"
+  }
 }

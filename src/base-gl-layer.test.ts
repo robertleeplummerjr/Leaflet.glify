@@ -7,27 +7,7 @@ import {
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 
-jest.mock("./canvas-overlay", () => {
-  class CanvasOverlay {
-    _userDrawFunc: (e: ICanvasOverlayDrawEvent) => void;
-    constructor(userDrawFunc: (e: ICanvasOverlayDrawEvent) => void) {
-      this._userDrawFunc = userDrawFunc;
-    }
-
-    canvas: HTMLCanvasElement = (() => {
-      const canvas = document.createElement("canvas");
-      jest.spyOn(canvas, "getContext");
-      return canvas;
-    })();
-
-    addTo(map: Map): this {
-      return this;
-    }
-  }
-  return {
-    CanvasOverlay,
-  };
-});
+jest.mock("./canvas-overlay");
 
 describe("BaseGlLayer", () => {
   interface ITestLayerSettings extends IBaseGlLayerSettings {}
