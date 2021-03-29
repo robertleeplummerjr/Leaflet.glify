@@ -10,7 +10,12 @@ module.exports = {
     },
     mode: "production",
     externals: {
-      leaflet: 'leaflet'
+        leaflet: {
+            commonjs: 'leaflet',
+            commonjs2: 'leaflet',
+            amd: 'leaflet',
+            root: 'L', // indicates global variable
+        }
     },
     module: {
         rules: [
