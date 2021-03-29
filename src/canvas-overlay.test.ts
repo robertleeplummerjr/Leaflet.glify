@@ -60,9 +60,11 @@ describe('CanvasOverlay', () => {
 
   describe('onAdd', () => {
     it('sets this._map from map argument', () => {
-      const co = new CanvasOverlay(() => {}, '');
+      const co = new CanvasOverlay(() => {}, 'pane');
       const el = document.createElement('div');
       const map = new Map(el);
+      map.createPane('pane');
+      map.setView([1, 1], 1);
       co.onAdd(map);
       expect(co['_map']).toBe(map);
     });
@@ -72,7 +74,7 @@ describe('CanvasOverlay', () => {
         const map = co['_map'];
         expect(co.canvas).toBe(undefined);
         co.onAdd(map);
-        expect(co.canvas).toEqual(document.createElement('canvas'));
+        expect(co.canvas).not.toBe(undefined);
       });
     });
     describe('when this.canvas is defined', () => {
