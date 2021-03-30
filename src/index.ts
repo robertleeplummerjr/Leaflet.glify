@@ -53,7 +53,11 @@ export class Glify {
   }
 
   get instances(): Array<Points | Lines | Shapes> {
-    return [...this.pointsInstances, ...this.linesInstances, ...this.shapesInstances];
+    return [
+      ...this.pointsInstances,
+      ...this.linesInstances,
+      ...this.shapesInstances,
+    ];
   }
 
   points(settings: Partial<IPointsSettings>): Points {

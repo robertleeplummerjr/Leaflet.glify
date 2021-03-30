@@ -3,10 +3,11 @@ import { IPointsSettings, Points } from "./points";
 import { ILinesSettings, Lines } from "./lines";
 import { IShapesSettings, Shapes } from "./shapes";
 import { LatLng, LeafletMouseEvent, Map, Point } from "leaflet";
+import { FeatureCollection, LineString } from "geojson";
 
-jest.mock('./canvas-overlay');
+jest.mock("./canvas-overlay");
 type mouseEventFunction = (e: LeafletMouseEvent) => void;
-jest.mock('./utils', () => {
+jest.mock("./utils", () => {
   return {
     debounce: (fn: mouseEventFunction) => {
       return (e: LeafletMouseEvent) => fn(e);
@@ -14,34 +15,37 @@ jest.mock('./utils', () => {
   };
 });
 
-describe('glify', () => {
-  describe('longitudeFirst', () => {
-    it('sets longitudeKey as 0 and latitudeKey as 1', () => {
+describe("glify", () => {
+  describe("longitudeFirst", () => {
+    it("sets longitudeKey as 0 and latitudeKey as 1", () => {
       const glify = new Glify().longitudeFirst();
       expect(glify.longitudeKey).toBe(0);
       expect(glify.latitudeKey).toBe(1);
     });
   });
-  describe('latitudeFirst', () => {
-    it('sets longitudeKey as 1 and latitudeKey as 0', () => {
+  describe("latitudeFirst", () => {
+    it("sets longitudeKey as 1 and latitudeKey as 0", () => {
       const glify = new Glify().latitudeFirst();
       expect(glify.longitudeKey).toBe(1);
       expect(glify.latitudeKey).toBe(0);
     });
   });
-  describe('instances', () => {
-    it('groups all instances together', () => {
+  describe("instances", () => {
+    it("groups all instances together", () => {
       const glify = new Glify();
-      const data: number[][] = [[1,2]];
+      const data: number[][] = [[1, 2]];
       const size = 1;
-      const map = new Map(document.createElement('div'));
+      const map = new Map(document.createElement("div"));
       const points = glify.points({
         data,
         size,
         map,
       });
       const lines = glify.lines({
-        data: { features: [] },
+        data: {
+          type: "FeatureCollection",
+          features: [],
+        },
         weight: size,
         map,
       });
@@ -53,7 +57,7 @@ describe('glify', () => {
       expect(new Glify().instances).toEqual([]);
     });
   });
-  describe('points', () => {
+  describe("points", () => {
     let glify: Glify;
     let constructorSpy: jest.Mock;
     beforeEach(() => {
@@ -64,12 +68,12 @@ describe('glify', () => {
           super(settings);
           constructorSpy(settings);
         }
-      }
+      };
     });
-    it('calls new this.Points with proper properties and pushes to pointsInstances', () => {
-      const data: number[][] = [[1,2]];
+    it("calls new this.Points with proper properties and pushes to pointsInstances", () => {
+      const data: number[][] = [[1, 2]];
       const size = 1;
-      const map = new Map(document.createElement('div'));
+      const map = new Map(document.createElement("div"));
       expect(glify.pointsInstances.length).toBe(0);
       const points = glify.points({
         data,
@@ -92,7 +96,7 @@ describe('glify', () => {
       });
     });
   });
-  describe('lines', () => {
+  describe("lines", () => {
     let glify: Glify;
     let constructorSpy: jest.Mock;
     beforeEach(() => {
@@ -103,12 +107,15 @@ describe('glify', () => {
           super(settings);
           constructorSpy(settings);
         }
-      }
+      };
     });
-    it('calls new this.Lines with proper properties and pushes to linesInstances', () => {
-      const data = { features: [] };
+    it("calls new this.Lines with proper properties and pushes to linesInstances", () => {
+      const data: FeatureCollection<LineString> = {
+        type: "FeatureCollection",
+        features: [],
+      };
       const weight = 1;
-      const map = new Map(document.createElement('div'));
+      const map = new Map(document.createElement("div"));
       expect(glify.linesInstances.length).toBe(0);
       const lines = glify.lines({
         data,
@@ -131,7 +138,7 @@ describe('glify', () => {
       });
     });
   });
-  describe('shapes', () => {
+  describe("shapes", () => {
     let glify: Glify;
     let constructorSpy: jest.Mock;
     beforeEach(() => {
@@ -142,11 +149,11 @@ describe('glify', () => {
           super(settings);
           constructorSpy(settings);
         }
-      }
+      };
     });
-    it('calls new this.Shapes with proper properties and pushes to shapesInstances', () => {
+    it("calls new this.Shapes with proper properties and pushes to shapesInstances", () => {
       const data = { features: [] };
-      const map = new Map(document.createElement('div'));
+      const map = new Map(document.createElement("div"));
       expect(glify.shapesInstances.length).toBe(0);
       const shapes = glify.shapes({
         data,
@@ -167,21 +174,21 @@ describe('glify', () => {
       });
     });
   });
-  describe('setupClick', () => {
-    describe('when this.clickSetupMaps does not include map', () => {
-      it('pushes it to glify.maps', () => {
+  describe("setupClick", () => {
+    describe("when this.clickSetupMaps does not include map", () => {
+      it("pushes it to glify.maps", () => {
         const glify = new Glify();
-        const element = document.createElement('div');
+        const element = document.createElement("div");
         const map = new Map(element);
         expect(glify.clickSetupMaps.length).toBe(0);
         glify.setupClick(map);
         expect(glify.clickSetupMaps.length).toBe(1);
       });
     });
-    describe('when this.clickSetupMaps includes map', () => {
-      it('returns early', () => {
+    describe("when this.clickSetupMaps includes map", () => {
+      it("returns early", () => {
         const glify = new Glify();
-        const element = document.createElement('div');
+        const element = document.createElement("div");
         const map = new Map(element);
         glify.clickSetupMaps.push(map);
         expect(glify.clickSetupMaps.length).toBe(1);
@@ -191,13 +198,13 @@ describe('glify', () => {
     });
     it('calls map.on("click") correctly', () => {
       const glify = new Glify();
-      const element = document.createElement('div');
+      const element = document.createElement("div");
       const map = new Map(element);
-      jest.spyOn(map, 'on');
+      jest.spyOn(map, "on");
       glify.setupClick(map);
       expect(map.on).toHaveBeenCalled();
     });
-    describe('when a click occurs', () => {
+    describe("when a click occurs", () => {
       let glify: Glify;
       let map: Map;
       let element: HTMLElement;
@@ -212,10 +219,10 @@ describe('glify', () => {
         glify.Points = PointsSpy;
         glify.Lines = LinesSpy;
         glify.Shapes = ShapesSpy;
-        pointsTryClickSpy = jest.spyOn(glify.Points, 'tryClick');
-        linesTryClickSpy = jest.spyOn(glify.Lines, 'tryClick');
-        shapesTryClickSpy = jest.spyOn(glify.Shapes, 'tryClick');
-        element = document.createElement('div');
+        pointsTryClickSpy = jest.spyOn(glify.Points, "tryClick");
+        linesTryClickSpy = jest.spyOn(glify.Lines, "tryClick");
+        shapesTryClickSpy = jest.spyOn(glify.Shapes, "tryClick");
+        element = document.createElement("div");
         map = new Map(element);
         glify.setupClick(map);
         map.setView([10, 10], 7);
@@ -228,13 +235,13 @@ describe('glify', () => {
         linesTryClickSpy.mockRestore();
         shapesTryClickSpy.mockRestore();
       });
-      describe('calling Points.tryClick', () => {
-        describe('when Points.tryClick returns undefined', () => {
-          it('continues on to Lines', () => {
-            map.fireEvent('click', {
+      describe("calling Points.tryClick", () => {
+        describe("when Points.tryClick returns undefined", () => {
+          it("continues on to Lines", () => {
+            map.fireEvent("click", {
               latlng,
               layerPoint,
-              containerPoint
+              containerPoint,
             });
             expect(pointsTryClickSpy.mock.calls[0][0]).toEqual({
               containerPoint,
@@ -242,7 +249,7 @@ describe('glify', () => {
               layerPoint,
               sourceTarget: map,
               target: map,
-              type: 'click',
+              type: "click",
             });
             expect(linesTryClickSpy.mock.calls[0][0]).toEqual({
               containerPoint,
@@ -250,22 +257,22 @@ describe('glify', () => {
               layerPoint,
               sourceTarget: map,
               target: map,
-              type: 'click',
+              type: "click",
             });
           });
         });
-        describe('when Points.tryClick returns a value', () => {
+        describe("when Points.tryClick returns a value", () => {
           beforeEach(() => {
             PointsSpy.tryCLickResult = false;
           });
           afterEach(() => {
             delete PointsSpy.tryCLickResult;
           });
-          it('returns early', () => {
-            map.fireEvent('click', {
+          it("returns early", () => {
+            map.fireEvent("click", {
               latlng,
               layerPoint,
-              containerPoint
+              containerPoint,
             });
             expect(pointsTryClickSpy.mock.calls[0][0]).toEqual({
               containerPoint,
@@ -273,19 +280,19 @@ describe('glify', () => {
               layerPoint,
               sourceTarget: map,
               target: map,
-              type: 'click',
+              type: "click",
             });
             expect(linesTryClickSpy).not.toHaveBeenCalled();
           });
         });
       });
-      describe('calling Lines.tryClick', () => {
-        describe('when Lines.tryClick returns undefined', () => {
-          it('continues on to Shapes', () => {
-            map.fireEvent('click', {
+      describe("calling Lines.tryClick", () => {
+        describe("when Lines.tryClick returns undefined", () => {
+          it("continues on to Shapes", () => {
+            map.fireEvent("click", {
               latlng,
               layerPoint,
-              containerPoint
+              containerPoint,
             });
             expect(linesTryClickSpy.mock.calls[0][0]).toEqual({
               containerPoint,
@@ -293,7 +300,7 @@ describe('glify', () => {
               layerPoint,
               sourceTarget: map,
               target: map,
-              type: 'click',
+              type: "click",
             });
             expect(shapesTryClickSpy.mock.calls[0][0]).toEqual({
               containerPoint,
@@ -301,22 +308,22 @@ describe('glify', () => {
               layerPoint,
               sourceTarget: map,
               target: map,
-              type: 'click',
+              type: "click",
             });
           });
         });
-        describe('when Lines.tryClick returns a value', () => {
+        describe("when Lines.tryClick returns a value", () => {
           beforeEach(() => {
             LinesSpy.tryCLickResult = false;
           });
           afterEach(() => {
             delete LinesSpy.tryCLickResult;
           });
-          it('returns early', () => {
-            map.fireEvent('click', {
+          it("returns early", () => {
+            map.fireEvent("click", {
               latlng,
               layerPoint,
-              containerPoint
+              containerPoint,
             });
             expect(linesTryClickSpy.mock.calls[0][0]).toEqual({
               containerPoint,
@@ -324,7 +331,7 @@ describe('glify', () => {
               layerPoint,
               sourceTarget: map,
               target: map,
-              type: 'click',
+              type: "click",
             });
             expect(shapesTryClickSpy).not.toHaveBeenCalled();
           });
@@ -332,21 +339,21 @@ describe('glify', () => {
       });
     });
   });
-  describe('setupHover', () => {
-    describe('when this.clickSetupMaps does not include map', () => {
-      it('pushes it to glify.maps', () => {
+  describe("setupHover", () => {
+    describe("when this.clickSetupMaps does not include map", () => {
+      it("pushes it to glify.maps", () => {
         const glify = new Glify();
-        const element = document.createElement('div');
+        const element = document.createElement("div");
         const map = new Map(element);
         expect(glify.hoverSetupMaps.length).toBe(0);
         glify.setupHover(map);
         expect(glify.hoverSetupMaps.length).toBe(1);
       });
     });
-    describe('when this.clickSetupMaps includes map', () => {
-      it('returns early', () => {
+    describe("when this.clickSetupMaps includes map", () => {
+      it("returns early", () => {
         const glify = new Glify();
-        const element = document.createElement('div');
+        const element = document.createElement("div");
         const map = new Map(element);
         glify.hoverSetupMaps.push(map);
         expect(glify.hoverSetupMaps.length).toBe(1);
@@ -354,7 +361,7 @@ describe('glify', () => {
         expect(glify.hoverSetupMaps.length).toBe(1);
       });
     });
-    describe('when a hover occurs', () => {
+    describe("when a hover occurs", () => {
       let glify: Glify;
       let map: Map;
       let element: HTMLElement;
@@ -369,10 +376,10 @@ describe('glify', () => {
         glify.Points = PointsSpy;
         glify.Lines = LinesSpy;
         glify.Shapes = ShapesSpy;
-        pointsTryHoverSpy = jest.spyOn(glify.Points, 'tryHover');
-        linesTryHoverSpy = jest.spyOn(glify.Lines, 'tryHover');
-        shapesTryHoverSpy = jest.spyOn(glify.Shapes, 'tryHover');
-        element = document.createElement('div');
+        pointsTryHoverSpy = jest.spyOn(glify.Points, "tryHover");
+        linesTryHoverSpy = jest.spyOn(glify.Lines, "tryHover");
+        shapesTryHoverSpy = jest.spyOn(glify.Shapes, "tryHover");
+        element = document.createElement("div");
         map = new Map(element);
         glify.setupHover(map);
         map.setView([10, 10], 7);
@@ -385,11 +392,11 @@ describe('glify', () => {
         linesTryHoverSpy.mockRestore();
         shapesTryHoverSpy.mockRestore();
       });
-      it('calls tryHover on Points, Lines, and Shapes', () => {
-        map.fireEvent('mousemove', {
+      it("calls tryHover on Points, Lines, and Shapes", () => {
+        map.fireEvent("mousemove", {
           latlng,
           layerPoint,
-          containerPoint
+          containerPoint,
         });
         const expected = {
           containerPoint,
@@ -397,11 +404,23 @@ describe('glify', () => {
           layerPoint,
           sourceTarget: map,
           target: map,
-          type: 'mousemove',
+          type: "mousemove",
         };
-        expect(pointsTryHoverSpy).toHaveBeenCalledWith(expected, map, glify.pointsInstances);
-        expect(linesTryHoverSpy).toHaveBeenCalledWith(expected, map, glify.linesInstances);
-        expect(shapesTryHoverSpy).toHaveBeenCalledWith(expected, map, glify.shapesInstances);
+        expect(pointsTryHoverSpy).toHaveBeenCalledWith(
+          expected,
+          map,
+          glify.pointsInstances
+        );
+        expect(linesTryHoverSpy).toHaveBeenCalledWith(
+          expected,
+          map,
+          glify.linesInstances
+        );
+        expect(shapesTryHoverSpy).toHaveBeenCalledWith(
+          expected,
+          map,
+          glify.shapesInstances
+        );
       });
     });
   });
@@ -409,28 +428,55 @@ describe('glify', () => {
 
 class PointsSpy extends Points {
   static tryCLickResult: boolean | undefined;
-  static tryClick(e: LeafletMouseEvent, map: Map, instances: Points[]): boolean | undefined {
+  static tryClick(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Points[]
+  ): boolean | undefined {
     return this.tryCLickResult;
   }
-  static tryHover(e: LeafletMouseEvent, map: Map, instances: Points[]): boolean[] {
+
+  static tryHover(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Points[]
+  ): boolean[] {
     return [];
   }
 }
 class LinesSpy extends Lines {
   static tryCLickResult: boolean | undefined;
-  static tryClick(e: LeafletMouseEvent, map: Map, instances: Lines[]): boolean | undefined {
+  static tryClick(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Lines[]
+  ): boolean | undefined {
     return this.tryCLickResult;
   }
-  static tryHover(e: LeafletMouseEvent, map: Map, instances: Lines[]): boolean[] {
+
+  static tryHover(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Lines[]
+  ): boolean[] {
     return [];
   }
 }
 class ShapesSpy extends Shapes {
   static tryCLickResult: boolean | undefined;
-  static tryClick(e: LeafletMouseEvent, map: Map, instances: Shapes[]): boolean | undefined {
+  static tryClick(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Shapes[]
+  ): boolean | undefined {
     return this.tryCLickResult;
   }
-  static tryHover(e: LeafletMouseEvent, map: Map, instances: Shapes[]): boolean[] {
+
+  static tryHover(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Shapes[]
+  ): boolean[] {
     return [];
   }
 }

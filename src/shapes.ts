@@ -284,7 +284,11 @@ export class Shapes extends BaseGlLayer {
   }
 
   // attempts to click the top-most Shapes instance
-  static tryClick(e: LeafletMouseEvent, map: Map, instances: Shapes[]): boolean | undefined {
+  static tryClick(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Shapes[]
+  ): boolean | undefined {
     let foundPolygon: Polygon | null = null;
     let foundShapes: Shapes | null = null;
     instances.forEach(function (_instance: Shapes): void {
@@ -309,7 +313,11 @@ export class Shapes extends BaseGlLayer {
   }
 
   // hovers all touching Shapes instances
-  static tryHover(e: LeafletMouseEvent, map: Map, instances: Shapes[]): Array<boolean | undefined> {
+  static tryHover(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Shapes[]
+  ): Array<boolean | undefined> {
     const results: boolean[] = [];
     let feature;
 

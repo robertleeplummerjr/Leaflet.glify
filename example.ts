@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
-import { FeatureCollection } from 'geojson';
+import { LeafletMouseEvent } from 'leaflet';
+import { FeatureCollection, LineString } from 'geojson';
 import glify from './src/index';
-import {LeafletMouseEvent} from "leaflet";
 
 const map = L.map('map')
   .setView([50.00, 14.44], 7);
@@ -12,7 +12,7 @@ L.tileLayer('http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference
 Promise.all([
   wget<number[][]>('data/86T.json'),
   wget<FeatureCollection>('data/CZDistricts.json'),
-  wget<FeatureCollection>('data/rivers.json')
+  wget<FeatureCollection<LineString>>('data/rivers.json')
 ])
   .then(([points, districts, rivers]) => {
     glify.shapes({

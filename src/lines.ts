@@ -4,16 +4,25 @@ import * as color from "./color";
 import { Map, LeafletMouseEvent, geoJSON } from "leaflet";
 import { LineFeatureVertices } from "./line-feature-vertices";
 import { latLngDistance, inBounds } from "./utils";
-import { Feature, LineString, MultiLineString } from "geojson";
+import {
+  Feature,
+  FeatureCollection,
+  LineString,
+  MultiLineString,
+} from "geojson";
 
 export interface ILinesSettings extends IBaseGlLayerSettings {
+  data: FeatureCollection<LineString | MultiLineString>;
   weight: ((i: number, feature: any) => number) | number;
   sensitivity?: number;
   sensitivityHover?: number;
 }
 
 const defaults: Partial<ILinesSettings> = {
-  data: [],
+  data: {
+    type: "FeatureCollection",
+    features: [],
+  },
   color: color.random,
   className: "",
   opacity: 0.5,
@@ -38,7 +47,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   static defaults = defaults;
 
   bytes = 6;
-  allVertices: number[];
+  allVertices: number[] = [];
+  allVerticesTyped: Float32Array = new Float32Array(0);
   vertices: LineFeatureVertices[] = [];
   aPointSize = -1;
   settings: Partial<ILinesSettings>;
@@ -54,65 +64,23 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     super(settings);
     this.settings = { ...Lines.defaults, ...settings };
 
-    if (!settings.data) throw new Error('no "data" array setting defined');
-    if (!settings.map)
-      throw new Error('no leaflet "map" object setting defined');
-
+    if (!settings.data) {
+      throw new Error('"data" is missing');
+    }
     this.active = true;
-    this.allVertices = [];
-
     this.setup().render();
   }
 
   render(): this {
     this.resetVertices();
 
-    const { canvas, gl, layer, vertices, mapMatrix, bytes } = this;
+    const { canvas, gl, layer, mapMatrix } = this;
     const vertexBuffer = this.getBuffer("vertex");
-    const vertexLocation = this.getAttributeLocation("vertex");
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 
-    /*
-    Transforming lines according to the rule:
-    1. Take one line (single feature)
-    [[0,0],[1,1],[2,2]]
-    2. Split the line in segments, duplicating all coordinates except first and last one
-    [[0,0],[1,1],[2,2]] => [[0,0],[1,1],[1,1],[2,2]]
-    3. Do this for all lines and put all coordinates in array
-    */
-    let size = vertices.length;
-    const allVertices = [];
-    for (let i = 0; i < size; i++) {
-      const vertexArray = vertices[i].array;
-      const length = vertexArray.length / bytes;
-      for (let j = 0; j < length; j++) {
-        const vertexIndex = j * bytes;
-        if (j !== 0 && j !== length - 1) {
-          allVertices.push(
-            vertexArray[vertexIndex],
-            vertexArray[vertexIndex + 1],
-            vertexArray[vertexIndex + 2],
-            vertexArray[vertexIndex + 3],
-            vertexArray[vertexIndex + 4],
-            vertexArray[vertexIndex + 5]
-          );
-        }
-        allVertices.push(
-          vertexArray[vertexIndex],
-          vertexArray[vertexIndex + 1],
-          vertexArray[vertexIndex + 2],
-          vertexArray[vertexIndex + 3],
-          vertexArray[vertexIndex + 4],
-          vertexArray[vertexIndex + 5]
-        );
-      }
-    }
-
-    this.allVertices = allVertices;
-
-    const vertArray = new Float32Array(allVertices);
-    size = vertArray.BYTES_PER_ELEMENT;
-    gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
+    const size = this.allVerticesTyped.BYTES_PER_ELEMENT;
+    gl.bufferData(gl.ARRAY_BUFFER, this.allVerticesTyped, gl.STATIC_DRAW);
+    const vertexLocation = this.getAttributeLocation("vertex");
     gl.vertexAttribPointer(
       vertexLocation,
       2,
@@ -143,13 +111,16 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   }
 
   resetVertices(): this {
-    this.allVertices = [];
-    this.vertices = [];
-
-    const { vertices, map, opacity, color, latitudeKey, longitudeKey } = this;
-    const settings = this.settings;
-    const data = settings.data;
-    const features = data.features;
+    const {
+      map,
+      opacity,
+      color,
+      latitudeKey,
+      longitudeKey,
+      data,
+      bytes,
+    } = this;
+    const { features } = data;
     const featureMax = features.length;
     let feature: Feature<LineString | MultiLineString>;
     let colorFn: ((i: number, feature: any) => color.IColor) | null = null;
@@ -162,6 +133,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     }
 
     // -- data
+    const vertices: LineFeatureVertices[] = [];
     for (; featureIndex < featureMax; featureIndex++) {
       feature = features[featureIndex];
       // use colorFn function here if it exists
@@ -182,6 +154,46 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       vertices.push(featureVertices);
     }
 
+    /*
+    Transforming lines according to the rule:
+    1. Take one line (single feature)
+    [[0,0],[1,1],[2,2]]
+    2. Split the line in segments, duplicating all coordinates except first and last one
+    [[0,0],[1,1],[2,2]] => [[0,0],[1,1],[1,1],[2,2]]
+    3. Do this for all lines and put all coordinates in array
+    */
+    const size = vertices.length;
+    const allVertices = [];
+    for (let i = 0; i < size; i++) {
+      const vertexArray = vertices[i].array;
+      const length = vertexArray.length / bytes;
+      for (let j = 0; j < length; j++) {
+        const vertexIndex = j * bytes;
+        if (j !== 0 && j !== length - 1) {
+          allVertices.push(
+            vertexArray[vertexIndex],
+            vertexArray[vertexIndex + 1],
+            vertexArray[vertexIndex + 2],
+            vertexArray[vertexIndex + 3],
+            vertexArray[vertexIndex + 4],
+            vertexArray[vertexIndex + 5]
+          );
+        }
+        allVertices.push(
+          vertexArray[vertexIndex],
+          vertexArray[vertexIndex + 1],
+          vertexArray[vertexIndex + 2],
+          vertexArray[vertexIndex + 3],
+          vertexArray[vertexIndex + 4],
+          vertexArray[vertexIndex + 5]
+        );
+      }
+    }
+
+    this.vertices = vertices;
+    this.allVertices = allVertices;
+    this.allVerticesTyped = new Float32Array(allVertices);
+
     return this;
   }
 
@@ -190,7 +202,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
 
     const {
       gl,
-      settings,
+      data,
       canvas,
       mapMatrix,
       matrix,
@@ -204,7 +216,6 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     const pointSize = Math.max(zoom - 4.0, 4.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.viewport(0, 0, canvas.width, canvas.height);
     gl.vertexAttrib1f(aPointSize, pointSize);
     mapMatrix.setSize(canvas.width, canvas.height).scaleMatrix(scale);
     if (zoom > 18) {
@@ -215,8 +226,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       gl.drawArrays(gl.LINES, 0, allVertices.length / bytes);
     } else if (typeof weight === "number") {
       // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
-      for (let yOffset = -weight; yOffset < weight; yOffset += 0.5) {
-        for (let xOffset = -weight; xOffset < weight; xOffset += 0.5) {
+      for (let yOffset = -weight; yOffset <= weight; yOffset += 0.5) {
+        for (let xOffset = -weight; xOffset <= weight; xOffset += 0.5) {
           // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
           mapMatrix.translateMatrix(
             -offset.x + xOffset / scale,
@@ -230,7 +241,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       }
     } else if (typeof weight === "function") {
       let allVertexCount = 0;
-      const features = settings.data.features;
+      const { features } = data;
       for (let i = 0; i < vertices.length; i++) {
         const featureVertices = vertices[i];
         const vertexCount = featureVertices.vertexCount;
@@ -238,12 +249,12 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
         for (
           let yOffset = -weightValue;
-          yOffset < weightValue;
+          yOffset <= weightValue;
           yOffset += 0.5
         ) {
           for (
             let xOffset = -weightValue;
-            xOffset < weightValue;
+            xOffset <= weightValue;
             xOffset += 0.5
           ) {
             // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
@@ -264,17 +275,19 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   }
 
   // attempts to click the top-most Lines instance
-  static tryClick(e: LeafletMouseEvent, map: Map, instances: Lines[]): boolean | undefined {
+  static tryClick(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Lines[]
+  ): boolean | undefined {
     let foundFeature: Feature<LineString> | null = null;
     let foundLines: Lines | null = null;
-    let settings;
     instances.forEach((_instance: Lines): void => {
-      settings = _instance.settings;
       const { latitudeKey, longitudeKey, sensitivity } = _instance;
       if (!_instance.active) return;
       if (_instance.map !== map) return;
 
-      settings.data.features.forEach((feature: Feature<LineString>): void => {
+      _instance.data.features.forEach((feature: Feature<LineString>): void => {
         const { coordinates } = feature.geometry;
         for (let i = 1; i < coordinates.length; i++) {
           const distance = latLngDistance(
@@ -283,7 +296,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
             coordinates[i - 1][longitudeKey],
             coordinates[i - 1][latitudeKey],
             coordinates[i][longitudeKey],
-            coordinates[i][latitudeKey],
+            coordinates[i][latitudeKey]
           );
           if (distance < sensitivity) {
             foundFeature = feature;
@@ -300,18 +313,21 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   }
 
   // hovers all touching Lines instances
-  static tryHover(e: LeafletMouseEvent, map: Map, instances: Lines[]): Array<boolean | undefined> {
+  static tryHover(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Lines[]
+  ): Array<boolean | undefined> {
     const results: Array<boolean | undefined> = [];
     instances.forEach((_instance: Lines): void => {
-      const { settings } = _instance;
-      const { sensitivityHover, latitudeKey, longitudeKey } = _instance;
+      const { sensitivityHover, latitudeKey, longitudeKey, data } = _instance;
       if (!_instance.active) return;
       if (map !== _instance.map) return;
       // Check if e.latlng is inside the bbox of the features
-      const bounds = geoJSON(settings.data.features).getBounds();
+      const bounds = geoJSON(_instance.data.features).getBounds();
 
       if (inBounds(e.latlng, bounds)) {
-        settings.data.features.forEach((feature: Feature<LineString>): void => {
+        data.features.forEach((feature: Feature<LineString>): void => {
           for (let i = 1; i < feature.geometry.coordinates.length; i++) {
             const { coordinates } = feature.geometry;
             const distance = latLngDistance(
@@ -320,7 +336,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
               coordinates[i - 1][longitudeKey],
               coordinates[i - 1][latitudeKey],
               coordinates[i][longitudeKey],
-              coordinates[i][latitudeKey],
+              coordinates[i][latitudeKey]
             );
 
             if (distance < sensitivityHover) {

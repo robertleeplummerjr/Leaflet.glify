@@ -41,7 +41,7 @@ export interface IBaseGlLayerSettings {
 
 export const defaultPane = "overlayPane";
 export const defaultHoverWait = 250;
-const defaults: Partial<IBaseGlLayerSettings> = {
+export const defaults: Partial<IBaseGlLayerSettings> = {
   pane: defaultPane,
 };
 

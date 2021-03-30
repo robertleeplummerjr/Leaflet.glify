@@ -17,7 +17,5 @@ export class CanvasOverlay {
     return this;
   }
 
-  redraw(): void {
-
-  }
+  redraw(): void {}
 }

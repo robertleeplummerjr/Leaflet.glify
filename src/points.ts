@@ -377,7 +377,11 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   }
 
   // attempts to click the top-most Points instance
-  static tryClick(e: LeafletMouseEvent, map: Map, instances: Points[]): boolean | undefined {
+  static tryClick(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Points[]
+  ): boolean | undefined {
     const closestFromEach: IPointLookup[] = [];
     const instancesLookup: { [key: string]: Points } = {};
     let result;
@@ -417,7 +421,11 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   }
 
   // hovers all touching Points instances
-  static tryHover(e: LeafletMouseEvent, map: Map, instances: Points[]): Array<boolean | undefined> {
+  static tryHover(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Points[]
+  ): Array<boolean | undefined> {
     const results: boolean[] = [];
     instances.forEach((_instance: Points): void => {
       if (!_instance.active) return;
