@@ -55,7 +55,6 @@ export interface IPointLookup {
 }
 
 export class Points extends BaseGlLayer<IPointsSettings> {
-  static instances: Points[] = [];
   static defaults = defaults;
   static maps = [];
   bytes = 7;
@@ -79,7 +78,6 @@ export class Points extends BaseGlLayer<IPointsSettings> {
 
   constructor(settings: Partial<IPointsSettings>) {
     super(settings);
-    Points.instances.push(this);
     this.settings = { ...defaults, ...settings };
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -379,14 +377,14 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   }
 
   // attempts to click the top-most Points instance
-  static tryClick(e: LeafletMouseEvent, map: Map): boolean | undefined {
+  static tryClick(e: LeafletMouseEvent, map: Map, instances: Points[]): boolean | undefined {
     const closestFromEach: IPointLookup[] = [];
     const instancesLookup: { [key: string]: Points } = {};
     let result;
     let settings: Partial<IPointsSettings> | null = null;
     let pointLookup: IPointLookup | null;
 
-    Points.instances.forEach((_instance: Points) => {
+    instances.forEach((_instance: Points) => {
       settings = _instance.settings;
       if (!_instance.active) return;
       if (_instance.map !== map) return;
@@ -419,9 +417,9 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   }
 
   // hovers all touching Points instances
-  static tryHover(e: LeafletMouseEvent, map: Map): boolean[] {
+  static tryHover(e: LeafletMouseEvent, map: Map, instances: Points[]): Array<boolean | undefined> {
     const results: boolean[] = [];
-    Points.instances.forEach((_instance: Points): void => {
+    instances.forEach((_instance: Points): void => {
       if (!_instance.active) return;
       if (_instance.map !== map) return;
       const pointLookup = _instance.lookup(e.latlng);

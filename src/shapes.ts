@@ -7,13 +7,13 @@ import * as Color from "./color";
 import { LatLng, LeafletMouseEvent, Map } from "leaflet";
 import { latLonToPixel } from "./utils";
 import { Geometry, Polygon } from "geojson";
-const geojsonFlatten = require("geojson-flatten");
+import geojsonFlatten from "geojson-flatten";
 
-export interface IShapeSettings extends IBaseGlLayerSettings {
+export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
 }
 
-export const defaults: Partial<IShapeSettings> = {
+export const defaults: Partial<IShapesSettings> = {
   data: [],
   color: Color.random,
   className: "",
@@ -34,10 +34,9 @@ export const defaults: Partial<IShapeSettings> = {
 };
 
 export class Shapes extends BaseGlLayer {
-  static instances: Shapes[] = [];
   static defaults = defaults;
   static maps: Map[];
-  settings: Partial<IShapeSettings>;
+  settings: Partial<IShapesSettings>;
   bytes = 6;
   polygonLookup: PolygonLookup | null = null;
 
@@ -48,9 +47,8 @@ export class Shapes extends BaseGlLayer {
     return this.settings.border;
   }
 
-  constructor(settings: Partial<IShapeSettings>) {
+  constructor(settings: Partial<IShapesSettings>) {
     super(settings);
-    Shapes.instances.push(this);
     this.settings = { ...Shapes.defaults, ...settings };
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -286,10 +284,10 @@ export class Shapes extends BaseGlLayer {
   }
 
   // attempts to click the top-most Shapes instance
-  static tryClick(e: LeafletMouseEvent, map: Map): boolean | undefined {
+  static tryClick(e: LeafletMouseEvent, map: Map, instances: Shapes[]): boolean | undefined {
     let foundPolygon: Polygon | null = null;
     let foundShapes: Shapes | null = null;
-    Shapes.instances.forEach(function (_instance: Shapes): void {
+    instances.forEach(function (_instance: Shapes): void {
       if (!_instance.active) return;
       if (_instance.map !== map) return;
       if (!_instance.polygonLookup) return;
@@ -311,11 +309,11 @@ export class Shapes extends BaseGlLayer {
   }
 
   // hovers all touching Shapes instances
-  static tryHover(e: LeafletMouseEvent, map: Map): boolean[] {
+  static tryHover(e: LeafletMouseEvent, map: Map, instances: Shapes[]): Array<boolean | undefined> {
     const results: boolean[] = [];
     let feature;
 
-    Shapes.instances.forEach((_instance: Shapes): void => {
+    instances.forEach((_instance: Shapes): void => {
       if (!_instance.active) return;
       if (_instance.map !== map) return;
       if (!_instance.polygonLookup) return;

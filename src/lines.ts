@@ -36,7 +36,6 @@ const defaults: Partial<ILinesSettings> = {
 
 export class Lines extends BaseGlLayer<ILinesSettings> {
   static defaults = defaults;
-  static instances: Lines[] = [];
 
   bytes = 6;
   allVertices: number[];
@@ -53,7 +52,6 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
 
   constructor(settings: Partial<ILinesSettings>) {
     super(settings);
-    Lines.instances.push(this);
     this.settings = { ...Lines.defaults, ...settings };
 
     if (!settings.data) throw new Error('no "data" array setting defined');
@@ -264,11 +262,11 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   }
 
   // attempts to click the top-most Lines instance
-  static tryClick(e: LeafletMouseEvent, map: Map): boolean | undefined {
+  static tryClick(e: LeafletMouseEvent, map: Map, instances: Lines[]): boolean | undefined {
     let foundFeature: Feature<LineString> | null = null;
     let foundLines: Lines | null = null;
     let settings;
-    Lines.instances.forEach((_instance: Lines): void => {
+    instances.forEach((_instance: Lines): void => {
       settings = _instance.settings;
       const { latitudeKey, longitudeKey, sensitivity } = _instance;
       if (!_instance.active) return;
@@ -300,9 +298,9 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   }
 
   // hovers all touching Lines instances
-  static tryHover(e: LeafletMouseEvent, map: Map): Array<boolean | undefined> {
+  static tryHover(e: LeafletMouseEvent, map: Map, instances: Lines[]): Array<boolean | undefined> {
     const results: Array<boolean | undefined> = [];
-    Lines.instances.forEach((_instance: Lines): void => {
+    instances.forEach((_instance: Lines): void => {
       const { settings } = _instance;
       const { sensitivityHover, latitudeKey, longitudeKey } = _instance;
       if (!_instance.active) return;

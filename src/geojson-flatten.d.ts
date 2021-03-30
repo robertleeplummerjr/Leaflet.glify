@@ -1,5 +1,5 @@
 declare module 'geojson-flatten' {
-  type geojsonFlatten = (data: any) => any;
+  const geojsonFlatten = (data: any) => any;
 
   export default geojsonFlatten;
 }

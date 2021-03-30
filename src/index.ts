@@ -2,22 +2,15 @@ import { LeafletMouseEvent, Map } from "leaflet";
 
 import { Lines, ILinesSettings } from "./lines";
 import { Points, IPointsSettings } from "./points";
-import { Shapes, IShapeSettings } from "./shapes";
+import { Shapes, IShapesSettings } from "./shapes";
 import { debounce } from "./utils";
 
-// @ts-expect-error import string
 import vertex from "./shader/vertex/default.glsl";
-// @ts-expect-error import string
 import dot from "./shader/fragment/dot.glsl";
-// @ts-expect-error import string
 import point from "./shader/fragment/point.glsl";
-// @ts-expect-error import string
 import puck from "./shader/fragment/puck.glsl";
-// @ts-expect-error import string
 import simpleCircle from "./shader/fragment/simple-circle.glsl";
-// @ts-expect-error import string
 import square from "./shader/fragment/square.glsl";
-// @ts-expect-error import string
 import polygon from "./shader/fragment/polygon.glsl";
 
 const shader = {
@@ -35,7 +28,6 @@ const shader = {
 export class Glify {
   longitudeKey = 1;
   latitudeKey = 0;
-  maps: Map[] = [];
   clickSetupMaps: Map[] = [];
   hoverSetupMaps: Map[] = [];
   shader = shader;
@@ -43,6 +35,10 @@ export class Glify {
   Points: typeof Points = Points;
   Shapes: typeof Shapes = Shapes;
   Lines: typeof Lines = Lines;
+
+  pointsInstances: Points[] = [];
+  shapesInstances: Shapes[] = [];
+  linesInstances: Lines[] = [];
 
   longitudeFirst(): this {
     this.longitudeKey = 0;
@@ -57,11 +53,11 @@ export class Glify {
   }
 
   get instances(): Array<Points | Lines | Shapes> {
-    return [...Points.instances, ...Lines.instances, ...Shapes.instances];
+    return [...this.pointsInstances, ...this.linesInstances, ...this.shapesInstances];
   }
 
   points(settings: Partial<IPointsSettings>): Points {
-    return new this.Points({
+    const points = new this.Points({
       ...settings,
       setupClick: this.setupClick.bind(this),
       setupHover: this.setupHover.bind(this),
@@ -74,26 +70,12 @@ export class Glify {
         return this.shader.fragment.point;
       },
     });
-  }
-
-  shapes(settings: Partial<IShapeSettings>): Shapes {
-    return new this.Shapes({
-      ...settings,
-      setupClick: this.setupClick.bind(this),
-      setupHover: this.setupHover.bind(this),
-      latitudeKey: this.latitudeKey,
-      longitudeKey: this.longitudeKey,
-      vertexShaderSource: () => {
-        return this.shader.vertex;
-      },
-      fragmentShaderSource: () => {
-        return this.shader.fragment.polygon;
-      },
-    });
+    this.pointsInstances.push(points);
+    return points;
   }
 
   lines(settings: Partial<ILinesSettings>): Lines {
-    return new this.Lines({
+    const lines = new this.Lines({
       ...settings,
       setupClick: this.setupClick.bind(this),
       setupHover: this.setupHover.bind(this),
@@ -106,6 +88,26 @@ export class Glify {
         return this.shader.fragment.polygon;
       },
     });
+    this.linesInstances.push(lines);
+    return lines;
+  }
+
+  shapes(settings: Partial<IShapesSettings>): Shapes {
+    const shapes = new this.Shapes({
+      ...settings,
+      setupClick: this.setupClick.bind(this),
+      setupHover: this.setupHover.bind(this),
+      latitudeKey: this.latitudeKey,
+      longitudeKey: this.longitudeKey,
+      vertexShaderSource: () => {
+        return this.shader.vertex;
+      },
+      fragmentShaderSource: () => {
+        return this.shader.fragment.polygon;
+      },
+    });
+    this.shapesInstances.push(shapes);
+    return shapes;
   }
 
   setupClick(map: Map): void {
@@ -113,13 +115,13 @@ export class Glify {
     this.clickSetupMaps.push(map);
     map.on("click", (e: LeafletMouseEvent) => {
       let hit;
-      hit = Points.tryClick(e, map);
+      hit = this.Points.tryClick(e, map, this.pointsInstances);
       if (hit !== undefined) return hit;
 
-      hit = Lines.tryClick(e, map);
+      hit = this.Lines.tryClick(e, map, this.linesInstances);
       if (hit !== undefined) return hit;
 
-      hit = Shapes.tryClick(e, map);
+      hit = this.Shapes.tryClick(e, map, this.shapesInstances);
       if (hit !== undefined) return hit;
     });
   }
@@ -131,9 +133,9 @@ export class Glify {
       "mousemove",
       debounce(
         (e: LeafletMouseEvent) => {
-          Points.tryHover(e, map);
-          Lines.tryHover(e, map);
-          Shapes.tryHover(e, map);
+          this.Points.tryHover(e, map, this.pointsInstances);
+          this.Lines.tryHover(e, map, this.linesInstances);
+          this.Shapes.tryHover(e, map, this.shapesInstances);
         },
         hoverWait ?? 0,
         immediate
