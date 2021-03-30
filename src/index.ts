@@ -58,7 +58,6 @@ export class Glify {
 
   points(settings: Partial<IPointsSettings>): Points {
     const points = new this.Points({
-      ...settings,
       setupClick: this.setupClick.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: glify.latitudeKey,
@@ -69,6 +68,7 @@ export class Glify {
       fragmentShaderSource: () => {
         return this.shader.fragment.point;
       },
+      ...settings,
     });
     this.pointsInstances.push(points);
     return points;
@@ -76,7 +76,6 @@ export class Glify {
 
   lines(settings: Partial<ILinesSettings>): Lines {
     const lines = new this.Lines({
-      ...settings,
       setupClick: this.setupClick.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
@@ -87,6 +86,7 @@ export class Glify {
       fragmentShaderSource: () => {
         return this.shader.fragment.polygon;
       },
+      ...settings,
     });
     this.linesInstances.push(lines);
     return lines;
@@ -94,7 +94,6 @@ export class Glify {
 
   shapes(settings: Partial<IShapesSettings>): Shapes {
     const shapes = new this.Shapes({
-      ...settings,
       setupClick: this.setupClick.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
@@ -105,6 +104,7 @@ export class Glify {
       fragmentShaderSource: () => {
         return this.shader.fragment.polygon;
       },
+      ...settings,
     });
     this.shapesInstances.push(shapes);
     return shapes;

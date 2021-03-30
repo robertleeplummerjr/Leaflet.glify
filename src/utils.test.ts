@@ -1,6 +1,6 @@
 import {
   latLonToPixel,
-  pixelDistance,
+  latLngDistance,
   pixelInCircle,
   vectorDistance,
 } from "./utils";
@@ -27,15 +27,15 @@ describe("utils", () => {
     });
   });
 
-  describe("pixelDistance", () => {
+  describe("latLngDistance", () => {
     describe("when used with positive numbers", () => {
       it("calculates the distance correctly", () => {
-        expect(pixelDistance(1, 1, 2, 2, 3, 3)).toBeCloseTo(1.41421);
+        expect(latLngDistance(1, 1, 2, 2, 3, 3)).toBeCloseTo(1.41421);
       });
     });
     describe("when used with negative numbers", () => {
       it("calculates the distance correctly", () => {
-        expect(pixelDistance(-1, -1, -2, -2, -3, -3)).toBeCloseTo(1.41421);
+        expect(latLngDistance(-1, -1, -2, -2, -3, -3)).toBeCloseTo(1.41421);
       });
     });
   });

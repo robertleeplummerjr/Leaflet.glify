@@ -134,10 +134,12 @@ L.glify.lines({
   * CAUTION: Zoom of more than 18 will turn weight internally to 1 to prevent WebGL precision rendering issues.
 * `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 
-## `L.glify` methods
+## `L.glify` methods/properties
 * `longitudeFirst()`
 * `latitudeFirst()`
-* `instances`
+* `pointsInstances`
+* `linesInstances`
+* `shapesInstances`
 * `points(options)`
 * `shapes(options)`
 * `lines(options)`
@@ -152,7 +154,10 @@ You can build the webpack version by running ``yarn run build-browser-webpack``
 
 ## Developing
 
-Use `yarn serve-webpack`
+Use `yarn serve`
+
+## Testing
+Use `yarn test`
 
 ## Update & Remove Data
 L.glify instances can be updated using the `update(data, index)` method.

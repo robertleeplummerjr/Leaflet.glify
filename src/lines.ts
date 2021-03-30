@@ -3,7 +3,7 @@ import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as color from "./color";
 import { Map, LeafletMouseEvent, geoJSON } from "leaflet";
 import { LineFeatureVertices } from "./line-feature-vertices";
-import { pixelDistance, inBounds } from "./utils";
+import { latLngDistance, inBounds } from "./utils";
 import { Feature, LineString, MultiLineString } from "geojson";
 
 export interface ILinesSettings extends IBaseGlLayerSettings {
@@ -67,7 +67,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   render(): this {
     this.resetVertices();
 
-    const { canvas, gl, layer, vertices, mapMatrix } = this;
+    const { canvas, gl, layer, vertices, mapMatrix, bytes } = this;
     const vertexBuffer = this.getBuffer("vertex");
     const vertexLocation = this.getAttributeLocation("vertex");
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
@@ -84,9 +84,9 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     const allVertices = [];
     for (let i = 0; i < size; i++) {
       const vertexArray = vertices[i].array;
-      const length = vertexArray.length / this.bytes;
+      const length = vertexArray.length / bytes;
       for (let j = 0; j < length; j++) {
-        const vertexIndex = j * this.bytes;
+        const vertexIndex = j * bytes;
         if (j !== 0 && j !== length - 1) {
           allVertices.push(
             vertexArray[vertexIndex],
@@ -197,20 +197,22 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       allVertices,
       vertices,
       weight,
+      aPointSize,
+      bytes,
     } = this;
     const { scale, offset, zoom } = e;
     const pointSize = Math.max(zoom - 4.0, 4.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.vertexAttrib1f(this.aPointSize, pointSize);
+    gl.vertexAttrib1f(aPointSize, pointSize);
     mapMatrix.setSize(canvas.width, canvas.height).scaleMatrix(scale);
     if (zoom > 18) {
       mapMatrix.translateMatrix(-offset.x, -offset.y);
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
-      gl.drawArrays(gl.LINES, 0, allVertices.length / this.bytes);
+      gl.drawArrays(gl.LINES, 0, allVertices.length / bytes);
     } else if (typeof weight === "number") {
       // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
       for (let yOffset = -weight; yOffset < weight; yOffset += 0.5) {
@@ -223,7 +225,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
           // -- attach matrix value to 'mapMatrix' uniform in shader
           gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
-          gl.drawArrays(gl.LINES, 0, allVertices.length / this.bytes);
+          gl.drawArrays(gl.LINES, 0, allVertices.length / bytes);
         }
       }
     } else if (typeof weight === "function") {
@@ -275,13 +277,13 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       settings.data.features.forEach((feature: Feature<LineString>): void => {
         const { coordinates } = feature.geometry;
         for (let i = 1; i < coordinates.length; i++) {
-          const distance = pixelDistance(
+          const distance = latLngDistance(
             e.latlng.lng,
             e.latlng.lat,
-            coordinates[i - 1][latitudeKey],
             coordinates[i - 1][longitudeKey],
+            coordinates[i - 1][latitudeKey],
+            coordinates[i][longitudeKey],
             coordinates[i][latitudeKey],
-            coordinates[i][longitudeKey]
           );
           if (distance < sensitivity) {
             foundFeature = feature;
@@ -312,13 +314,13 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         settings.data.features.forEach((feature: Feature<LineString>): void => {
           for (let i = 1; i < feature.geometry.coordinates.length; i++) {
             const { coordinates } = feature.geometry;
-            const distance = pixelDistance(
+            const distance = latLngDistance(
               e.latlng.lng,
               e.latlng.lat,
-              coordinates[i - 1][latitudeKey],
               coordinates[i - 1][longitudeKey],
+              coordinates[i - 1][latitudeKey],
+              coordinates[i][longitudeKey],
               coordinates[i][latitudeKey],
-              coordinates[i][longitudeKey]
             );
 
             if (distance < sensitivityHover) {

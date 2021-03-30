@@ -75,6 +75,8 @@ describe('glify', () => {
         data,
         size,
         map,
+        latitudeKey: 1,
+        longitudeKey: 1,
       });
       expect(glify.pointsInstances.length).toBe(1);
       expect(constructorSpy).toHaveBeenCalledWith({
@@ -83,8 +85,8 @@ describe('glify', () => {
         data,
         setupClick: points.settings.setupClick,
         setupHover: points.settings.setupHover,
-        latitudeKey: glify.latitudeKey,
-        longitudeKey: glify.longitudeKey,
+        latitudeKey: 1,
+        longitudeKey: 1,
         vertexShaderSource: points.settings.vertexShaderSource,
         fragmentShaderSource: points.settings.fragmentShaderSource,
       });
@@ -112,6 +114,8 @@ describe('glify', () => {
         data,
         weight,
         map,
+        latitudeKey: 1,
+        longitudeKey: 1,
       });
       expect(glify.linesInstances.length).toBe(1);
       expect(constructorSpy).toHaveBeenCalledWith({
@@ -120,8 +124,8 @@ describe('glify', () => {
         data,
         setupClick: lines.settings.setupClick,
         setupHover: lines.settings.setupHover,
-        latitudeKey: glify.latitudeKey,
-        longitudeKey: glify.longitudeKey,
+        latitudeKey: 1,
+        longitudeKey: 1,
         vertexShaderSource: lines.settings.vertexShaderSource,
         fragmentShaderSource: lines.settings.fragmentShaderSource,
       });
@@ -147,6 +151,8 @@ describe('glify', () => {
       const shapes = glify.shapes({
         data,
         map,
+        latitudeKey: 2,
+        longitudeKey: 3,
       });
       expect(glify.shapesInstances.length).toBe(1);
       expect(constructorSpy).toHaveBeenCalledWith({
@@ -154,8 +160,8 @@ describe('glify', () => {
         data,
         setupClick: shapes.settings.setupClick,
         setupHover: shapes.settings.setupHover,
-        latitudeKey: glify.latitudeKey,
-        longitudeKey: glify.longitudeKey,
+        latitudeKey: 2,
+        longitudeKey: 3,
         vertexShaderSource: shapes.settings.vertexShaderSource,
         fragmentShaderSource: shapes.settings.fragmentShaderSource,
       });

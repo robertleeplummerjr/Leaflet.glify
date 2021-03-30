@@ -41,8 +41,8 @@ export class LineFeatureVertices {
       const flatterCoordinates: Position[] = coordinates as Position[];
       const pixel = project(
         new LatLng(
+          flatterCoordinates[i][latitudeKey],
           flatterCoordinates[i][longitudeKey],
-          flatterCoordinates[i][latitudeKey]
         ),
         0
       );

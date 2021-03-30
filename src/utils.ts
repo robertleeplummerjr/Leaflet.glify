@@ -25,7 +25,7 @@ export function pixelInCircle(
   return distanceSquared <= radius * radius;
 }
 
-export function pixelDistance(
+export function latLngDistance(
   x: number,
   y: number,
   x1: number,
