@@ -9,6 +9,7 @@ import {
   FeatureCollection,
   LineString,
   MultiLineString,
+  Position,
 } from "geojson";
 
 export interface ILinesSettings extends IBaseGlLayerSettings {
@@ -46,6 +47,7 @@ const defaults: Partial<ILinesSettings> = {
 export class Lines extends BaseGlLayer<ILinesSettings> {
   static defaults = defaults;
 
+  scale = Infinity;
   bytes = 6;
   allVertices: number[] = [];
   allVerticesTyped: Float32Array = new Float32Array(0);
@@ -126,9 +128,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     let colorFn: ((i: number, feature: any) => color.IColor) | null = null;
     let chosenColor: color.IColor;
     let featureIndex = 0;
-    if (!color) {
-      throw new Error("color is not properly defined");
-    } else if (typeof color === "function") {
+    if (typeof color === "function") {
       colorFn = color;
     }
 
@@ -213,13 +213,16 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       bytes,
     } = this;
     const { scale, offset, zoom } = e;
+    this.scale = scale;
     const pointSize = Math.max(zoom - 4.0, 4.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.vertexAttrib1f(aPointSize, pointSize);
-    mapMatrix.setSize(canvas.width, canvas.height).scaleMatrix(scale);
     if (zoom > 18) {
-      mapMatrix.translateMatrix(-offset.x, -offset.y);
+      mapMatrix
+        .setSize(canvas.width, canvas.height)
+        .scaleTo(scale)
+        .translateTo(-offset.x, -offset.y);
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
@@ -229,10 +232,13 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       for (let yOffset = -weight; yOffset <= weight; yOffset += 0.5) {
         for (let xOffset = -weight; xOffset <= weight; xOffset += 0.5) {
           // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-          mapMatrix.translateMatrix(
-            -offset.x + xOffset / scale,
-            -offset.y + yOffset / scale
-          );
+          mapMatrix
+            .setSize(canvas.width, canvas.height)
+            .scaleTo(scale)
+            .translateTo(
+              -offset.x + xOffset / scale,
+              -offset.y + yOffset / scale
+            );
           // -- attach matrix value to 'mapMatrix' uniform in shader
           gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
@@ -244,7 +250,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       const { features } = data;
       for (let i = 0; i < vertices.length; i++) {
         const featureVertices = vertices[i];
-        const vertexCount = featureVertices.vertexCount;
+        const { vertexCount } = featureVertices;
         const weightValue = weight(i, features[i]);
         // Now draw the lines several times, but like a brush, taking advantage of the half pixel line generally used by cards
         for (
@@ -258,10 +264,13 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
             xOffset += 0.5
           ) {
             // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-            mapMatrix.translateMatrix(
-              -offset.x + xOffset / scale,
-              -offset.y + yOffset / scale
-            );
+            mapMatrix
+              .setSize(canvas.width, canvas.height)
+              .scaleTo(scale)
+              .translateTo(
+                -offset.x + xOffset / scale,
+                -offset.y + yOffset / scale
+              );
             // -- attach matrix value to 'mapMatrix' uniform in shader
             gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
 
@@ -280,30 +289,80 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     map: Map,
     instances: Lines[]
   ): boolean | undefined {
-    let foundFeature: Feature<LineString> | null = null;
+    let foundFeature: Feature<LineString | MultiLineString> | null = null;
     let foundLines: Lines | null = null;
-    instances.forEach((_instance: Lines): void => {
-      const { latitudeKey, longitudeKey, sensitivity } = _instance;
-      if (!_instance.active) return;
-      if (_instance.map !== map) return;
 
-      _instance.data.features.forEach((feature: Feature<LineString>): void => {
-        const { coordinates } = feature.geometry;
-        for (let i = 1; i < coordinates.length; i++) {
-          const distance = latLngDistance(
-            e.latlng.lng,
-            e.latlng.lat,
-            coordinates[i - 1][longitudeKey],
-            coordinates[i - 1][latitudeKey],
-            coordinates[i][longitudeKey],
-            coordinates[i][latitudeKey]
-          );
-          if (distance < sensitivity) {
-            foundFeature = feature;
-            foundLines = _instance;
+    instances.forEach((instance: Lines): void => {
+      const {
+        latitudeKey,
+        longitudeKey,
+        sensitivity,
+        weight,
+        scale,
+        active,
+      } = instance;
+      if (!active) return;
+      if (instance.map !== map) return;
+      function checkClick(
+        coordinate: Position,
+        prevCoordinate: Position,
+        feature: Feature<LineString | MultiLineString>,
+        chosenWeight: number
+      ): void {
+        const distance = latLngDistance(
+          e.latlng.lng,
+          e.latlng.lat,
+          prevCoordinate[longitudeKey],
+          prevCoordinate[latitudeKey],
+          coordinate[longitudeKey],
+          coordinate[latitudeKey]
+        );
+        if (distance <= sensitivity + chosenWeight / scale) {
+          foundFeature = feature;
+          foundLines = instance;
+        }
+      }
+      instance.data.features.forEach(
+        (feature: Feature<LineString | MultiLineString>, i: number): void => {
+          const chosenWeight =
+            typeof weight === "function" ? weight(i, feature) : weight;
+          const { coordinates, type } = feature.geometry;
+          if (type === "LineString") {
+            for (let i = 1; i < coordinates.length; i++) {
+              checkClick(
+                coordinates[i] as Position,
+                coordinates[i - 1] as Position,
+                feature,
+                chosenWeight
+              );
+            }
+          } else if (type === "MultiLineString") { // TODO: Unit test
+            for (let i = 0; i < coordinates.length; i++) {
+              const coordinate = coordinates[i];
+              for (let j = 0; j < coordinate.length; j++) {
+                if (j === 0 && i > 0) {
+                  const prevCoordinates = coordinates[i - 1];
+                  const lastPositions =
+                    prevCoordinates[prevCoordinates.length - 1];
+                  checkClick(
+                    lastPositions as Position,
+                    coordinates[i][j] as Position,
+                    feature,
+                    chosenWeight
+                  );
+                } else if (j > 0) {
+                  checkClick(
+                    coordinates[i][j] as Position,
+                    coordinates[i][j - 1] as Position,
+                    feature,
+                    chosenWeight
+                  );
+                }
+              }
+            }
           }
         }
-      });
+      );
     });
 
     if (foundLines && foundFeature) {
@@ -312,6 +371,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     }
   }
 
+  hoveringFeatures: Array<Feature<LineString | MultiLineString>> = [];
   // hovers all touching Lines instances
   static tryHover(
     e: LeafletMouseEvent,
@@ -319,34 +379,109 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     instances: Lines[]
   ): Array<boolean | undefined> {
     const results: Array<boolean | undefined> = [];
-    instances.forEach((_instance: Lines): void => {
-      const { sensitivityHover, latitudeKey, longitudeKey, data } = _instance;
-      if (!_instance.active) return;
-      if (map !== _instance.map) return;
+    instances.forEach((instance: Lines): void => {
+      const {
+        sensitivityHover,
+        latitudeKey,
+        longitudeKey,
+        data,
+        hoveringFeatures,
+        weight,
+        scale,
+      } = instance;
+      function checkHover(
+        coordinate: Position,
+        prevCoordinate: Position,
+        feature: Feature<LineString | MultiLineString>,
+        chosenWeight: number
+      ): boolean {
+        const distance = latLngDistance(
+          e.latlng.lng,
+          e.latlng.lat,
+          prevCoordinate[longitudeKey],
+          prevCoordinate[latitudeKey],
+          coordinate[longitudeKey],
+          coordinate[latitudeKey]
+        );
+
+        if (distance <= sensitivityHover + chosenWeight / scale) {
+          if (!newHoveredFeatures.includes(feature)) {
+            newHoveredFeatures.push(feature);
+          }
+          if (!oldHoveredFeatures.includes(feature)) {
+            return true;
+          }
+        }
+        return false;
+      }
+      if (!instance.active) return;
+      if (map !== instance.map) return;
+      const oldHoveredFeatures = hoveringFeatures;
+      const newHoveredFeatures: Array<
+        Feature<LineString | MultiLineString>
+      > = [];
+      instance.hoveringFeatures = newHoveredFeatures;
       // Check if e.latlng is inside the bbox of the features
-      const bounds = geoJSON(_instance.data.features).getBounds();
+      const bounds = geoJSON(data.features).getBounds();
 
       if (inBounds(e.latlng, bounds)) {
-        data.features.forEach((feature: Feature<LineString>): void => {
-          for (let i = 1; i < feature.geometry.coordinates.length; i++) {
-            const { coordinates } = feature.geometry;
-            const distance = latLngDistance(
-              e.latlng.lng,
-              e.latlng.lat,
-              coordinates[i - 1][longitudeKey],
-              coordinates[i - 1][latitudeKey],
-              coordinates[i][longitudeKey],
-              coordinates[i][latitudeKey]
-            );
-
-            if (distance < sensitivityHover) {
-              const result = _instance.hover(e, feature);
+        data.features.forEach(
+          (feature: Feature<LineString | MultiLineString>, i: number): void => {
+            const chosenWeight =
+              typeof weight === "function" ? weight(i, feature) : weight;
+            const { coordinates, type } = feature.geometry;
+            let isHovering = false;
+            if (type === "LineString") {
+              for (let i = 1; i < coordinates.length; i++) {
+                isHovering = checkHover(
+                  coordinates[i] as Position,
+                  coordinates[i - 1] as Position,
+                  feature,
+                  chosenWeight
+                );
+                if (isHovering) break;
+              }
+            } else if (type === "MultiLineString") { // TODO: Unit test
+              for (let i = 0; i < coordinates.length; i++) {
+                const coordinate = coordinates[i];
+                for (let j = 0; j < coordinate.length; j++) {
+                  if (j === 0 && i > 0) {
+                    const prevCoordinates = coordinates[i - 1];
+                    const lastPositions =
+                      prevCoordinates[prevCoordinates.length - 1];
+                    isHovering = checkHover(
+                      lastPositions as Position,
+                      coordinates[i][j] as Position,
+                      feature,
+                      chosenWeight
+                    );
+                    if (isHovering) break;
+                  } else if (j > 0) {
+                    isHovering = checkHover(
+                      coordinates[i][j] as Position,
+                      coordinates[i][j - 1] as Position,
+                      feature,
+                      chosenWeight
+                    );
+                    if (isHovering) break;
+                  }
+                }
+              }
+            }
+            if (isHovering) {
+              const result = instance.hover(e, feature);
               if (result !== undefined) {
                 results.push(result);
               }
             }
           }
-        });
+        );
+      }
+      for (let i = 0; i < oldHoveredFeatures.length; i++) {
+        const feature = oldHoveredFeatures[i];
+        if (!newHoveredFeatures.includes(feature)) {
+          instance.hoverOff(e, feature);
+        }
       }
     });
     return results;

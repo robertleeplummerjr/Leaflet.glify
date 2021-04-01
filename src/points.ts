@@ -316,8 +316,8 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     // set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
       .setSize(canvas.width, canvas.height)
-      .scaleMatrix(scale)
-      .translateMatrix(-offset.x, -offset.y);
+      .scaleTo(scale)
+      .translateTo(-offset.x, -offset.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);

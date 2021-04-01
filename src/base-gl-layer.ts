@@ -385,5 +385,8 @@ export abstract class BaseGlLayer<
     }
   }
 
-  hoverOff(e: LeafletMouseEvent, feature: any): void {}
+  hoverOff(e: LeafletMouseEvent, feature: any): void {
+    if (!this.settings.hoverOff) return;
+    this.settings.hoverOff(e, feature);
+  }
 }

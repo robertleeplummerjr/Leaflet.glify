@@ -947,4 +947,30 @@ describe("BaseGlLayer", () => {
       });
     });
   });
+
+  describe("hoverOff", () => {
+    describe("when this.settings.hoverOff is undefined", () => {
+      it("does not throw", () => {
+        const layer = getGlLayer();
+        expect(layer.settings.hoverOff).toBeUndefined();
+        expect(() => {
+          layer.hover(fakeEvent(layer), {});
+        }).not.toThrow();
+      });
+    });
+    describe("when this.settings.hoverOff is defined", () => {
+      describe("when it does not return a value", () => {
+        it("calls this.settings.hoverOff and returns void", () => {
+          const hoverOff = jest.fn(() => {
+            return undefined;
+          });
+          const layer = getGlLayer({ hoverOff });
+          const event = fakeEvent(layer);
+          const feature = {};
+          layer.hoverOff(event, feature);
+          expect(hoverOff).toHaveBeenCalledWith(event, feature);
+        });
+      });
+    });
+  });
 });

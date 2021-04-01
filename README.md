@@ -72,7 +72,10 @@ L.glify.lines({
   },
   hover: (e, feature): boolean | void => {
     // do something when a line is hovered
-  }
+  },
+  hoverOff: (e, feature): boolean | void => {
+    // do something when a line is hovered off
+  },
 });
 ```
 
@@ -120,6 +123,7 @@ L.glify.lines({
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.point`
 * `click` `{Function}` optional event handler for clicking a line
 * `hover` `{Function}` optional event handler for hovering a line
+* `hoverOff` `{Function}` optional event handler for hovering off a line
 * `color` `{Function|Object|String}` optional, default is 'random'
   * When `color` is a `Function` its arguments are the `index`:`number` and the `feature`:`object` that is being colored, opacity can optionally be included as `{ a: number }`.
     The result should be of interface `IColor`, example: `{r: number, g: number, b: number, a: number }`.
@@ -153,7 +157,6 @@ You can build the parcel version by running ``yarn run build-browser``
 You can build the webpack version by running ``yarn run build-browser-webpack``
 
 ## Developing
-
 Use `yarn serve`
 
 ## Testing

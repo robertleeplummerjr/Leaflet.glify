@@ -1,11 +1,16 @@
-import { ILinesSettings, Lines } from "./lines";
-import { featureGroup, LatLng, LatLngBounds, Map, Point } from "leaflet";
-import { FeatureCollection, LineString } from "geojson";
+import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
+import {Feature, FeatureCollection, LineString} from "geojson";
 import { MapMatrix } from "./map-matrix";
-import { LineFeatureVertices } from "./line-feature-vertices";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import { ILinesSettings, Lines } from "./lines";
 
 jest.mock("./canvas-overlay");
+jest.mock("./utils", () => {
+  return {
+    inBounds: () => true,
+    latLngDistance: () => 2,
+  };
+});
 
 const mockFeatureCollection: FeatureCollection<LineString> = {
   type: "FeatureCollection",
@@ -24,7 +29,38 @@ const mockFeatureCollection: FeatureCollection<LineString> = {
     },
   ],
 };
+
+function getSettings(
+  settings?: Partial<ILinesSettings>
+): Partial<ILinesSettings> {
+  const element = document.createElement("div");
+  const map = new Map(element);
+  return {
+    map,
+    data: mockFeatureCollection,
+    vertexShaderSource: " ",
+    fragmentShaderSource: " ",
+    latitudeKey: 0,
+    longitudeKey: 1,
+    color: { r: 3, g: 4, b: 5, a: 6 },
+    ...settings,
+  };
+}
+
 describe("Lines", () => {
+  describe("weight", () => {
+    describe("when settings.weight is falsey", () => {
+      it("throws", () => {
+        const settings = getSettings({ weight: 0 });
+        expect(() => {
+          new Lines(settings).weight;
+        }).toThrow();
+      });
+    });
+    describe("when settings.weight is truthy", () => {
+      expect(new Lines(getSettings()).weight).toBe(Lines.defaults.weight);
+    });
+  });
   describe("constructor", () => {
     let element: HTMLElement;
     let map: Map;
@@ -220,24 +256,21 @@ describe("Lines", () => {
     });
   });
   describe("resetVertices", () => {
-    let element: HTMLElement;
-    let map: Map;
-    let settings: Partial<ILinesSettings>;
-    beforeEach(() => {
-      element = document.createElement("div");
-      map = new Map(element);
-      settings = {
-        map,
-        data: mockFeatureCollection,
-        vertexShaderSource: " ",
-        fragmentShaderSource: " ",
-        latitudeKey: 0,
-        longitudeKey: 1,
-        color: { r: 3, g: 4, b: 5, a: 6 },
-      };
+    describe("when settings.color is a function", () => {
+      it("is called with index and feature", () => {
+        const lines = new Lines(
+          getSettings({
+            color: jest.fn(() => {
+              return { r: 1, g: 1, b: 1, a: 1 };
+            }),
+          })
+        );
+        lines.resetVertices();
+        expect(lines.color).toHaveBeenCalledWith(0, lines.data.features[0]);
+      });
     });
     it("accumulates this.vertices, this.allVertices and this.allVerticesTyped correctly", () => {
-      const lines = new Lines(settings);
+      const lines = new Lines(getSettings());
       jest.spyOn(lines.map, "project").mockReturnValue(new Point(1, 2));
       lines.resetVertices();
       const expected = [
@@ -301,9 +334,6 @@ describe("Lines", () => {
     });
   });
   describe("drawOnCanvas", () => {
-    let element: HTMLElement;
-    let map: Map;
-    let settings: Partial<ILinesSettings>;
     function callDrawOnCanvas(
       lines: Lines,
       event?: Partial<ICanvasOverlayDrawEvent>
@@ -319,28 +349,15 @@ describe("Lines", () => {
         ...event,
       });
     }
-    const event: ICanvasOverlayDrawEvent = beforeEach(() => {
-      element = document.createElement("div");
-      map = new Map(element);
-      settings = {
-        map,
-        data: mockFeatureCollection,
-        vertexShaderSource: " ",
-        fragmentShaderSource: " ",
-        latitudeKey: 0,
-        longitudeKey: 1,
-        color: { r: 3, g: 4, b: 5, a: 6 },
-      };
-    });
     it("calls gl.clear() correctly", () => {
-      const lines = new Lines(settings);
+      const lines = new Lines(getSettings());
       const { gl } = lines;
       const clearSpy = jest.spyOn(gl, "clear");
       callDrawOnCanvas(lines);
       expect(clearSpy).toHaveBeenCalledWith(gl.COLOR_BUFFER_BIT);
     });
     it("calls gl.viewport() correctly", () => {
-      const lines = new Lines(settings);
+      const lines = new Lines(getSettings());
       const { gl } = lines;
       const viewportSpy = jest.spyOn(gl, "viewport");
       callDrawOnCanvas(lines);
@@ -352,16 +369,16 @@ describe("Lines", () => {
       );
     });
     it("calls gl.vertexAttrib1f() correctly", () => {
-      const lines = new Lines(settings);
+      const lines = new Lines(getSettings());
       const { gl } = lines;
       const vertexAttrib1fSpy = jest.spyOn(gl, "vertexAttrib1f");
       callDrawOnCanvas(lines);
       expect(vertexAttrib1fSpy).toHaveBeenCalledWith(lines.aPointSize, 4);
     });
     it("calls mapMatrix.setSize and mapMatrix.scaleMatrix correctly", () => {
-      const lines = new Lines(settings);
+      const lines = new Lines(getSettings());
       const setSizeSpy = jest.spyOn(lines.mapMatrix, "setSize");
-      const scaleMatrixSpy = jest.spyOn(lines.mapMatrix, "scaleMatrix");
+      const scaleMatrixSpy = jest.spyOn(lines.mapMatrix, "scaleTo");
       callDrawOnCanvas(lines);
       expect(setSizeSpy).toHaveBeenCalledWith(
         lines.canvas.width,
@@ -371,18 +388,24 @@ describe("Lines", () => {
     });
     describe("when zoom is greater than 18", () => {
       it("draws arrays once", () => {
-        const lines = new Lines(settings);
-        const translateMatrixSpy = jest.spyOn(
-          lines.mapMatrix,
-          "translateMatrix"
-        );
+        const lines = new Lines(getSettings());
         const uniformMatrix4fvSpy = jest.spyOn(lines.gl, "uniformMatrix4fv");
         const drawArraysSpy = jest.spyOn(lines.gl, "drawArrays");
+        const setSizeSpy = jest.spyOn(lines.mapMatrix, "setSize");
+        const scaleToSpy = jest.spyOn(lines.mapMatrix, "scaleTo");
+        const translateToSpy = jest.spyOn(lines.mapMatrix, "translateTo");
         const offset = new Point(5, 5);
         const zoom = 19;
         callDrawOnCanvas(lines, { zoom, offset });
-        expect(translateMatrixSpy).toHaveBeenCalledTimes(1);
-        expect(translateMatrixSpy).toHaveBeenCalledWith(-offset.x, -offset.y);
+        expect(setSizeSpy).toHaveBeenCalledTimes(1);
+        expect(setSizeSpy).toHaveBeenCalledWith(
+          lines.canvas.width,
+          lines.canvas.height
+        );
+        expect(scaleToSpy).toHaveBeenCalledTimes(1);
+        expect(scaleToSpy).toHaveBeenCalledWith(1);
+        expect(translateToSpy).toHaveBeenCalledTimes(1);
+        expect(translateToSpy).toHaveBeenCalledWith(-offset.x, -offset.y);
         expect(uniformMatrix4fvSpy).toHaveBeenCalledWith(
           lines.matrix,
           false,
@@ -394,18 +417,24 @@ describe("Lines", () => {
     describe("when zoom is less than 19", () => {
       describe("when weight is a number", () => {
         it("draws arrays using weight", () => {
-          const lines = new Lines({ ...settings, weight: 1 });
-          const translateMatrixSpy = jest.spyOn(
-            lines.mapMatrix,
-            "translateMatrix"
-          );
+          const lines = new Lines({ ...getSettings(), weight: 1 });
           const uniformMatrix4fvSpy = jest.spyOn(lines.gl, "uniformMatrix4fv");
           const drawArraysSpy = jest.spyOn(lines.gl, "drawArrays");
+          const setSizeSpy = jest.spyOn(lines.mapMatrix, "setSize");
+          const scaleToSpy = jest.spyOn(lines.mapMatrix, "scaleTo");
+          const translateToSpy = jest.spyOn(lines.mapMatrix, "translateTo");
           const offset = new Point(5, 5);
           const zoom = 18;
           callDrawOnCanvas(lines, { zoom, offset });
-          expect(translateMatrixSpy).toHaveBeenCalledTimes(25);
-          expect(translateMatrixSpy).toHaveBeenCalledWith(-offset.x, -offset.y);
+          expect(setSizeSpy).toHaveBeenCalledTimes(25);
+          expect(setSizeSpy).toHaveBeenCalledWith(
+            lines.canvas.width,
+            lines.canvas.height
+          );
+          expect(scaleToSpy).toHaveBeenCalledTimes(25);
+          expect(scaleToSpy).toHaveBeenCalledWith(1);
+          expect(translateToSpy).toHaveBeenCalledTimes(25);
+          expect(translateToSpy).toHaveBeenCalledWith(-offset.x, -offset.y);
           expect(uniformMatrix4fvSpy).toHaveBeenCalledWith(
             lines.matrix,
             false,
@@ -417,28 +446,245 @@ describe("Lines", () => {
       describe("when weight is a function", () => {
         it("draws arrays using weight function", () => {
           const lines = new Lines({
-            ...settings,
+            ...getSettings(),
             weight: (i: number, feature: LineString): number => {
               return 2;
             },
           });
-          const translateMatrixSpy = jest.spyOn(
-            lines.mapMatrix,
-            "translateMatrix"
-          );
           const uniformMatrix4fvSpy = jest.spyOn(lines.gl, "uniformMatrix4fv");
           const drawArraysSpy = jest.spyOn(lines.gl, "drawArrays");
+          const setSizeSpy = jest.spyOn(lines.mapMatrix, "setSize");
+          const scaleToSpy = jest.spyOn(lines.mapMatrix, "scaleTo");
+          const translateToSpy = jest.spyOn(lines.mapMatrix, "translateTo");
           const offset = new Point(5, 5);
           const zoom = 18;
           callDrawOnCanvas(lines, { zoom, offset });
-          expect(translateMatrixSpy).toHaveBeenCalledTimes(81);
-          expect(translateMatrixSpy).toHaveBeenCalledWith(-offset.x, -offset.y);
+          expect(setSizeSpy).toHaveBeenCalledTimes(81);
+          expect(setSizeSpy).toHaveBeenCalledWith(
+            lines.canvas.width,
+            lines.canvas.height
+          );
+          expect(scaleToSpy).toHaveBeenCalledTimes(81);
+          expect(scaleToSpy).toHaveBeenCalledWith(1);
+          expect(translateToSpy).toHaveBeenCalledTimes(81);
+          expect(translateToSpy).toHaveBeenCalledWith(-offset.x, -offset.y);
           expect(uniformMatrix4fvSpy).toHaveBeenCalledWith(
             lines.matrix,
             false,
             lines.mapMatrix.array
           );
           expect(drawArraysSpy).toHaveBeenCalledWith(lines.gl.LINES, 0, 4);
+        });
+      });
+    });
+  });
+  describe("tryClick", () => {
+    let lines: Lines;
+    let settings: Partial<ILinesSettings>;
+    let map: Map;
+    let mockClick: LeafletMouseEvent;
+    let forEachSpy: jest.SpyInstance;
+    beforeEach(() => {
+      settings = getSettings({
+        click: jest.fn(() => {
+          return true;
+        }),
+      });
+      lines = new Lines(settings);
+      lines.scale = 1;
+      map = lines.map;
+      forEachSpy = jest.spyOn(lines.data.features, "forEach");
+      const latlngArray =
+        mockFeatureCollection.features[0].geometry.coordinates[0];
+      const latlng = new LatLng(latlngArray[0], latlngArray[1]);
+      mockClick = {
+        type: "click",
+        target: map,
+        sourceTarget: map,
+        propagatedFrom: "mock",
+        layer: lines,
+        latlng,
+        layerPoint: new Point(1, 1),
+        containerPoint: new Point(1, 1),
+        originalEvent: new MouseEvent("click"),
+      };
+    });
+    afterEach(() => {
+      forEachSpy.mockRestore();
+    });
+    describe("when layer has been removed", () => {
+      it("is not checked for click", () => {
+        lines.remove();
+        Lines.tryClick(mockClick, map, [lines]);
+        expect(forEachSpy).not.toHaveBeenCalled();
+      });
+    });
+    describe("when map is not same as instance.map", () => {
+      it("is not checked for click", () => {
+        Lines.tryClick(mockClick, new Map(document.createElement("div")), [
+          lines,
+        ]);
+        expect(forEachSpy).not.toHaveBeenCalled();
+      });
+    });
+    describe("when map is same", () => {
+      it("is checked for click", () => {
+        Lines.tryClick(mockClick, lines.map, [lines]);
+        expect(forEachSpy).toHaveBeenCalled();
+      });
+      describe("when a feature is near point", () => {
+        it("calls settings.click", () => {
+          Lines.tryClick(mockClick, lines.map, [lines]);
+          expect(lines.settings.click).toHaveBeenCalledWith(
+            mockClick,
+            lines.data.features[0]
+          );
+        });
+        it("returns the response from settings.click", () => {
+          const result = Lines.tryClick(mockClick, lines.map, [lines]);
+          expect(result).toBe(true);
+        });
+      });
+      describe("when a feature is not near point", () => {
+        // distance = 2
+        // sensitivity = 0.1
+        // weight = 2
+        // distance < sensitivity + weight / scale
+        // 2 < 0.01 + 2 / 1
+        // 2 < 0.01 + 2 / 1 (2.01)
+        it("does not call settings.click", () => {
+          lines.settings.sensitivity = -0.01;
+          Lines.tryClick(mockClick, lines.map, [lines]);
+          expect(lines.settings.click).not.toHaveBeenCalled();
+        });
+      });
+    });
+  });
+  describe("tryHover", () => {
+    let lines: Lines;
+    let settings: Partial<ILinesSettings>;
+    let map: Map;
+    let mockHover: LeafletMouseEvent;
+    let forEachSpy: jest.SpyInstance;
+    let hoverMock: jest.Mock;
+    beforeEach(() => {
+      hoverMock = jest.fn(() => {
+        return true;
+      });
+      settings = getSettings({
+        hover: hoverMock,
+      });
+      lines = new Lines(settings);
+      lines.scale = 1;
+      map = lines.map;
+      forEachSpy = jest.spyOn(lines.data.features, "forEach");
+      const latlngArray =
+        mockFeatureCollection.features[0].geometry.coordinates[0];
+      const latlng = new LatLng(latlngArray[0], latlngArray[1]);
+      mockHover = {
+        type: "mousemove",
+        target: map,
+        sourceTarget: map,
+        propagatedFrom: "mock",
+        layer: lines,
+        latlng,
+        layerPoint: new Point(1, 1),
+        containerPoint: new Point(1, 1),
+        originalEvent: new MouseEvent("mousemove"),
+      };
+    });
+    afterEach(() => {
+      forEachSpy.mockRestore();
+    });
+    describe("when layer has been removed", () => {
+      it("is not checked for hover", () => {
+        lines.remove();
+        Lines.tryHover(mockHover, map, [lines]);
+        expect(forEachSpy).not.toHaveBeenCalled();
+      });
+    });
+    describe("when map is not same as instance.map", () => {
+      it("is not checked for hover", () => {
+        Lines.tryHover(mockHover, new Map(document.createElement("div")), [
+          lines,
+        ]);
+        expect(forEachSpy).not.toHaveBeenCalled();
+      });
+    });
+    describe("when map is same", () => {
+      it("is checked for hover", () => {
+        Lines.tryHover(mockHover, lines.map, [lines]);
+        expect(forEachSpy).toHaveBeenCalled();
+      });
+      describe("when a feature is near point", () => {
+        describe("when lines.hoverFeatures does not contain the feature being hovered", () => {
+          it("it is added a new array in lines.hoveringFeatures", () => {
+            const oldHoveringFeatures = lines.hoveringFeatures;
+            expect(oldHoveringFeatures).toEqual([]);
+            Lines.tryHover(mockHover, lines.map, [lines]);
+            const newHoveringFeatures = lines.hoveringFeatures;
+            expect(oldHoveringFeatures).not.toBe(newHoveringFeatures);
+            expect(newHoveringFeatures).toEqual([lines.data.features[0]]);
+          });
+          it("calls settings.hover", () => {
+            Lines.tryHover(mockHover, lines.map, [lines]);
+            expect(hoverMock).toHaveBeenCalledWith(
+              mockHover,
+              lines.data.features[0]
+            );
+          });
+        });
+        describe("when a feature is not near point", () => {
+          // distance = 2
+          // sensitivityHover = 0.1
+          // weight = 2
+          // distance < sensitivityHover + weight / scale
+          // 2 < 0.01 + 2 / 1
+          // 2 < 0.01 + 2 / 1 (2.01)
+          it("does not call settings.hover", () => {
+            lines.settings.sensitivityHover = -0.01;
+            Lines.tryHover(mockHover, lines.map, [lines]);
+            expect(lines.settings.hover).not.toHaveBeenCalled();
+          });
+        });
+        describe("when lines.hoverFeatures does contain the feature being hovered", () => {
+          it("it is added a new array in lines.hoveringFeatures", () => {
+            Lines.tryHover(mockHover, lines.map, [lines]);
+            const oldHoveringFeatures = lines.hoveringFeatures;
+            expect(oldHoveringFeatures).toEqual([lines.data.features[0]]);
+            Lines.tryHover(mockHover, lines.map, [lines]);
+            const newHoveringFeatures = lines.hoveringFeatures;
+            expect(oldHoveringFeatures).not.toBe(newHoveringFeatures);
+            expect(newHoveringFeatures).toEqual([lines.data.features[0]]);
+          });
+          it("does not calls settings.hover", () => {
+            Lines.tryHover(mockHover, lines.map, [lines]);
+            hoverMock.mockReset();
+            Lines.tryHover(mockHover, lines.map, [lines]);
+            expect(hoverMock).not.toHaveBeenCalled();
+          });
+        });
+        it("returns the responses from settings.hover", () => {
+          const result = Lines.tryHover(mockHover, lines.map, [lines]);
+          expect(result).toEqual([true]);
+        });
+      });
+      describe('when a feature is no longer hovered', () => {
+        it('the instance.hoverOff is called with event and feature', () => {
+          const fakeFeature: Feature<LineString> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [5, 6],
+              ],
+            },
+          };
+          lines.hoveringFeatures.push(fakeFeature);
+          const hoverOff = lines.settings.hoverOff = jest.fn(() => {});
+          Lines.tryHover(mockHover, lines.map, [lines]);
+          expect(hoverOff).toHaveBeenCalledWith(mockHover, fakeFeature);
         });
       });
     });

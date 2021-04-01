@@ -33,10 +33,10 @@ Promise.all([
     });
 
     glify.lines({
-      map: map,
+      map,
       latitudeKey: 1,
       longitudeKey: 0,
-      weight: 5,
+      weight: 2,
       click: (e: LeafletMouseEvent, feature) => {
         L.popup()
           .setLatLng(e.latlng)
@@ -47,6 +47,9 @@ Promise.all([
       },
       hover: (e: LeafletMouseEvent, feature) => {
         console.log('hovered on Line', feature, e);
+      },
+      hoverOff: (e: LeafletMouseEvent, feature) => {
+        console.log('hovered off Line', feature, e);
       },
       data: rivers
     });
