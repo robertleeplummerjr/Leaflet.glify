@@ -12,6 +12,7 @@ describe("LineFeatureVertices", () => {
     latitudeKey: 0,
     longitudeKey: 1,
     opacity: 1,
+    weight: 1,
   };
   describe("constructor", () => {
     it("sets this.settings, this.vertexCount, and this.array correctly", () => {

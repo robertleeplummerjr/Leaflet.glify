@@ -234,12 +234,10 @@ describe("BaseGlLayer", () => {
 
   describe("color", () => {
     describe("when settings.color is not defined", () => {
-      it("throws", () => {
+      it("returns null", () => {
         const layer = getGlLayer();
         delete layer.settings.color;
-        expect(() => {
-          layer.color;
-        }).toThrow();
+        expect(layer.color).toBeNull();
       });
     });
     describe("when settings.color is defined", () => {

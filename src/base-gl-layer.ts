@@ -32,7 +32,7 @@ export interface IBaseGlLayerSettings {
     e: LeafletMouseEvent,
     feature: any
   ) => (boolean | undefined) | void;
-  color?: ((featureIndex: number, feature: any) => IColor) | IColor;
+  color?: ((featureIndex: number, feature: any) => IColor) | IColor | null;
   className?: string;
   opacity?: number;
   preserveDrawingBuffer?: boolean;
@@ -52,7 +52,7 @@ export abstract class BaseGlLayer<
   active: boolean;
   fragmentShader: any;
   canvas: HTMLCanvasElement;
-  gl: WebGLRenderingContext;
+  gl: WebGLRenderingContext | WebGL2RenderingContext;
   layer: CanvasOverlay;
   mapMatrix: MapMatrix;
   matrix: WebGLUniformLocation | null;
@@ -131,11 +131,11 @@ export abstract class BaseGlLayer<
     return this.settings.opacity;
   }
 
-  get color(): ((featureIndex: number, feature: any) => IColor) | IColor {
-    if (!this.settings.color) {
-      throw new Error("settings.color not correctly defined");
-    }
-    return this.settings.color;
+  get color():
+    | ((featureIndex: number, feature: any) => IColor)
+    | IColor
+    | null {
+    return this.settings.color ?? null;
   }
 
   constructor(settings: Partial<IBaseGlLayerSettings>) {

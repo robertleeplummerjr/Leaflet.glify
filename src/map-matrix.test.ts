@@ -45,7 +45,7 @@ describe("MapMatrix", () => {
       const row1 = [1, 2, 3, 4];
       const row2 = [5, 6, 7, 8];
       const row3 = [9, 10, 11, 12];
-      const row4 = [73, 94, 115, 136];
+      const row4 = [9, 61, 15, 16];
       expect(mapMatrix.array).toEqual(
         new Float32Array([...row1, ...row2, ...row3, ...row4])
       );

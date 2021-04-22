@@ -1,5 +1,5 @@
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
-import {Feature, FeatureCollection, LineString} from "geojson";
+import { Feature, FeatureCollection, LineString } from "geojson";
 import { MapMatrix } from "./map-matrix";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { ILinesSettings, Lines } from "./lines";
@@ -426,12 +426,12 @@ describe("Lines", () => {
           const offset = new Point(5, 5);
           const zoom = 18;
           callDrawOnCanvas(lines, { zoom, offset });
-          expect(setSizeSpy).toHaveBeenCalledTimes(25);
+          expect(setSizeSpy).toHaveBeenCalledTimes(1);
           expect(setSizeSpy).toHaveBeenCalledWith(
             lines.canvas.width,
             lines.canvas.height
           );
-          expect(scaleToSpy).toHaveBeenCalledTimes(25);
+          expect(scaleToSpy).toHaveBeenCalledTimes(1);
           expect(scaleToSpy).toHaveBeenCalledWith(1);
           expect(translateToSpy).toHaveBeenCalledTimes(25);
           expect(translateToSpy).toHaveBeenCalledWith(-offset.x, -offset.y);
@@ -459,12 +459,12 @@ describe("Lines", () => {
           const offset = new Point(5, 5);
           const zoom = 18;
           callDrawOnCanvas(lines, { zoom, offset });
-          expect(setSizeSpy).toHaveBeenCalledTimes(81);
+          expect(setSizeSpy).toHaveBeenCalledTimes(1);
           expect(setSizeSpy).toHaveBeenCalledWith(
             lines.canvas.width,
             lines.canvas.height
           );
-          expect(scaleToSpy).toHaveBeenCalledTimes(81);
+          expect(scaleToSpy).toHaveBeenCalledTimes(1);
           expect(scaleToSpy).toHaveBeenCalledWith(1);
           expect(translateToSpy).toHaveBeenCalledTimes(81);
           expect(translateToSpy).toHaveBeenCalledWith(-offset.x, -offset.y);
@@ -669,20 +669,18 @@ describe("Lines", () => {
           expect(result).toEqual([true]);
         });
       });
-      describe('when a feature is no longer hovered', () => {
-        it('the instance.hoverOff is called with event and feature', () => {
+      describe("when a feature is no longer hovered", () => {
+        it("the instance.hoverOff is called with event and feature", () => {
           const fakeFeature: Feature<LineString> = {
             type: "Feature",
             properties: {},
             geometry: {
               type: "LineString",
-              coordinates: [
-                [5, 6],
-              ],
+              coordinates: [[5, 6]],
             },
           };
           lines.hoveringFeatures.push(fakeFeature);
-          const hoverOff = lines.settings.hoverOff = jest.fn(() => {});
+          const hoverOff = (lines.settings.hoverOff = jest.fn(() => {}));
           Lines.tryHover(mockHover, lines.map, [lines]);
           expect(hoverOff).toHaveBeenCalledWith(mockHover, fakeFeature);
         });

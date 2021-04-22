@@ -6,6 +6,7 @@ import { IPixel } from "./pixel";
 interface ILineFeatureVerticesSettings {
   project: (coordinates: LatLng, distance: number) => IPixel;
   color: IColor;
+  weight: number;
   latitudeKey: number;
   longitudeKey: number;
   opacity: number;
@@ -15,6 +16,8 @@ export class LineFeatureVertices {
   settings: ILineFeatureVerticesSettings;
   vertexCount: number;
   array: number[];
+  pixels: IPixel[] = [];
+  latLngs: LatLng[] = [];
   get length(): number {
     return this.array.length;
   }
@@ -39,13 +42,13 @@ export class LineFeatureVertices {
         continue;
       }
       const flatterCoordinates: Position[] = coordinates as Position[];
-      const pixel = project(
-        new LatLng(
-          flatterCoordinates[i][latitudeKey],
-          flatterCoordinates[i][longitudeKey]
-        ),
-        0
+      const latLng = new LatLng(
+        flatterCoordinates[i][latitudeKey],
+        flatterCoordinates[i][longitudeKey]
       );
+      this.latLngs.push(latLng);
+      const pixel = project(latLng, 0);
+      this.pixels.push(pixel);
       this.push(
         pixel.x,
         pixel.y,

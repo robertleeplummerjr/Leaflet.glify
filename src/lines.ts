@@ -1,9 +1,4 @@
-import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
-import * as color from "./color";
 import { Map, LeafletMouseEvent, geoJSON } from "leaflet";
-import { LineFeatureVertices } from "./line-feature-vertices";
-import { latLngDistance, inBounds } from "./utils";
 import {
   Feature,
   FeatureCollection,
@@ -12,11 +7,18 @@ import {
   Position,
 } from "geojson";
 
+import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import * as color from "./color";
+import { LineFeatureVertices } from "./line-feature-vertices";
+import { latLngDistance, inBounds } from "./utils";
+
 export interface ILinesSettings extends IBaseGlLayerSettings {
   data: FeatureCollection<LineString | MultiLineString>;
   weight: ((i: number, feature: any) => number) | number;
   sensitivity?: number;
   sensitivityHover?: number;
+  eachVertex?: (vertices: LineFeatureVertices) => void;
 }
 
 const defaults: Partial<ILinesSettings> = {
@@ -117,21 +119,30 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       map,
       opacity,
       color,
+      weight,
       latitudeKey,
       longitudeKey,
       data,
       bytes,
+      settings,
     } = this;
+    const { eachVertex } = settings;
     const { features } = data;
     const featureMax = features.length;
     let feature: Feature<LineString | MultiLineString>;
     let colorFn: ((i: number, feature: any) => color.IColor) | null = null;
+    let weightFn: ((i: number, feature: any) => number) | null = null;
     let chosenColor: color.IColor;
     let featureIndex = 0;
+
     if (typeof color === "function") {
       colorFn = color;
     }
+    if (typeof weight === "function") {
+      weightFn = weight;
+    }
 
+    const project = map.project.bind(map);
     // -- data
     const vertices: LineFeatureVertices[] = [];
     for (; featureIndex < featureMax; featureIndex++) {
@@ -143,15 +154,24 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         chosenColor = color as color.IColor;
       }
 
+      const chosenWeight: number = weightFn
+        ? weightFn(featureIndex, feature)
+        : (weight as number);
+
       const featureVertices = new LineFeatureVertices({
-        project: map.project.bind(map),
+        project,
         latitudeKey,
         longitudeKey,
         color: chosenColor,
+        weight: chosenWeight,
         opacity,
       });
+
       featureVertices.fillFromCoordinates(feature.geometry.coordinates);
       vertices.push(featureVertices);
+      if (eachVertex) {
+        eachVertex(featureVertices);
+      }
     }
 
     /*
@@ -218,11 +238,9 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.vertexAttrib1f(aPointSize, pointSize);
+    mapMatrix.setSize(canvas.width, canvas.height).scaleTo(scale);
     if (zoom > 18) {
-      mapMatrix
-        .setSize(canvas.width, canvas.height)
-        .scaleTo(scale)
-        .translateTo(-offset.x, -offset.y);
+      mapMatrix.translateTo(-offset.x, -offset.y);
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
@@ -232,13 +250,10 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       for (let yOffset = -weight; yOffset <= weight; yOffset += 0.5) {
         for (let xOffset = -weight; xOffset <= weight; xOffset += 0.5) {
           // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-          mapMatrix
-            .setSize(canvas.width, canvas.height)
-            .scaleTo(scale)
-            .translateTo(
-              -offset.x + xOffset / scale,
-              -offset.y + yOffset / scale
-            );
+          mapMatrix.translateTo(
+            -offset.x + xOffset / scale,
+            -offset.y + yOffset / scale
+          );
           // -- attach matrix value to 'mapMatrix' uniform in shader
           gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
@@ -264,13 +279,10 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
             xOffset += 0.5
           ) {
             // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
-            mapMatrix
-              .setSize(canvas.width, canvas.height)
-              .scaleTo(scale)
-              .translateTo(
-                -offset.x + xOffset / scale,
-                -offset.y + yOffset / scale
-              );
+            mapMatrix.translateTo(
+              -offset.x + xOffset / scale,
+              -offset.y + yOffset / scale
+            );
             // -- attach matrix value to 'mapMatrix' uniform in shader
             gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
 
@@ -336,7 +348,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
                 chosenWeight
               );
             }
-          } else if (type === "MultiLineString") { // TODO: Unit test
+          } else if (type === "MultiLineString") {
+            // TODO: Unit test
             for (let i = 0; i < coordinates.length; i++) {
               const coordinate = coordinates[i];
               for (let j = 0; j < coordinate.length; j++) {
@@ -441,7 +454,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
                 );
                 if (isHovering) break;
               }
-            } else if (type === "MultiLineString") { // TODO: Unit test
+            } else if (type === "MultiLineString") {
+              // TODO: Unit test
               for (let i = 0; i < coordinates.length; i++) {
                 const coordinate = coordinates[i];
                 for (let j = 0; j < coordinate.length; j++) {

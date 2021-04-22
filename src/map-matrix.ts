@@ -29,11 +29,8 @@ export class MapMatrix {
   translateTo(x: number, y: number): this {
     const { array } = this;
     // translation is in last column of matrix
-    array[12] += array[0] * x + array[4] * y;
-    array[13] += array[1] * x + array[5] * y;
-    array[14] += array[2] * x + array[6] * y;
-    array[15] += array[3] * x + array[7] * y;
-
+    array[12] = array[0] * x - 1;
+    array[13] = array[5] * y + 1;
     return this;
   }
 
@@ -41,15 +38,7 @@ export class MapMatrix {
     const { array } = this;
     // scaling x and y, which is just scaling first two columns of matrix
     array[0] *= scale;
-    array[1] *= scale;
-    array[2] *= scale;
-    array[3] *= scale;
-
-    array[4] *= scale;
     array[5] *= scale;
-    array[6] *= scale;
-    array[7] *= scale;
-
     return this;
   }
 }
