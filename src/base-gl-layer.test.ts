@@ -603,10 +603,12 @@ describe("BaseGlLayer", () => {
     });
     it("calls gl.blendFunc with gl.SRC_ALPHA and gl.ONE_MINUS_SRC_ALPHA", () => {
       const layer = getGlLayer().setupVertexShader().setupFragmentShader();
-      jest.spyOn(layer.gl, "blendFunc");
+      jest.spyOn(layer.gl, "blendFuncSeparate");
       layer.setupProgram();
-      expect(layer.gl.blendFunc).toHaveBeenCalledWith(
+      expect(layer.gl.blendFuncSeparate).toHaveBeenCalledWith(
         layer.gl.SRC_ALPHA,
+        layer.gl.ONE_MINUS_SRC_ALPHA,
+        layer.gl.ONE,
         layer.gl.ONE_MINUS_SRC_ALPHA
       );
     });
