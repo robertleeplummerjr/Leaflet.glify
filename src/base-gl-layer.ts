@@ -1,7 +1,9 @@
-import { IColor } from "./color";
 import { LeafletMouseEvent, Map } from "leaflet";
-import { MapMatrix } from "./map-matrix";
+
+import { IColor } from "./color";
 import { CanvasOverlay, ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import { notProperlyDefined } from "./errors";
+import { MapMatrix } from "./map-matrix";
 
 export interface IShaderVariable {
   type: "FLOAT";
@@ -9,6 +11,13 @@ export interface IShaderVariable {
   size: number;
   normalize?: boolean;
 }
+
+export type EventCallback = (
+  e: LeafletMouseEvent,
+  feature: any
+) => boolean | void;
+
+export type SetupHoverCallback = (map: Map, hoverWait?: number, immediate?: false) => void;
 
 export interface IBaseGlLayerSettings {
   data: any;
@@ -20,19 +29,16 @@ export interface IBaseGlLayerSettings {
     [name: string]: IShaderVariable;
   };
   setupClick?: (map: Map) => void;
-  setupHover?: (map: Map, hoverWait?: number, immediate?: false) => void;
+  setupHover?: SetupHoverCallback;
   sensitivity?: number;
   sensitivityHover?: number;
   vertexShaderSource?: (() => string) | string;
   fragmentShaderSource?: (() => string) | string;
   canvas?: HTMLCanvasElement;
-  click?: (e: LeafletMouseEvent, feature: any) => (boolean | undefined) | void;
-  hover?: (e: LeafletMouseEvent, feature: any) => (boolean | undefined) | void;
-  hoverOff?: (
-    e: LeafletMouseEvent,
-    feature: any
-  ) => (boolean | undefined) | void;
-  color?: ((featureIndex: number, feature: any) => IColor) | IColor | null;
+  click?: EventCallback;
+  hover?: EventCallback;
+  hoverOff?: EventCallback;
+  color?: ColorCallback | IColor | null;
   className?: string;
   opacity?: number;
   preserveDrawingBuffer?: boolean;
@@ -44,6 +50,8 @@ export const defaultHoverWait = 250;
 export const defaults: Partial<IBaseGlLayerSettings> = {
   pane: defaultPane,
 };
+
+export type ColorCallback = (featureIndex: number, feature: any) => IColor;
 
 export abstract class BaseGlLayer<
   T extends IBaseGlLayerSettings = IBaseGlLayerSettings
@@ -72,7 +80,7 @@ export abstract class BaseGlLayer<
 
   get data(): any {
     if (!this.settings.data) {
-      throw new Error("data not defined");
+      throw new Error(notProperlyDefined("settings.data"));
     }
     return this.settings.data;
   }
@@ -87,21 +95,21 @@ export abstract class BaseGlLayer<
 
   get map(): Map {
     if (!this.settings.map) {
-      throw new Error("settings.map not defined");
+      throw new Error(notProperlyDefined("settings.map"));
     }
     return this.settings.map;
   }
 
   get sensitivity(): number {
     if (typeof this.settings.sensitivity !== "number") {
-      throw new Error("settings.sensitivity not correctly defined");
+      throw new Error(notProperlyDefined("settings.sensitivity"));
     }
     return this.settings.sensitivity;
   }
 
   get sensitivityHover(): number {
     if (typeof this.settings.sensitivityHover !== "number") {
-      throw new Error("settings.sensitivityHover not correctly defined");
+      throw new Error(notProperlyDefined("settings.sensitivityHover"));
     }
     return this.settings.sensitivityHover;
   }
@@ -112,29 +120,26 @@ export abstract class BaseGlLayer<
 
   get longitudeKey(): number {
     if (typeof this.settings.longitudeKey !== "number") {
-      throw new Error("settings.longitudeKey not correctly defined");
+      throw new Error(notProperlyDefined("settings.longitudeKey"));
     }
     return this.settings.longitudeKey;
   }
 
   get latitudeKey(): number {
     if (typeof this.settings.latitudeKey !== "number") {
-      throw new Error("settings.latitudeKey not correctly defined");
+      throw new Error(notProperlyDefined("settings.latitudeKey"));
     }
     return this.settings.latitudeKey;
   }
 
   get opacity(): number {
     if (typeof this.settings.opacity !== "number") {
-      throw new Error("settings.opacity not correctly defined");
+      throw new Error(notProperlyDefined("settings.opacity"));
     }
     return this.settings.opacity;
   }
 
-  get color():
-    | ((featureIndex: number, feature: any) => IColor)
-    | IColor
-    | null {
+  get color(): ColorCallback | IColor | null {
     return this.settings.color ?? null;
   }
 
@@ -156,7 +161,7 @@ export abstract class BaseGlLayer<
       this.pane
     ).addTo(this.map));
     if (!layer.canvas) {
-      throw new Error("layer.canvas not correctly defined");
+      throw new Error(notProperlyDefined("layer.canvas"));
     }
     const canvas = (this.canvas = layer.canvas);
     canvas.width = canvas.clientWidth;
@@ -236,7 +241,7 @@ export abstract class BaseGlLayer<
       throw new Error("Not able to create vertex");
     }
     if (!vertexShaderSource) {
-      throw new Error("vertexShaderSource not set");
+      throw new Error(notProperlyDefined("settings.vertexShaderSource"));
     }
     gl.shaderSource(vertexShader, vertexShaderSource);
     gl.compileShader(vertexShader);
@@ -258,7 +263,7 @@ export abstract class BaseGlLayer<
       throw new Error("Not able to create fragment");
     }
     if (!fragmentShaderSource) {
-      throw new Error("fragmentShaderSource not set");
+      throw new Error(notProperlyDefined("settings.fragmentShaderSource"));
     }
     gl.shaderSource(fragmentShader, fragmentShaderSource);
     gl.compileShader(fragmentShader);
@@ -276,10 +281,10 @@ export abstract class BaseGlLayer<
       throw new Error("Not able to create program");
     }
     if (!vertexShader) {
-      throw new Error("this.vertexShader not correctly set");
+      throw new Error(notProperlyDefined("this.vertexShader"));
     }
     if (!fragmentShader) {
-      throw new Error("this.fragmentShader not correctly set");
+      throw new Error(notProperlyDefined("this.fragmentShader"));
     }
 
     gl.attachShader(program, vertexShader);
@@ -287,8 +292,10 @@ export abstract class BaseGlLayer<
     gl.linkProgram(program);
     gl.useProgram(program);
     gl.blendFuncSeparate(
-      gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
-      gl.ONE, gl.ONE_MINUS_SRC_ALPHA
+      gl.SRC_ALPHA,
+      gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE,
+      gl.ONE_MINUS_SRC_ALPHA
     );
     gl.enable(gl.BLEND);
 
@@ -350,7 +357,9 @@ export abstract class BaseGlLayer<
   }
 
   getAttributeLocation(name: string): number {
-    if (!this.program) throw new Error("Program is missing");
+    if (!this.program) {
+      throw new Error(notProperlyDefined("this.program"));
+    }
     if (this.attributeLocations[name] !== undefined) {
       return this.attributeLocations[name];
     }
@@ -361,7 +370,9 @@ export abstract class BaseGlLayer<
   }
 
   getUniformLocation(name: string): WebGLUniformLocation {
-    if (!this.program) throw new Error("Program is missing");
+    if (!this.program) {
+      throw new Error(notProperlyDefined("this.program"));
+    }
     if (this.uniformLocations[name] !== undefined) {
       return this.uniformLocations[name];
     }

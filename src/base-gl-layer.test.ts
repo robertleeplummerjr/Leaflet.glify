@@ -2,6 +2,7 @@ import {
   BaseGlLayer,
   defaultHoverWait,
   defaultPane,
+  EventCallback,
   IBaseGlLayerSettings,
 } from "./base-gl-layer";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
@@ -402,7 +403,7 @@ describe("BaseGlLayer", () => {
     });
     describe("when settings.hover and settings.setupHover are truthy", () => {
       it("calls settings.setupHover with this.map and settings.hoverWait", () => {
-        const hover = () => {};
+        const hover: EventCallback = () => {};
         const setupHover = jest.fn();
         const hoverWait = 12;
         const layer = getGlLayer({

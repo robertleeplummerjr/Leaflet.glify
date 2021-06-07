@@ -3,7 +3,7 @@ import { IPointsSettings, Points } from "./points";
 import { ILinesSettings, Lines } from "./lines";
 import { IShapesSettings, Shapes } from "./shapes";
 import { LatLng, LeafletMouseEvent, Map, Point } from "leaflet";
-import { FeatureCollection, LineString } from "geojson";
+import { FeatureCollection, LineString, MultiPolygon } from "geojson";
 
 jest.mock("./canvas-overlay");
 type mouseEventFunction = (e: LeafletMouseEvent) => void;
@@ -50,7 +50,10 @@ describe("glify", () => {
         map,
       });
       const shapes = glify.shapes({
-        data: { features: [] },
+        data: {
+          type: "FeatureCollection",
+          features: [],
+        },
         map,
       });
       expect(glify.instances).toEqual([points, lines, shapes]);
@@ -152,7 +155,10 @@ describe("glify", () => {
       };
     });
     it("calls new this.Shapes with proper properties and pushes to shapesInstances", () => {
-      const data = { features: [] };
+      const data: FeatureCollection<MultiPolygon> = {
+        type: "FeatureCollection",
+        features: [],
+      };
       const map = new Map(document.createElement("div"));
       expect(glify.shapesInstances.length).toBe(0);
       const shapes = glify.shapes({

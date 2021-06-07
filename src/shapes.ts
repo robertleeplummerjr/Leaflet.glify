@@ -1,23 +1,37 @@
 import earcut from "earcut";
 import PolygonLookup from "polygon-lookup";
+import geojsonFlatten from "geojson-flatten";
+import { LatLng, LeafletMouseEvent, Map } from "leaflet";
+import {
+  Feature,
+  FeatureCollection,
+  Geometry,
+  MultiPolygon,
+  Polygon,
+} from "geojson";
 
-import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
+import {
+  BaseGlLayer,
+  ColorCallback,
+  IBaseGlLayerSettings,
+} from "./base-gl-layer";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as Color from "./color";
-import { LatLng, LeafletMouseEvent, Map } from "leaflet";
 import { latLonToPixel } from "./utils";
-import { Geometry, Polygon } from "geojson";
-import geojsonFlatten from "geojson-flatten";
+
+import { notProperlyDefined } from "./errors";
 
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
+  borderOpacity?: number;
+  data: Feature | FeatureCollection | MultiPolygon;
 }
 
 export const defaults: Partial<IShapesSettings> = {
-  data: [],
   color: Color.random,
   className: "",
   opacity: 0.5,
+  borderOpacity: 1,
   shaderVariables: {
     vertex: {
       type: "FLOAT",
@@ -42,18 +56,28 @@ export class Shapes extends BaseGlLayer {
 
   get border(): boolean {
     if (typeof this.settings.border !== "boolean") {
-      throw new Error("settings.boarder not defined");
+      throw new Error(notProperlyDefined("settings.border"));
     }
     return this.settings.border;
+  }
+
+  get borderOpacity(): number {
+    if (typeof this.settings.borderOpacity !== "number") {
+      throw new Error(notProperlyDefined("settings.borderOpacity"));
+    }
+    return this.settings.borderOpacity;
   }
 
   constructor(settings: Partial<IShapesSettings>) {
     super(settings);
     this.settings = { ...Shapes.defaults, ...settings };
 
-    if (!settings.data) throw new Error('no "data" array setting defined');
-    if (!settings.map)
-      throw new Error('no leaflet "map" object setting defined');
+    if (!settings.data) {
+      throw new Error(notProperlyDefined("settings.data"));
+    }
+    if (!settings.map) {
+      throw new Error(notProperlyDefined("settings.map"));
+    }
 
     this.setup().render();
   }
@@ -64,20 +88,20 @@ export class Shapes extends BaseGlLayer {
 
     const { canvas, gl, layer, vertices, mapMatrix } = this;
     const vertexBuffer = this.getBuffer("vertex");
-    const vertArray = new Float32Array(vertices);
-    const byteCount = vertArray.BYTES_PER_ELEMENT;
-    const vertex = this.getAttributeLocation("vertex");
+    const vertexArray = new Float32Array(vertices);
+    const byteCount = vertexArray.BYTES_PER_ELEMENT;
+    const vertexLocation = this.getAttributeLocation("vertex");
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertArray, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, vertexArray, gl.STATIC_DRAW);
     gl.vertexAttribPointer(
-      vertex,
+      vertexLocation,
       2,
       gl.FLOAT,
       false,
       byteCount * this.bytes,
       0
     );
-    gl.enableVertexAttribArray(vertex);
+    gl.enableVertexAttribArray(vertexLocation);
 
     //  gl.disable(gl.DEPTH_TEST);
     // ----------------------------
@@ -105,18 +129,18 @@ export class Shapes extends BaseGlLayer {
       vertices,
       vertexLines,
       polygonLookup,
-      settings,
       map,
       border,
       opacity,
+      borderOpacity, // TODO: Make lookup for each shape priority, then fallback
       color,
+      data,
     } = this;
-    const data = settings.data;
     let pixel;
     let index;
     let features;
     let feature;
-    let colorFn: ((i: number, feature: any) => Color.IColor) | null = null;
+    let colorFn: ColorCallback | null = null;
     let chosenColor: Color.IColor;
     let coordinates;
     let featureIndex = 0;
@@ -143,7 +167,7 @@ export class Shapes extends BaseGlLayer {
           features: [
             {
               type: "Feature" as const,
-              properties: { id: "bar" },
+              properties: {},
               geometry,
             },
           ],
@@ -158,7 +182,7 @@ export class Shapes extends BaseGlLayer {
     const featureMax = features.length;
 
     if (!color) {
-      throw new Error("color is not properly defined");
+      throw new Error(notProperlyDefined("settings.color"));
     } else if (typeof color === "function") {
       colorFn = color;
     }
@@ -175,7 +199,12 @@ export class Shapes extends BaseGlLayer {
         chosenColor = color as Color.IColor;
       }
 
+      const alpha = typeof chosenColor.a === "number" ? chosenColor.a : opacity;
+
       coordinates = (feature.geometry || feature).coordinates;
+      if (!Array.isArray(coordinates[0])) {
+        continue;
+      }
       flat = earcut.flatten(coordinates);
       indices = earcut(flat.vertices, flat.holes, flat.dimensions);
       dim = coordinates[0][0].length;
@@ -200,7 +229,7 @@ export class Shapes extends BaseGlLayer {
           chosenColor.r,
           chosenColor.g,
           chosenColor.b,
-          chosenColor.a ?? opacity
+          alpha
         );
       }
 
@@ -219,7 +248,7 @@ export class Shapes extends BaseGlLayer {
             chosenColor.r,
             chosenColor.g,
             chosenColor.b,
-            chosenColor.a ?? opacity
+            borderOpacity
           );
         }
       }

@@ -91,8 +91,9 @@ L.glify.lines({
     The result should be of interface `IColor`, example: `{r: number, g: number, b: number, a: number }`.
 * `opacity` `{Number}` a value from 0 to 1, default is 0.5.   Only used when opacity isn't included on color.
 * `className` `{String}` a class name applied to canvas, default is ''
-* `border` `{Boolean}` optional, default `false`. When set to `true`, a border with an opacity of 1 is displayed.
-* `preserveDrawingBuffer` `{Boolean}` optional, default `false`, perverse draw buffer on webgl context.
+* `border` `{Boolean}` optional, default `false`. When set to `true`, a border with an opacity of `settings.borderOpacity` is displayed.
+* `borderOpacity` `{Number}` optional, default `false`. Border opacity for when `settings.boarder` is `true`.  Default is 1.
+* `preserveDrawingBuffer` `{Boolean}` optional, default `1`, adjusts the border opacity separate from `opacity`.
   * CAUTION: May cause performance issue with large data sets.
 * `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 

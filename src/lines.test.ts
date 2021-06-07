@@ -2,7 +2,7 @@ import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 import { Feature, FeatureCollection, LineString } from "geojson";
 import { MapMatrix } from "./map-matrix";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
-import { ILinesSettings, Lines } from "./lines";
+import { ILinesSettings, Lines, WeightCallback } from "./lines";
 
 jest.mock("./canvas-overlay");
 jest.mock("./utils", () => {
@@ -52,9 +52,11 @@ describe("Lines", () => {
     describe("when settings.weight is falsey", () => {
       it("throws", () => {
         const settings = getSettings({ weight: 0 });
+        let weight: WeightCallback | number | null = null;
         expect(() => {
-          new Lines(settings).weight;
+          weight = new Lines(settings).weight;
         }).toThrow();
+        expect(weight).toBeNull();
       });
     });
     describe("when settings.weight is truthy", () => {
@@ -98,9 +100,11 @@ describe("Lines", () => {
     describe("when missing settings.data", () => {
       it("throws", () => {
         delete settings.data;
+        let lines: Lines | null = null;
         expect(() => {
-          new Lines(settings);
+          lines = new Lines(settings);
         }).toThrow('"data" is missing');
+        expect(lines).toBeNull();
       });
     });
     it("sets this.active to true", () => {
@@ -108,7 +112,8 @@ describe("Lines", () => {
       expect(lines.active).toBe(true);
     });
     it("calls this.setup and this.render", () => {
-      new Lines(settings);
+      const lines = new Lines(settings);
+      expect(lines).toBeInstanceOf(Lines);
       expect(setupSpy).toHaveBeenCalled();
       expect(renderSpy).toHaveBeenCalled();
     });

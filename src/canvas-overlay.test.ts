@@ -1,7 +1,6 @@
-import { CanvasOverlay, ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import { CanvasOverlay } from "./canvas-overlay";
 import {
   Bounds,
-  Browser,
   LatLng,
   LatLngBounds,
   Map,

@@ -7,15 +7,21 @@ import {
   Position,
 } from "geojson";
 
-import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
+import {
+  BaseGlLayer,
+  ColorCallback,
+  IBaseGlLayerSettings,
+} from "./base-gl-layer";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as color from "./color";
 import { LineFeatureVertices } from "./line-feature-vertices";
 import { latLngDistance, inBounds } from "./utils";
 
+export type WeightCallback = (i: number, feature: any) => number;
+
 export interface ILinesSettings extends IBaseGlLayerSettings {
   data: FeatureCollection<LineString | MultiLineString>;
-  weight: ((i: number, feature: any) => number) | number;
+  weight: WeightCallback | number;
   sensitivity?: number;
   sensitivityHover?: number;
   eachVertex?: (vertices: LineFeatureVertices) => void;
@@ -57,7 +63,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   aPointSize = -1;
   settings: Partial<ILinesSettings>;
 
-  get weight(): ((i: number, feature: any) => number) | number {
+  get weight(): WeightCallback | number {
     if (!this.settings.weight) {
       throw new Error("settings.weight not correctly defined");
     }
@@ -130,8 +136,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     const { features } = data;
     const featureMax = features.length;
     let feature: Feature<LineString | MultiLineString>;
-    let colorFn: ((i: number, feature: any) => color.IColor) | null = null;
-    let weightFn: ((i: number, feature: any) => number) | null = null;
+    let colorFn: ColorCallback | null = null;
+    let weightFn: WeightCallback | null = null;
     let chosenColor: color.IColor;
     let featureIndex = 0;
 
