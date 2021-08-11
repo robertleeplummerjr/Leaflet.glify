@@ -1,8 +1,9 @@
 const path = require('path');
 
-module.exports = {
+const web = {
+    target: 'web',
     entry: './src/index.ts',
-    devtool: 'inline-source-map',
+    devtool: 'source-map',
     devServer: {
         contentBase: path.join(__dirname, 'dist'),
         compress: true,
@@ -42,3 +43,15 @@ module.exports = {
         libraryTarget: 'umd',
     },
 };
+
+const node = {
+    ...web,
+    target: 'node',
+    output: {
+        filename: 'glify.js',
+        path: path.resolve(__dirname, 'dist'),
+        libraryTarget: 'umd',
+    }
+};
+
+module.exports = [web, node];
