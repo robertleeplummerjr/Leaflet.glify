@@ -9,3 +9,4 @@ yarn.lock
 .build
 dist
 __coverage__
+.gh-pages
