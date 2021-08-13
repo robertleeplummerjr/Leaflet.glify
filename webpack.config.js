@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 
 const web = {
     target: 'web',
@@ -10,6 +11,11 @@ const web = {
         port: 9000
     },
     mode: 'production',
+    plugins: [
+      new webpack.ProvidePlugin({
+          leaflet: 'leaflet',
+      }),
+    ],
     externals: {
         leaflet: {
             commonjs: 'leaflet',
