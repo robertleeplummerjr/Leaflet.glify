@@ -235,9 +235,16 @@ export class Shapes extends BaseGlLayer {
 
       if (border) {
         const lines = [];
+        let holeIndex = 0;
+        let skipLineIndices = flat.holes.map(i => ((i+1)*2)-1);
         for (let i = 1, iMax = flat.vertices.length - 2; i < iMax; i = i + 2) {
-          lines.push(flat.vertices[i], flat.vertices[i - 1]);
-          lines.push(flat.vertices[i + 2], flat.vertices[i + 1]);
+          // Skip draw between hole and non-hole vertext
+          if(flat.holes.length == 0 || i + 2 != skipLineIndices[holeIndex]) {
+            lines.push(flat.vertices[i], flat.vertices[i - 1]);
+            lines.push(flat.vertices[i + 2], flat.vertices[i + 1]);
+          } else {
+            holeIndex++;
+          }
         }
 
         for (let i = 0, iMax = lines.length; i < iMax; i) {
