@@ -135,6 +135,7 @@ export class Shapes extends BaseGlLayer {
       borderOpacity, // TODO: Make lookup for each shape priority, then fallback
       color,
       data,
+      mapCenterPixels,
     } = this;
     let pixel;
     let index;
@@ -224,8 +225,8 @@ export class Shapes extends BaseGlLayer {
       for (let i = 0, iMax = triangles.length; i < iMax; i) {
         pixel = map.project(new LatLng(triangles[i++], triangles[i++]), 0);
         vertices.push(
-          pixel.x,
-          pixel.y,
+          pixel.x - mapCenterPixels.x,
+          pixel.y - mapCenterPixels.y,
           chosenColor.r,
           chosenColor.g,
           chosenColor.b,
@@ -243,8 +244,8 @@ export class Shapes extends BaseGlLayer {
         for (let i = 0, iMax = lines.length; i < iMax; i) {
           pixel = latLonToPixel(lines[i++], lines[i++]);
           vertexLines.push(
-            pixel.x,
-            pixel.y,
+            pixel.x - mapCenterPixels.x,
+            pixel.y - mapCenterPixels.y,
             chosenColor.r,
             chosenColor.g,
             chosenColor.b,
@@ -261,12 +262,12 @@ export class Shapes extends BaseGlLayer {
     if (!this.gl) return this;
 
     const { scale, offset, canvas } = e;
-    const { mapMatrix, gl, vertices, settings, vertexLines, border } = this;
+    const { mapMatrix, gl, vertices, settings, vertexLines, border, mapCenterPixels } = this;
     // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
       .setSize(canvas.width, canvas.height)
       .scaleTo(scale)
-      .translateTo(-offset.x, -offset.y);
+      .translateTo(-offset.x + mapCenterPixels.x, -offset.y + mapCenterPixels.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);

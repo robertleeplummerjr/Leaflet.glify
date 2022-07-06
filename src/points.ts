@@ -152,6 +152,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
       color,
       opacity,
       data,
+      mapCenterPixels,
     } = this;
     const { eachVertex } = settings;
     let colorFn:
@@ -204,8 +205,8 @@ export class Points extends BaseGlLayer<IPointsSettings> {
 
         vertices.push(
           // vertex
-          pixel.x,
-          pixel.y,
+          pixel.x - mapCenterPixels.x,
+          pixel.y - mapCenterPixels.y,
 
           // color
           chosenColor.r,
@@ -257,8 +258,8 @@ export class Points extends BaseGlLayer<IPointsSettings> {
 
         vertices.push(
           // vertex
-          pixel.x,
-          pixel.y,
+          pixel.x - mapCenterPixels.x,
+          pixel.y - mapCenterPixels.y,
 
           // color
           chosenColor.r,
@@ -300,7 +301,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    const { gl, canvas, mapMatrix, matrix, map, allLatLngLookup } = this;
+    const { gl, canvas, mapMatrix, matrix, map, allLatLngLookup, mapCenterPixels } = this;
     const { offset } = e;
     const zoom = map.getZoom();
     const scale = Math.pow(2, zoom);
@@ -308,7 +309,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     mapMatrix
       .setSize(canvas.width, canvas.height)
       .scaleTo(scale)
-      .translateTo(-offset.x, -offset.y);
+      .translateTo(-offset.x + mapCenterPixels.x, -offset.y + mapCenterPixels.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);

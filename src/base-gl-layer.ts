@@ -1,6 +1,7 @@
 import { LeafletMouseEvent, Map } from "leaflet";
 
 import { IColor } from "./color";
+import { IPixel } from "./pixel"
 import { CanvasOverlay, ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { notProperlyDefined } from "./errors";
 import { MapMatrix } from "./map-matrix";
@@ -69,6 +70,7 @@ export abstract class BaseGlLayer<
   vertexShader: WebGLShader | null;
   vertices: any;
   vertexLines: any;
+  mapCenterPixels: IPixel;
 
   buffers: { [name: string]: WebGLBuffer } = {};
   attributeLocations: { [name: string]: number } = {};
@@ -153,6 +155,11 @@ export abstract class BaseGlLayer<
     this.matrix = null;
     this.vertices = null;
     this.vertexLines = null;
+    try{
+      this.mapCenterPixels =  this.map.project(this.map.getCenter(), 0)
+    } catch(err){
+      this.mapCenterPixels = {x:-0,y:-0}
+    }
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
     const layer = (this.layer = new CanvasOverlay(
       (context: ICanvasOverlayDrawEvent) => {
