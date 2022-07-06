@@ -1,6 +1,7 @@
 import { LeafletMouseEvent, Map } from "leaflet";
 
 import { IColor } from "./color";
+import { IPixel } from "./pixel"
 import { CanvasOverlay, ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { notProperlyDefined } from "./errors";
 import { MapMatrix } from "./map-matrix";
@@ -69,7 +70,7 @@ export abstract class BaseGlLayer<
   vertexShader: WebGLShader | null;
   vertices: any;
   vertexLines: any;
-  mapCenterPixels: any;
+  mapCenterPixels: IPixel;
 
   buffers: { [name: string]: WebGLBuffer } = {};
   attributeLocations: { [name: string]: number } = {};
