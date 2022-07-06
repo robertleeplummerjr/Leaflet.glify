@@ -10,7 +10,7 @@ interface ILineFeatureVerticesSettings {
   latitudeKey: number;
   longitudeKey: number;
   opacity: number;
-  mapCenterPixels: any;
+  mapCenterPixels: IPixel;
 }
 
 export class LineFeatureVertices {
