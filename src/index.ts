@@ -1,25 +1,17 @@
-import { LeafletMouseEvent, Map } from './leaflet-bindings';
+import { LeafletMouseEvent, Map } from "leaflet";
 
-import { Lines, ILinesSettings } from './lines';
-import { MapMatrix } from './map-matrix';
-import { Points, IPointsSettings } from './points';
-import { IShapeSettings, Shapes } from './shapes';
-import { debounce } from './utils';
+import { Lines, ILinesSettings } from "./lines";
+import { Points, IPointsSettings } from "./points";
+import { Shapes, IShapesSettings } from "./shapes";
+import { debounce } from "./utils";
 
-// @ts-ignore
-import vertex from './shader/vertex/default.glsl';
-// @ts-ignore
-import dot from './shader/fragment/dot.glsl';
-// @ts-ignore
-import point from './shader/fragment/point.glsl';
-// @ts-ignore
-import puck from './shader/fragment/puck.glsl';
-// @ts-ignore
-import simpleCircle from './shader/fragment/simple-circle.glsl';
-// @ts-ignore
-import square from './shader/fragment/square.glsl';
-// @ts-ignore
-import polygon from './shader/fragment/polygon.glsl';
+import vertex from "./shader/vertex/default.glsl";
+import dot from "./shader/fragment/dot.glsl";
+import point from "./shader/fragment/point.glsl";
+import puck from "./shader/fragment/puck.glsl";
+import simpleCircle from "./shader/fragment/simple-circle.glsl";
+import square from "./shader/fragment/square.glsl";
+import polygon from "./shader/fragment/polygon.glsl";
 
 const shader = {
   vertex,
@@ -30,18 +22,23 @@ const shader = {
     simpleCircle,
     square,
     polygon,
-  }
+  },
 };
 
-class Glify {
-  longitudeKey: number = 1;
-  latitudeKey: number = 0;
-  maps: Map[] = [];
+export class Glify {
+  longitudeKey = 1;
+  latitudeKey = 0;
+  clickSetupMaps: Map[] = [];
+  hoverSetupMaps: Map[] = [];
   shader = shader;
 
   Points: typeof Points = Points;
   Shapes: typeof Shapes = Shapes;
   Lines: typeof Lines = Lines;
+
+  pointsInstances: Points[] = [];
+  shapesInstances: Shapes[] = [];
+  linesInstances: Lines[] = [];
 
   longitudeFirst(): this {
     this.longitudeKey = 0;
@@ -55,17 +52,17 @@ class Glify {
     return this;
   }
 
-  get instances() {
+  get instances(): Array<Points | Lines | Shapes> {
     return [
-      ...Points.instances,
-      ...Lines.instances,
-      ...Shapes.instances,
+      ...this.pointsInstances,
+      ...this.linesInstances,
+      ...this.shapesInstances,
     ];
   }
 
-  points(settings: IPointsSettings): Points {
-    return new this.Points({
-      setupClick: glify.setupClick.bind(this),
+  points(settings: Partial<IPointsSettings>): Points {
+    const points = new this.Points({
+      setupClick: this.setupClick.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
@@ -77,10 +74,12 @@ class Glify {
       },
       ...settings,
     });
+    this.pointsInstances.push(points);
+    return points;
   }
 
-  shapes(settings: IShapeSettings): Shapes {
-    return new this.Shapes({
+  lines(settings: Partial<ILinesSettings>): Lines {
+    const lines = new this.Lines({
       setupClick: this.setupClick.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
@@ -91,12 +90,14 @@ class Glify {
       fragmentShaderSource: () => {
         return this.shader.fragment.polygon;
       },
-      ...settings
+      ...settings,
     });
+    this.linesInstances.push(lines);
+    return lines;
   }
 
-  lines(settings: ILinesSettings): Lines {
-    return new this.Lines({
+  shapes(settings: Partial<IShapesSettings>): Shapes {
+    const shapes = new this.Shapes({
       setupClick: this.setupClick.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
@@ -107,48 +108,51 @@ class Glify {
       fragmentShaderSource: () => {
         return this.shader.fragment.polygon;
       },
-      ...settings
+      ...settings,
     });
+    this.shapesInstances.push(shapes);
+    return shapes;
   }
 
-  setupClick(map?: Map): void {
-    if (this.maps.indexOf(map) < 0) {
-      this.maps.push(map);
-      map.on('click', (e: LeafletMouseEvent) => {
-        let hit;
-        hit = Points.tryClick(e, map);
-        if (hit !== undefined) return hit;
-
-        hit = Lines.tryClick(e, map);
-        if (hit !== undefined) return hit;
-
-        hit = Shapes.tryClick(e, map);
-        if (hit !== undefined) return hit;
-      });
-    }
-  }
-
-  setupHover(map?: Map, hoverWait?: 250, immediate?: false): void {
-    this.maps.push(map);
-    map.on('mousemove', debounce((e: LeafletMouseEvent) => {
+  setupClick(map: Map): void {
+    if (this.clickSetupMaps.includes(map)) return;
+    this.clickSetupMaps.push(map);
+    map.on("click", (e: LeafletMouseEvent) => {
       let hit;
-      hit = Points.tryHover(e, map);
+      hit = this.Points.tryClick(e, map, this.pointsInstances);
       if (hit !== undefined) return hit;
 
-      hit = Lines.tryHover(e, map);
+      hit = this.Lines.tryClick(e, map, this.linesInstances);
       if (hit !== undefined) return hit;
 
-      hit = Shapes.tryHover(e, map);
+      hit = this.Shapes.tryClick(e, map, this.shapesInstances);
       if (hit !== undefined) return hit;
-    }, hoverWait, immediate));
+    });
+  }
+
+  setupHover(map: Map, hoverWait?: number, immediate?: false): void {
+    if (this.hoverSetupMaps.includes(map)) return;
+    this.hoverSetupMaps.push(map);
+    map.on(
+      "mousemove",
+      debounce(
+        (e: LeafletMouseEvent) => {
+          this.Points.tryHover(e, map, this.pointsInstances);
+          this.Lines.tryHover(e, map, this.linesInstances);
+          this.Shapes.tryHover(e, map, this.shapesInstances);
+        },
+        hoverWait ?? 0,
+        immediate
+      )
+    );
   }
 }
 
-const glify = new Glify();
-export default module.exports = glify;
-if (typeof window !== 'undefined' && window.L) {
-  // @ts-ignore
-  window['L'].glify = glify;
-  // @ts-ignore
-  window['L'].Glify = Glify;
+export const glify = new Glify();
+export default glify;
+if (typeof window !== "undefined" && window.L) {
+  // @ts-expect-error exporting it to window
+  window.L.glify = glify;
+  // @ts-expect-error exporting it to window
+  window.L.Glify = Glify;
 }

@@ -1,6 +1,7 @@
 import * as L from 'leaflet';
-import { FeatureCollection } from 'geojson';
-import glify from './src';
+import { LeafletMouseEvent } from 'leaflet';
+import { FeatureCollection, LineString } from 'geojson';
+import glify from './src/index';
 
 const map = L.map('map')
   .setView([50.00, 14.44], 7);
@@ -9,9 +10,9 @@ L.tileLayer('http://{s}.sm.mapstack.stamen.com/(toner-background,$fff[difference
   .addTo(map);
 
 Promise.all([
-  wget<number[][]>('86T.json'),
-  wget<FeatureCollection>('CZDistricts.json'),
-  wget<FeatureCollection>('rivers.json')
+  wget<number[][]>('data/86T.json'),
+  wget<FeatureCollection>('data/CZDistricts.json'),
+  wget<FeatureCollection<LineString>>('data/rivers.json')
 ])
   .then(([points, districts, rivers]) => {
     glify.shapes({
@@ -19,29 +20,36 @@ Promise.all([
       click: (e, feature): void => {
         L.popup()
           .setLatLng(e.latlng)
-          .setContent('You clicked on ' + feature.properties.NAZKR_ENG)
+          .setContent(`You clicked on ${feature.properties.NAZKR_ENG}`)
           .openOn(map);
 
-        console.log(feature);
-        console.log(e);
+        console.log('clicked on Shape', feature, e);
+      },
+      hover: (e: LeafletMouseEvent, feature) => {
+        console.log('hovered on Shape', feature, e);
       },
       data: districts,
       border: true,
     });
 
     glify.lines({
-      map: map,
+      map,
       latitudeKey: 1,
       longitudeKey: 0,
-      weight: 5,
-      click: (e, feature) => {
+      weight: 2,
+      click: (e: LeafletMouseEvent, feature) => {
         L.popup()
           .setLatLng(e.latlng)
-          .setContent('You clicked on ' + feature.properties.name)
+          .setContent(`clicked on Line ${feature.properties.name}`)
           .openOn(map);
 
-        console.log(feature);
-        console.log(e);
+        console.log('clicked on Line', feature, e);
+      },
+      hover: (e: LeafletMouseEvent, feature) => {
+        console.log('hovered on Line', feature, e);
+      },
+      hoverOff: (e: LeafletMouseEvent, feature) => {
+        console.log('hovered off Line', feature, e);
       },
       data: rivers
     });
@@ -51,14 +59,17 @@ Promise.all([
       size: function(i) {
         return (Math.random() * 17) + 3;
       },
-      click: (e, point, xy) => {
+      hover: (e: LeafletMouseEvent, feature) => {
+        console.log('hovered on Point', feature, e);
+      },
+      click: (e: LeafletMouseEvent, feature) => {
         //set up a standalone popup (use a popup as a layer)
         L.popup()
-          .setLatLng(point)
-          .setContent('You clicked the point at longitude:' + point[glify.longitudeKey] + ', latitude:' + point[glify.latitudeKey])
+          .setLatLng(feature)
+          .setContent(`You clicked the point at longitude:${ e.latlng.lng }, latitude:${ e.latlng.lat }`)
           .openOn(map);
 
-        console.log(point);
+        console.log('clicked on Point', feature, e);
       },
       data: points
     });
@@ -75,14 +86,17 @@ Promise.all([
           b: 0,
         };
       },
-      click: (e, point) => {
+      click: (e: LeafletMouseEvent, feature) => {
         //set up a standalone popup (use a popup as a layer)
         L.popup()
-          .setLatLng(point)
-          .setContent('You clicked the point at longitude:' + point[glify.longitudeKey] + ', latitude:' + point[glify.latitudeKey])
+          .setLatLng(feature)
+          .setContent(`You clicked the point at longitude:${e.latlng.lng}, latitude:${e.latlng.lat}`)
           .openOn(map);
 
-        console.log(point);
+        console.log('clicked on Point', feature, e);
+      },
+      hover: (e: LeafletMouseEvent, feature) => {
+        console.log('hovered on Point', feature, e);
       },
       data: [[50.10164799,14.5]]
     });
@@ -99,6 +113,12 @@ Promise.all([
           b: 1,
         };
       },
+      hover: (e: LeafletMouseEvent, feature) => {
+        console.log('hovered on Point', feature, e);
+      },
+      hoverOff: (e: LeafletMouseEvent, feature) => {
+
+      },
       click: (e, feature) => {
         //set up a standalone popup (use a popup as a layer)
         L.popup()
@@ -106,7 +126,7 @@ Promise.all([
           .setContent('You clicked on:' + feature.properties.name)
           .openOn(map);
 
-        console.log(feature);
+        console.log('clicked on Point', feature, e);
       },
       data: { //geojson
         'type': 'FeatureCollection',
@@ -138,7 +158,7 @@ Promise.all([
     });
   });
 
-function wget<T>(url): Promise<T> {
+function wget<T>(url: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open('GET', url, true);

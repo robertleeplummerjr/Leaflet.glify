@@ -1,7 +1,7 @@
 uniform mat4 matrix;
 attribute vec4 vertex;
-attribute float pointSize;
 attribute vec4 color;
+attribute float pointSize;
 varying vec4 _color;
 
 void main() {
