@@ -7,6 +7,5 @@ yarn.lock
 .cache
 .dev-server
 .build
-dist
 __coverage__
 .gh-pages
