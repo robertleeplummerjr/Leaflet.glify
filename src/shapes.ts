@@ -349,56 +349,26 @@ export class Shapes extends BaseGlLayer {
     instances: Shapes[]
   ): Array<boolean | undefined> {
     const results: Array<boolean | undefined> = [];
-    instances.forEach((instance: Shapes): void => {
-      // console.log(instance);
-      const { data, hoveringFeatures } = instance;
-      function checkHover(): boolean {
-        const feature_index = instance.polygonLookup?.search(
-          e.latlng.lng,
-          e.latlng.lat
-        );
-        // console.log(feature_index);
-
-        if (feature_index) {
-          // console.log(feature_index);
-          if (!newHoveredFeatures.includes(feature_index)) {
-            newHoveredFeatures.push(feature_index);
-            console.log("newHoveredFeatures");
-            console.log(newHoveredFeatures);
-          }
-          if (!oldHoveredFeatures.includes(feature_index)) {
-            console.log("oldHoveredFeatures");
-            console.log(oldHoveredFeatures);
-            return true;
-          }
-        }
-        return false;
-      }
+    instances.forEach(function (instance: Shapes): void {
+      const { hoveringFeatures } = instance;
       if (!instance.active) return;
       if (instance.map !== map) return;
       if (!instance.polygonLookup) return;
       const oldHoveredFeatures = hoveringFeatures;
       const newHoveredFeatures: Array<Polygon | MultiPolygon> = [];
-
       instance.hoveringFeatures = newHoveredFeatures;
 
-      data.features.forEach(
-        (feature: Feature<Polygon | MultiPolygon>): void => {
-          const type = feature.geometry.type;
-          let isHovering = false;
-          if (type === "Polygon") {
-            isHovering = checkHover();
-            // if (isHovering) return;
-          } else if (type === "MultiPolygon") {
-          }
-          if (isHovering) {
-            const result = instance.hover(e, feature);
-            if (result !== undefined) {
-              results.push(result);
-            }
-          }
+      const feature = instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+
+      if (feature) {
+        if (!newHoveredFeatures.includes(feature)) {
+          newHoveredFeatures.push(feature);
         }
-      );
+        const result = instance.hover(e, feature);
+        if (result !== undefined) {
+          results.push(result);
+        }
+      }
 
       for (let i = 0; i < oldHoveredFeatures.length; i++) {
         const feature = oldHoveredFeatures[i];
@@ -406,8 +376,6 @@ export class Shapes extends BaseGlLayer {
           instance.hoverOff(e, feature);
         }
       }
-
-      // feature = instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
     });
 
     return results;
