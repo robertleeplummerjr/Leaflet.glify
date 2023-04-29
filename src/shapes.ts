@@ -236,6 +236,7 @@ export class Shapes extends BaseGlLayer {
       if (border) {
         const lines = [];
         for (let i = 1, iMax = flat.vertices.length - 2; i < iMax; i = i + 2) {
+          if (flat.holes.includes((i + 1) / 2)) continue;
           lines.push(flat.vertices[i], flat.vertices[i - 1]);
           lines.push(flat.vertices[i + 2], flat.vertices[i + 1]);
         }
