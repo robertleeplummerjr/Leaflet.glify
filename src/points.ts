@@ -411,6 +411,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     }
   }
 
+  hoveringFeatures: Array<Feature<GeoPoint>> = [];
   // hovers all touching Points instances
   static tryHover(
     e: LeafletMouseEvent,
@@ -418,24 +419,36 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     instances: Points[]
   ): Array<boolean | undefined> {
     const results: boolean[] = [];
-    instances.forEach((_instance: Points): void => {
-      if (!_instance.active) return;
-      if (_instance.map !== map) return;
-      const pointLookup = _instance.lookup(e.latlng);
+    instances.forEach((instance: Points): void => {
+      const { sensitivityHover, hoveringFeatures } = instance;
+      if (!instance.active) return;
+      if (instance.map !== map) return;
+      const oldHoveredFeatures = hoveringFeatures;
+      const newHoveredFeatures: Array<Feature<GeoPoint>> = [];
+      instance.hoveringFeatures = newHoveredFeatures;
+
+      const pointLookup = instance.lookup(e.latlng);
       if (!pointLookup) return;
       if (
         pixelInCircle(
           map.latLngToLayerPoint(pointLookup.latLng),
           e.layerPoint,
-          pointLookup.chosenSize * _instance.sensitivityHover * 30
+          pointLookup.chosenSize * sensitivityHover * 30
         )
       ) {
-        const result = _instance.hover(
-          e,
-          pointLookup.feature || pointLookup.latLng
-        );
+        let feature = pointLookup.feature || pointLookup.latLng;
+        if (!newHoveredFeatures.includes(feature)) {
+          newHoveredFeatures.push(feature);
+        }
+        const result = instance.hover(e, feature);
         if (result !== undefined) {
           results.push(result);
+        }
+      }
+      for (let i = 0; i < oldHoveredFeatures.length; i++) {
+        const feature = oldHoveredFeatures[i];
+        if (!newHoveredFeatures.includes(feature)) {
+          instance.hoverOff(e, feature);
         }
       }
     });
