@@ -4,11 +4,11 @@ import {
   defaultPane,
   EventCallback,
   IBaseGlLayerSettings,
-} from "./base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+} from "../base-gl-layer";
+import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 
-jest.mock("./canvas-overlay");
+jest.mock("../canvas-overlay");
 
 describe("BaseGlLayer", () => {
   interface ITestLayerSettings extends IBaseGlLayerSettings {}
@@ -18,6 +18,10 @@ describe("BaseGlLayer", () => {
     }
 
     render(): this {
+      return this;
+    }
+
+    removeInstance(): this {
       return this;
     }
   }

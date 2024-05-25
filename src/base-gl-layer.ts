@@ -17,7 +17,11 @@ export type EventCallback = (
   feature: any
 ) => boolean | void;
 
-export type SetupHoverCallback = (map: Map, hoverWait?: number, immediate?: false) => void;
+export type SetupHoverCallback = (
+  map: Map,
+  hoverWait?: number,
+  immediate?: false
+) => void;
 
 export interface IBaseGlLayerSettings {
   data: any;
@@ -77,6 +81,7 @@ export abstract class BaseGlLayer<
   static defaults = defaults;
 
   abstract render(): this;
+  abstract removeInstance(this: any): this;
 
   get data(): any {
     if (!this.settings.data) {
@@ -312,6 +317,7 @@ export abstract class BaseGlLayer<
 
   remove(indices?: number | number[]): this {
     if (indices === undefined) {
+      this.removeInstance();
       this.map.removeLayer(this.layer);
       this.active = false;
     } else {

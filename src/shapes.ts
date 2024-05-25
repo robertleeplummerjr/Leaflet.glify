@@ -20,6 +20,7 @@ import * as Color from "./color";
 import { latLonToPixel } from "./utils";
 
 import { notProperlyDefined } from "./errors";
+import glify from "./index";
 
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
@@ -254,6 +255,16 @@ export class Shapes extends BaseGlLayer {
       }
     }
 
+    return this;
+  }
+
+  removeInstance(): this {
+    const index = glify.shapesInstances.findIndex(
+      (element) => element.layer._leaflet_id === this.layer._leaflet_id
+    );
+    if (index !== -1) {
+      glify.shapesInstances.splice(index, 1);
+    }
     return this;
   }
 

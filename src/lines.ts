@@ -16,6 +16,7 @@ import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as color from "./color";
 import { LineFeatureVertices } from "./line-feature-vertices";
 import { latLngDistance, inBounds } from "./utils";
+import glify from "./index";
 
 export type WeightCallback = (i: number, feature: any) => number;
 
@@ -220,6 +221,16 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     this.allVertices = allVertices;
     this.allVerticesTyped = new Float32Array(allVertices);
 
+    return this;
+  }
+
+  removeInstance(): this {
+    const index = glify.linesInstances.findIndex(
+      (element) => element.layer._leaflet_id === this.layer._leaflet_id
+    );
+    if (index !== -1) {
+      glify.linesInstances.splice(index, 1);
+    }
     return this;
   }
 

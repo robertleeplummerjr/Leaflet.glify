@@ -14,5 +14,6 @@
   "testEnvironment": "jsdom",
   "transform": {
     "^.+\\.glsl": "jest-raw-loader"
-  }
+  },
+  "testMatch": ["**/tests/**/*.test.ts"]
 }

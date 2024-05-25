@@ -1,4 +1,4 @@
-import { MapMatrix } from "./map-matrix";
+import { MapMatrix } from "../map-matrix";
 
 describe("MapMatrix", () => {
   describe("constructor", () => {
