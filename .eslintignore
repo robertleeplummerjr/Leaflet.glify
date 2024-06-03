@@ -15,11 +15,12 @@ yarn.lock
 # code coverage
 __coverage__
 
-tests*.*
+src/tests/**
+test*.*
 
-tests/unit/coverage/**
-tests/unit/*.js
-tests/e2e/*.js
+test/unit/coverage/**
+test/unit/*.js
+test/e2e/*.js
 **.min.js
 dist/
 __coverage__/
