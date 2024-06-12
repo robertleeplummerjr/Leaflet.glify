@@ -149,28 +149,30 @@ L.glify.lines({
 * `shapes(options)`
 * `lines(options)`
 
-
 ## Building
 
-There are two ways to package this application: Parcel and WebPack.
-
-You can build the parcel version by running ``yarn run build-browser``
-You can build the webpack version by running ``yarn run build-browser-webpack``
+You can build by running `npm run build`
 
 ## Developing
-Use `yarn serve`
+
+Use `npm run serve`
 
 ## Testing
-Use `yarn test`
 
-## Update & Remove Data
-L.glify instances can be updated using the `update(data, index)` method.
-* `data` `{Object}` Lines and Shapes require a single GeoJSON feature. Points require the same data structure as the original object and therefore also accept an array of coordinates.
-* `index` `{number}` An integer indicating the index of the element to be updated.
+Use `npm run test`
+
+## Update & Insert & Remove Data
+
+L.glify instances can be manipulated using the `update(data, index)` or `insert(data, index)` method.
+
+- `data` `{Object}` Lines and Shapes accept either a single GeoJSON feature or an array of GeoJSON features. Points require the same data structure as the original object and therefore also accept an array of coordinates.
+- `index` `{number}` An integer indicating the starting index of the element(s) to be updated/inserted.
 
 An object or some elements of an object are removed using the `remove(index)` method.
-* `index` `{number|Array}` optional - An integer or an array of integers specifying the indices of the elements to be removed.
+
+- `index` `{number|Array}` optional - An integer or an array of integers specifying the indices of the elements to be removed.
   If `index` is not defined, the entire object is removed.
+  
 
 ## Contributors
 
