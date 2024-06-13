@@ -1,4 +1,5 @@
 # Leaflet.glify ![Leaflet.glify logo](logo.svg)
+
 web gl renderer plugin for leaflet in typescript
 
 _Pronounced leaflet-G.L.-Ify, or leaflet-glify, or L.-G.L.-Ify, or L-glify, or elglify_
@@ -8,25 +9,31 @@ inspired by http://bl.ocks.org/Sumbera/c6fed35c377a46ff74c3 & need.
 [![Backers on Open Collective](https://opencollective.com/leafletglify/backers/badge.svg)](#backers) [![Sponsors on Open Collective](https://opencollective.com/leafletglify/sponsors/badge.svg)](#sponsors)
 
 ## Objective
-* To provide a means of rendering a massive amount of data visually in a way that does not degrade user experience
-* Remaining as simple as possible with current fastest libs
-* Providing the same sort of user experience one would get using standard html and elements
+
+- To provide a means of rendering a massive amount of data visually in a way that does not degrade user experience
+- Remaining as simple as possible with current fastest libs
+- Providing the same sort of user experience one would get using standard html and elements
 
 ## Usage
+
 ### Browser
+
 ```html
 <script src="dist/glify-browser.js"></script>
 <script>
   // namespace
-  L.glify
+  L.glify;
 </script>
 ```
+
 ### Typescript
+
 ```ts
 import glify from 'leaflet.glify';
 // namespace
 glify
 ```
+
 ### Node
 ```js
 const { glify } = require('leaflet.glify');
@@ -45,7 +52,7 @@ L.glify.points({
   },
   hover: (e, pointOrGeoJsonFeature, xy): boolean | void => {
     // do something when a point is hovered
-  }
+  },
 });
 ```
 
@@ -195,16 +202,15 @@ All of the `L.glify.Shapes` instances
 
 ## Building
 
-There are two ways to package this application: Parcel and WebPack.
-
-You can build the parcel version by running ``yarn run build-browser``
-You can build the webpack version by running ``yarn run build-browser-webpack``
+You can build the library by running `yarn run build` or `npm run build`
 
 ## Developing
-Use `yarn serve`
+
+Use `yarn serve` or `npm run serve`
 
 ## Testing
-Use `yarn test`
+
+Use `yarn test` or `npm run test`
 
 ## Update & Remove Data
 `L.glify` instances can be updated using the `update(data, index)` method.
@@ -212,7 +218,8 @@ Use `yarn test`
 * `index` `{number}` An integer indicating the index of the element to be updated.
 
 An object or some elements of an object are removed using the `remove(index)` method.
-* `index` `{number|Array}` optional - An integer or an array of integers specifying the indices of the elements to be removed.
+
+- `index` `{number|Array}` optional - An integer or an array of integers specifying the indices of the elements to be removed.
   If `index` is not defined, the entire object is removed.
   
 ### Example

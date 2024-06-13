@@ -18,7 +18,11 @@ export type EventCallback = (
   feature: any
 ) => boolean | void;
 
-export type SetupHoverCallback = (map: Map, hoverWait?: number, immediate?: false) => void;
+export type SetupHoverCallback = (
+  map: Map,
+  hoverWait?: number,
+  immediate?: false
+) => void;
 
 export interface IBaseGlLayerSettings {
   data: any;

@@ -349,26 +349,39 @@ export class Shapes extends BaseGlLayer {
     }
   }
 
+  hoveringFeatures: Array<Polygon | MultiPolygon> = [];
   // hovers all touching Shapes instances
   static tryHover(
     e: LeafletMouseEvent,
     map: Map,
     instances: Shapes[]
   ): Array<boolean | undefined> {
-    const results: boolean[] = [];
-    let feature;
+    const results: Array<boolean | undefined> = [];
+    instances.forEach(function (instance: Shapes): void {
+      const { hoveringFeatures } = instance;
+      if (!instance.active) return;
+      if (instance.map !== map) return;
+      if (!instance.polygonLookup) return;
+      const oldHoveredFeatures = hoveringFeatures;
+      const newHoveredFeatures: Array<Polygon | MultiPolygon> = [];
+      instance.hoveringFeatures = newHoveredFeatures;
 
-    instances.forEach((_instance: Shapes): void => {
-      if (!_instance.active) return;
-      if (_instance.map !== map) return;
-      if (!_instance.polygonLookup) return;
-
-      feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+      const feature = instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
 
       if (feature) {
-        const result = _instance.hover(e, feature);
+        if (!newHoveredFeatures.includes(feature)) {
+          newHoveredFeatures.push(feature);
+        }
+        const result = instance.hover(e, feature);
         if (result !== undefined) {
           results.push(result);
+        }
+      }
+
+      for (let i = 0; i < oldHoveredFeatures.length; i++) {
+        const feature = oldHoveredFeatures[i];
+        if (!newHoveredFeatures.includes(feature)) {
+          instance.hoverOff(e, feature);
         }
       }
     });
