@@ -1,6 +1,6 @@
 {
   "name": "leaflet.glify",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "web gl renderer plugin for leaflet",
   "main": "dist/glify.js",
   "browser": "dist/glify-browser.js",
