@@ -346,15 +346,28 @@ export abstract class BaseGlLayer<
     return this;
   }
 
-  insert(feature: any, index: number): this {
-    const features = this.settings.data.features || this.settings.data;
-    features.splice(index, 0, feature);
+  insert(features: any | any[], index: number): this {
+    const featuresArray = Array.isArray(features) ? features : [features];
+    const featuresData = this.settings.data.features || this.settings.data;
+
+    for (let i = 0; i < featuresArray.length; i++) {
+      featuresData.splice(index + i, 0, featuresArray[i]);
+    }
+
     return this.render();
   }
 
-  update(feature: any, index: number): this {
-    const features = this.settings.data.features || this.settings.data;
-    features[index] = feature;
+  update(feature: any | any[], index: number): this {
+    const featuresData = this.settings.data.features || this.settings.data;
+
+    if (Array.isArray(feature)) {
+      for (let i = 0; i < feature.length; i++) {
+        featuresData[index + i] = feature[i];
+      }
+    } else {
+      featuresData[index] = feature;
+    }
+
     return this.render();
   }
 

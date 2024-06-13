@@ -220,6 +220,8 @@ Use `yarn test` or `npm run test`
 An object or some elements of an object are removed using the `remove(index)` method.
 
 - `index` `{number|Array}` optional - An integer or an array of integers specifying the indices of the elements to be removed.
+
+- `index` `{number|Array}` optional - An integer or an array of integers specifying the indices of the elements to be removed.
   If `index` is not defined, the entire object is removed.
   
 ### Example
