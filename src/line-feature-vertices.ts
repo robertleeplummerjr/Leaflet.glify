@@ -10,6 +10,7 @@ interface ILineFeatureVerticesSettings {
   latitudeKey: number;
   longitudeKey: number;
   opacity: number;
+  mapCenterPixels: IPixel;
 }
 
 export class LineFeatureVertices {
@@ -35,6 +36,7 @@ export class LineFeatureVertices {
       project,
       latitudeKey,
       longitudeKey,
+      mapCenterPixels,
     } = this.settings;
     for (let i = 0; i < coordinates.length; i++) {
       if (Array.isArray(coordinates[i][0])) {
@@ -50,8 +52,8 @@ export class LineFeatureVertices {
       const pixel = project(latLng, 0);
       this.pixels.push(pixel);
       this.push(
-        pixel.x,
-        pixel.y,
+        pixel.x - mapCenterPixels.x,
+        pixel.y - mapCenterPixels.y,
         color.r,
         color.g,
         color.b,
