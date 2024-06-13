@@ -512,6 +512,7 @@ describe("Lines", () => {
         layerPoint: new Point(1, 1),
         containerPoint: new Point(1, 1),
         originalEvent: new MouseEvent("click"),
+        popup: "",
       };
     });
     afterEach(() => {
@@ -596,6 +597,7 @@ describe("Lines", () => {
         layerPoint: new Point(1, 1),
         containerPoint: new Point(1, 1),
         originalEvent: new MouseEvent("mousemove"),
+        popup: "",
       };
     });
     afterEach(() => {

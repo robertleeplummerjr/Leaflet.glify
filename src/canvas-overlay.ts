@@ -45,7 +45,7 @@ export class CanvasOverlay extends Layer {
   _pane: string;
 
   _frame?: number | null;
-  options?: LayerOptions;
+  options: LayerOptions;
 
   constructor(userDrawFunc: IUserDrawFunc, pane: string) {
     super();
@@ -53,6 +53,7 @@ export class CanvasOverlay extends Layer {
     this._frame = null;
     this._redrawCallbacks = [];
     this._pane = pane;
+    this.options = {};
   }
 
   drawing(userDrawFunc: IUserDrawFunc): this {

@@ -50,6 +50,7 @@ describe("BaseGlLayer", () => {
       target: "",
       sourceTarget: "",
       propagatedFrom: "",
+      popup: "",
       layer,
     };
   }

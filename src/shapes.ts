@@ -5,6 +5,7 @@ import { LatLng, LeafletMouseEvent, Map } from "leaflet";
 import {
   Feature,
   FeatureCollection,
+  GeoJsonProperties,
   Geometry,
   MultiPolygon,
   Polygon,
@@ -318,7 +319,7 @@ export class Shapes extends BaseGlLayer {
     map: Map,
     instances: Shapes[]
   ): boolean | undefined {
-    let foundPolygon: Polygon | null = null;
+    let foundPolygon: Feature<Polygon, GeoJsonProperties> | null = null;
     let foundShapes: Shapes | null = null;
     instances.forEach(function (_instance: Shapes): void {
       if (!_instance.active) return;
