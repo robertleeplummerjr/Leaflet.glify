@@ -360,7 +360,7 @@ export class Shapes extends BaseGlLayer {
     }
   }
 
-  hoveringFeatures: Array<Polygon | MultiPolygon> = [];
+  hoveringFeatures: Array<Feature<Polygon, GeoJsonProperties> | Feature<MultiPolygon, GeoJsonProperties>> = [];
   // hovers all touching Shapes instances
   static tryHover(
     e: LeafletMouseEvent,
@@ -374,7 +374,7 @@ export class Shapes extends BaseGlLayer {
       if (instance.map !== map) return;
       if (!instance.polygonLookup) return;
       const oldHoveredFeatures = hoveringFeatures;
-      const newHoveredFeatures: Array<Polygon | MultiPolygon> = [];
+      const newHoveredFeatures: Array<Feature<Polygon, GeoJsonProperties> | Feature<MultiPolygon, GeoJsonProperties>> = [];
       instance.hoveringFeatures = newHoveredFeatures;
 
       const feature = instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
