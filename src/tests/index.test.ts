@@ -1,13 +1,13 @@
-import { Glify } from "./index";
-import { IPointsSettings, Points } from "./points";
-import { ILinesSettings, Lines } from "./lines";
-import { IShapesSettings, Shapes } from "./shapes";
+import { Glify } from "../index";
+import { IPointsSettings, Points } from "../points";
+import { ILinesSettings, Lines } from "../lines";
+import { IShapesSettings, Shapes } from "../shapes";
 import { LatLng, LeafletMouseEvent, Map, Point } from "leaflet";
 import { FeatureCollection, LineString, MultiPolygon } from "geojson";
 
-jest.mock("./canvas-overlay");
+jest.mock("../canvas-overlay");
 type mouseEventFunction = (e: LeafletMouseEvent) => void;
-jest.mock("./utils", () => {
+jest.mock("../utils", () => {
   return {
     debounce: (fn: mouseEventFunction) => {
       return (e: LeafletMouseEvent) => fn(e);

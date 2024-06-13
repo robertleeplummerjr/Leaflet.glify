@@ -11,6 +11,7 @@ import * as Color from "./color";
 import { LeafletMouseEvent, Map, Point, LatLng } from "leaflet";
 import { IPixel } from "./pixel";
 import { locationDistance, pixelInCircle } from "./utils";
+import glify from "./index";
 
 export interface IPointsSettings extends IBaseGlLayerSettings {
   data: number[][] | FeatureCollection<GeoPoint>;
@@ -285,6 +286,16 @@ export class Points extends BaseGlLayer<IPointsSettings> {
       }
     }
 
+    return this;
+  }
+
+  removeInstance(): this {
+    const index = glify.pointsInstances.findIndex(
+      (element) => element.layer._leaflet_id === this.layer._leaflet_id
+    );
+    if (index !== -1) {
+      glify.pointsInstances.splice(index, 1);
+    }
     return this;
   }
 

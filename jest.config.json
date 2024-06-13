@@ -10,5 +10,6 @@
   "transform": {
     "^.+\\.tsx?$": ["ts-jest", { "tsconfig": "tsconfig.json" }],
     "^.+\\.glsl": "@glen/jest-raw-loader"
-  }
+  },
+  "testMatch": ["**/tests/**/*.test.ts"]
 }

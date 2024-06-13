@@ -1,4 +1,4 @@
-import { CanvasOverlay } from "./canvas-overlay";
+import { CanvasOverlay } from "../canvas-overlay";
 import {
   Bounds,
   LatLng,

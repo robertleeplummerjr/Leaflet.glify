@@ -3,7 +3,7 @@ import {
   latLngDistance,
   pixelInCircle,
   vectorDistance,
-} from "./utils";
+} from "../utils";
 
 describe("utils", () => {
   describe("latLonToPixel", () => {

@@ -1,6 +1,6 @@
-import { LineFeatureVertices } from "./line-feature-vertices";
+import { LineFeatureVertices } from "../line-feature-vertices";
 import { LatLng } from "leaflet";
-import { IPixel } from "./pixel";
+import { IPixel } from "../pixel";
 import { Position } from "geojson";
 
 describe("LineFeatureVertices", () => {

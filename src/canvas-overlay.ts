@@ -45,6 +45,7 @@ export class CanvasOverlay extends Layer {
   _pane: string;
 
   _frame?: number | null;
+  _leaflet_id?: number;
   options: LayerOptions;
 
   constructor(userDrawFunc: IUserDrawFunc, pane: string) {
