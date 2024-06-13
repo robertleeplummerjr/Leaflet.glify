@@ -19,7 +19,8 @@
     "lint": "run-p lint:**",
     "lint:eslint": "eslint --fix --ext .js,.ts src",
     "lint:typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
