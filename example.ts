@@ -6,6 +6,9 @@ import glify from './src/index';
 const map = L.map('map')
   .setView([50.00, 14.44], 7);
 
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png')
+  .addTo(map);
+
 Promise.all([
   wget<number[][]>('data/86T.json'),
   wget<FeatureCollection>('data/CZDistricts.json'),
