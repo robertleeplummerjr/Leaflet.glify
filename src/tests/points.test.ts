@@ -1,9 +1,9 @@
 import { LatLng, LatLngBounds, Map, Point } from "leaflet";
 import { FeatureCollection, Point as GeoPoint } from "geojson";
-import { IPointVertex, IPointsSettings, Points } from "./points";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import { IPointVertex, IPointsSettings, Points } from "../points";
+import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 
-jest.mock("./canvas-overlay");
+jest.mock("../canvas-overlay");
 
 function getPoints(settings?: Partial<IPointsSettings>): Points {
   const element = document.createElement("div");

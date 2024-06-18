@@ -1,4 +1,4 @@
-import { fromHex, pallet, random } from "./color";
+import { fromHex, pallet, random } from "../color";
 
 describe("color", () => {
   test("fromHex", () => {

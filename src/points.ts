@@ -11,6 +11,7 @@ import * as Color from "./color";
 import { LeafletMouseEvent, Map, Point, LatLng } from "leaflet";
 import { IPixel } from "./pixel";
 import { locationDistance, pixelInCircle } from "./utils";
+import glify from "./index";
 
 export interface IPointsSettings extends IBaseGlLayerSettings {
   data: number[][] | FeatureCollection<GeoPoint>;
@@ -152,6 +153,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
       color,
       opacity,
       data,
+      mapCenterPixels,
     } = this;
     const { eachVertex } = settings;
     let colorFn:
@@ -204,8 +206,8 @@ export class Points extends BaseGlLayer<IPointsSettings> {
 
         vertices.push(
           // vertex
-          pixel.x,
-          pixel.y,
+          pixel.x - mapCenterPixels.x,
+          pixel.y - mapCenterPixels.y,
 
           // color
           chosenColor.r,
@@ -257,8 +259,8 @@ export class Points extends BaseGlLayer<IPointsSettings> {
 
         vertices.push(
           // vertex
-          pixel.x,
-          pixel.y,
+          pixel.x - mapCenterPixels.x,
+          pixel.y - mapCenterPixels.y,
 
           // color
           chosenColor.r,
@@ -287,6 +289,16 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     return this;
   }
 
+  removeInstance(): this {
+    const index = glify.pointsInstances.findIndex(
+      (element) => element.layer._leaflet_id === this.layer._leaflet_id
+    );
+    if (index !== -1) {
+      glify.pointsInstances.splice(index, 1);
+    }
+    return this;
+  }
+
   // TODO: remove?
   pointSize(pointIndex: number): number {
     const { map, size } = this;
@@ -300,7 +312,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
-    const { gl, canvas, mapMatrix, matrix, map, allLatLngLookup } = this;
+    const { gl, canvas, mapMatrix, matrix, map, allLatLngLookup, mapCenterPixels } = this;
     const { offset } = e;
     const zoom = map.getZoom();
     const scale = Math.pow(2, zoom);
@@ -308,7 +320,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     mapMatrix
       .setSize(canvas.width, canvas.height)
       .scaleTo(scale)
-      .translateTo(-offset.x, -offset.y);
+      .translateTo(-offset.x + mapCenterPixels.x, -offset.y + mapCenterPixels.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -411,6 +423,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     }
   }
 
+  hoveringFeatures: Array<Feature<GeoPoint>> = [];
   // hovers all touching Points instances
   static tryHover(
     e: LeafletMouseEvent,
@@ -418,24 +431,36 @@ export class Points extends BaseGlLayer<IPointsSettings> {
     instances: Points[]
   ): Array<boolean | undefined> {
     const results: boolean[] = [];
-    instances.forEach((_instance: Points): void => {
-      if (!_instance.active) return;
-      if (_instance.map !== map) return;
-      const pointLookup = _instance.lookup(e.latlng);
+    instances.forEach((instance: Points): void => {
+      const { sensitivityHover, hoveringFeatures } = instance;
+      if (!instance.active) return;
+      if (instance.map !== map) return;
+      const oldHoveredFeatures = hoveringFeatures;
+      const newHoveredFeatures: Array<Feature<GeoPoint>> = [];
+      instance.hoveringFeatures = newHoveredFeatures;
+
+      const pointLookup = instance.lookup(e.latlng);
       if (!pointLookup) return;
       if (
         pixelInCircle(
           map.latLngToLayerPoint(pointLookup.latLng),
           e.layerPoint,
-          pointLookup.chosenSize * _instance.sensitivityHover * 30
+          pointLookup.chosenSize * sensitivityHover * 30
         )
       ) {
-        const result = _instance.hover(
-          e,
-          pointLookup.feature || pointLookup.latLng
-        );
+        let feature = pointLookup.feature || pointLookup.latLng;
+        if (!newHoveredFeatures.includes(feature)) {
+          newHoveredFeatures.push(feature);
+        }
+        const result = instance.hover(e, feature);
         if (result !== undefined) {
           results.push(result);
+        }
+      }
+      for (let i = 0; i < oldHoveredFeatures.length; i++) {
+        const feature = oldHoveredFeatures[i];
+        if (!newHoveredFeatures.includes(feature)) {
+          instance.hoverOff(e, feature);
         }
       }
     });

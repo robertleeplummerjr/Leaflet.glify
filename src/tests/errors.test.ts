@@ -1,4 +1,4 @@
-import { notProperlyDefined } from "./errors";
+import { notProperlyDefined } from "../errors";
 
 describe("notProperlyDefined", () => {
   it("uses properly defined message", () => {

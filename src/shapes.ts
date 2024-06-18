@@ -5,6 +5,7 @@ import { LatLng, LeafletMouseEvent, Map } from "leaflet";
 import {
   Feature,
   FeatureCollection,
+  GeoJsonProperties,
   Geometry,
   MultiPolygon,
   Polygon,
@@ -20,6 +21,7 @@ import * as Color from "./color";
 import { latLonToPixel } from "./utils";
 
 import { notProperlyDefined } from "./errors";
+import glify from "./index";
 
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
@@ -135,6 +137,7 @@ export class Shapes extends BaseGlLayer {
       borderOpacity, // TODO: Make lookup for each shape priority, then fallback
       color,
       data,
+      mapCenterPixels,
     } = this;
     let pixel;
     let index;
@@ -224,8 +227,8 @@ export class Shapes extends BaseGlLayer {
       for (let i = 0, iMax = triangles.length; i < iMax; i) {
         pixel = map.project(new LatLng(triangles[i++], triangles[i++]), 0);
         vertices.push(
-          pixel.x,
-          pixel.y,
+          pixel.x - mapCenterPixels.x,
+          pixel.y - mapCenterPixels.y,
           chosenColor.r,
           chosenColor.g,
           chosenColor.b,
@@ -235,16 +238,22 @@ export class Shapes extends BaseGlLayer {
 
       if (border) {
         const lines = [];
+        let holeIndex = 0;
         for (let i = 1, iMax = flat.vertices.length - 2; i < iMax; i = i + 2) {
-          lines.push(flat.vertices[i], flat.vertices[i - 1]);
-          lines.push(flat.vertices[i + 2], flat.vertices[i + 1]);
+          // Skip draw between hole and non-hole vertext
+          if(((i + 1) / 2) !== flat.holes[holeIndex]) {
+            lines.push(flat.vertices[i], flat.vertices[i - 1]);
+            lines.push(flat.vertices[i + 2], flat.vertices[i + 1]);
+          } else {
+            holeIndex++;
+          }
         }
 
         for (let i = 0, iMax = lines.length; i < iMax; i) {
           pixel = latLonToPixel(lines[i++], lines[i++]);
           vertexLines.push(
-            pixel.x,
-            pixel.y,
+            pixel.x - mapCenterPixels.x,
+            pixel.y - mapCenterPixels.y,
             chosenColor.r,
             chosenColor.g,
             chosenColor.b,
@@ -257,16 +266,26 @@ export class Shapes extends BaseGlLayer {
     return this;
   }
 
+  removeInstance(): this {
+    const index = glify.shapesInstances.findIndex(
+      (element) => element.layer._leaflet_id === this.layer._leaflet_id
+    );
+    if (index !== -1) {
+      glify.shapesInstances.splice(index, 1);
+    }
+    return this;
+  }
+
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
     const { scale, offset, canvas } = e;
-    const { mapMatrix, gl, vertices, settings, vertexLines, border } = this;
+    const { mapMatrix, gl, vertices, settings, vertexLines, border, mapCenterPixels } = this;
     // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
       .setSize(canvas.width, canvas.height)
       .scaleTo(scale)
-      .translateTo(-offset.x, -offset.y);
+      .translateTo(-offset.x + mapCenterPixels.x, -offset.y + mapCenterPixels.y);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -318,7 +337,7 @@ export class Shapes extends BaseGlLayer {
     map: Map,
     instances: Shapes[]
   ): boolean | undefined {
-    let foundPolygon: Polygon | null = null;
+    let foundPolygon: Feature<Polygon, GeoJsonProperties> | null = null;
     let foundShapes: Shapes | null = null;
     instances.forEach(function (_instance: Shapes): void {
       if (!_instance.active) return;
@@ -341,26 +360,39 @@ export class Shapes extends BaseGlLayer {
     }
   }
 
+  hoveringFeatures: Array<Feature<Polygon, GeoJsonProperties> | Feature<MultiPolygon, GeoJsonProperties>> = [];
   // hovers all touching Shapes instances
   static tryHover(
     e: LeafletMouseEvent,
     map: Map,
     instances: Shapes[]
   ): Array<boolean | undefined> {
-    const results: boolean[] = [];
-    let feature;
+    const results: Array<boolean | undefined> = [];
+    instances.forEach(function (instance: Shapes): void {
+      const { hoveringFeatures } = instance;
+      if (!instance.active) return;
+      if (instance.map !== map) return;
+      if (!instance.polygonLookup) return;
+      const oldHoveredFeatures = hoveringFeatures;
+      const newHoveredFeatures: Array<Feature<Polygon, GeoJsonProperties> | Feature<MultiPolygon, GeoJsonProperties>> = [];
+      instance.hoveringFeatures = newHoveredFeatures;
 
-    instances.forEach((_instance: Shapes): void => {
-      if (!_instance.active) return;
-      if (_instance.map !== map) return;
-      if (!_instance.polygonLookup) return;
-
-      feature = _instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
+      const feature = instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
 
       if (feature) {
-        const result = _instance.hover(e, feature);
+        if (!newHoveredFeatures.includes(feature)) {
+          newHoveredFeatures.push(feature);
+        }
+        const result = instance.hover(e, feature);
         if (result !== undefined) {
           results.push(result);
+        }
+      }
+
+      for (let i = 0; i < oldHoveredFeatures.length; i++) {
+        const feature = oldHoveredFeatures[i];
+        if (!newHoveredFeatures.includes(feature)) {
+          instance.hoverOff(e, feature);
         }
       }
     });

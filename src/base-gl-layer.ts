@@ -1,6 +1,7 @@
 import { LeafletMouseEvent, Map } from "leaflet";
 
 import { IColor } from "./color";
+import { IPixel } from "./pixel"
 import { CanvasOverlay, ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { notProperlyDefined } from "./errors";
 import { MapMatrix } from "./map-matrix";
@@ -17,7 +18,11 @@ export type EventCallback = (
   feature: any
 ) => boolean | void;
 
-export type SetupHoverCallback = (map: Map, hoverWait?: number, immediate?: false) => void;
+export type SetupHoverCallback = (
+  map: Map,
+  hoverWait?: number,
+  immediate?: false
+) => void;
 
 export interface IBaseGlLayerSettings {
   data: any;
@@ -69,6 +74,7 @@ export abstract class BaseGlLayer<
   vertexShader: WebGLShader | null;
   vertices: any;
   vertexLines: any;
+  mapCenterPixels: IPixel;
 
   buffers: { [name: string]: WebGLBuffer } = {};
   attributeLocations: { [name: string]: number } = {};
@@ -77,6 +83,7 @@ export abstract class BaseGlLayer<
   static defaults = defaults;
 
   abstract render(): this;
+  abstract removeInstance(this: any): this;
 
   get data(): any {
     if (!this.settings.data) {
@@ -153,6 +160,11 @@ export abstract class BaseGlLayer<
     this.matrix = null;
     this.vertices = null;
     this.vertexLines = null;
+    try{
+      this.mapCenterPixels =  this.map.project(this.map.getCenter(), 0)
+    } catch(err){
+      this.mapCenterPixels = {x:-0,y:-0}
+    }
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
     const layer = (this.layer = new CanvasOverlay(
       (context: ICanvasOverlayDrawEvent) => {
@@ -312,6 +324,7 @@ export abstract class BaseGlLayer<
 
   remove(indices?: number | number[]): this {
     if (indices === undefined) {
+      this.removeInstance();
       this.map.removeLayer(this.layer);
       this.active = false;
     } else {
@@ -333,15 +346,28 @@ export abstract class BaseGlLayer<
     return this;
   }
 
-  insert(feature: any, index: number): this {
-    const features = this.settings.data.features || this.settings.data;
-    features.splice(index, 0, feature);
+  insert(features: any | any[], index: number): this {
+    const featuresArray = Array.isArray(features) ? features : [features];
+    const featuresData = this.settings.data.features || this.settings.data;
+
+    for (let i = 0; i < featuresArray.length; i++) {
+      featuresData.splice(index + i, 0, featuresArray[i]);
+    }
+
     return this.render();
   }
 
-  update(feature: any, index: number): this {
-    const features = this.settings.data.features || this.settings.data;
-    features[index] = feature;
+  update(feature: any | any[], index: number): this {
+    const featuresData = this.settings.data.features || this.settings.data;
+
+    if (Array.isArray(feature)) {
+      for (let i = 0; i < feature.length; i++) {
+        featuresData[index + i] = feature[i];
+      }
+    } else {
+      featuresData[index] = feature;
+    }
+
     return this.render();
   }
 

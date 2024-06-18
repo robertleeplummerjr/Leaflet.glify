@@ -16,6 +16,7 @@ import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as color from "./color";
 import { LineFeatureVertices } from "./line-feature-vertices";
 import { latLngDistance, inBounds } from "./utils";
+import glify from "./index";
 
 export type WeightCallback = (i: number, feature: any) => number;
 
@@ -131,6 +132,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       data,
       bytes,
       settings,
+      mapCenterPixels,
     } = this;
     const { eachVertex } = settings;
     const { features } = data;
@@ -171,6 +173,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         color: chosenColor,
         weight: chosenWeight,
         opacity,
+        mapCenterPixels,
       });
 
       featureVertices.fillFromCoordinates(feature.geometry.coordinates);
@@ -223,6 +226,16 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     return this;
   }
 
+  removeInstance(): this {
+    const index = glify.linesInstances.findIndex(
+      (element) => element.layer._leaflet_id === this.layer._leaflet_id
+    );
+    if (index !== -1) {
+      glify.linesInstances.splice(index, 1);
+    }
+    return this;
+  }
+
   drawOnCanvas(e: ICanvasOverlayDrawEvent): this {
     if (!this.gl) return this;
 
@@ -237,6 +250,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       weight,
       aPointSize,
       bytes,
+      mapCenterPixels,
     } = this;
     const { scale, offset, zoom } = e;
     this.scale = scale;
@@ -246,7 +260,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     gl.vertexAttrib1f(aPointSize, pointSize);
     mapMatrix.setSize(canvas.width, canvas.height).scaleTo(scale);
     if (zoom > 18) {
-      mapMatrix.translateTo(-offset.x, -offset.y);
+      mapMatrix.translateTo((-offset.x + mapCenterPixels.x), (-offset.y + mapCenterPixels.y));
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
@@ -257,8 +271,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         for (let xOffset = -weight; xOffset <= weight; xOffset += 0.5) {
           // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
           mapMatrix.translateTo(
-            -offset.x + xOffset / scale,
-            -offset.y + yOffset / scale
+            (-offset.x + mapCenterPixels.x) + xOffset / scale,
+            (-offset.y + mapCenterPixels.y) + yOffset / scale
           );
           // -- attach matrix value to 'mapMatrix' uniform in shader
           gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
@@ -286,8 +300,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
           ) {
             // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
             mapMatrix.translateTo(
-              -offset.x + xOffset / scale,
-              -offset.y + yOffset / scale
+              (-offset.x + mapCenterPixels.x) + xOffset / scale,
+              (-offset.y + mapCenterPixels.y) + yOffset / scale
             );
             // -- attach matrix value to 'mapMatrix' uniform in shader
             gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);

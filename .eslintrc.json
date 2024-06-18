@@ -38,8 +38,9 @@
     "no-prototype-builtins": "off",
     "no-restricted-globals": "off",
     "no-underscore-dangle": "off",
-    "prettier/prettier": "error",
+    "prettier/prettier": ["error", { "endOfLine": "auto" }],
     "semi": "off",
-    "standard/no-callback-literal": "off"
+    "standard/no-callback-literal": "off",
+    "endOfLine": "auto"
   }
 }

@@ -1,6 +1,6 @@
-import { LineFeatureVertices } from "./line-feature-vertices";
+import { LineFeatureVertices } from "../line-feature-vertices";
 import { LatLng } from "leaflet";
-import { IPixel } from "./pixel";
+import { IPixel } from "../pixel";
 import { Position } from "geojson";
 
 describe("LineFeatureVertices", () => {
@@ -13,6 +13,7 @@ describe("LineFeatureVertices", () => {
     longitudeKey: 1,
     opacity: 1,
     weight: 1,
+    mapCenterPixels: {x:0,y:0},
   };
   describe("constructor", () => {
     it("sets this.settings, this.vertexCount, and this.array correctly", () => {

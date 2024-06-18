@@ -1,4 +1,4 @@
-import { CanvasOverlay } from "./canvas-overlay";
+import { CanvasOverlay } from "../canvas-overlay";
 import {
   Bounds,
   LatLng,
@@ -204,6 +204,7 @@ describe("CanvasOverlay", () => {
           target: co,
           sourceTarget: "",
           propagatedFrom: "",
+          popup: "",
           layer: co,
         };
         co._resize(resizeEvent);
@@ -298,6 +299,7 @@ describe("CanvasOverlay", () => {
         center: new LatLng(10, 10),
         zoom: 10,
         noUpdate: true,
+        popup: "",
       };
       co._animateZoom(e);
       expect(canvas.style.transform).toBe(
@@ -319,6 +321,7 @@ describe("CanvasOverlay", () => {
         center: new LatLng(10, 10),
         zoom: 10,
         noUpdate: true,
+        popup: "",
       };
       co._animateZoomNoLayer(e);
       expect(canvas.style.transform).toBe(

@@ -1,11 +1,11 @@
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 import { Feature, FeatureCollection, LineString } from "geojson";
-import { MapMatrix } from "./map-matrix";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
-import { ILinesSettings, Lines, WeightCallback } from "./lines";
+import { MapMatrix } from "../map-matrix";
+import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
+import { ILinesSettings, Lines, WeightCallback } from "../lines";
 
-jest.mock("./canvas-overlay");
-jest.mock("./utils", () => {
+jest.mock("../canvas-overlay");
+jest.mock("../utils", () => {
   return {
     inBounds: () => true,
     latLngDistance: () => 2,
@@ -512,6 +512,7 @@ describe("Lines", () => {
         layerPoint: new Point(1, 1),
         containerPoint: new Point(1, 1),
         originalEvent: new MouseEvent("click"),
+        popup: "",
       };
     });
     afterEach(() => {
@@ -596,6 +597,7 @@ describe("Lines", () => {
         layerPoint: new Point(1, 1),
         containerPoint: new Point(1, 1),
         originalEvent: new MouseEvent("mousemove"),
+        popup: "",
       };
     });
     afterEach(() => {

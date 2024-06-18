@@ -4,10 +4,10 @@ import geojsonFlatten from "geojson-flatten";
 import PolygonLookup from "polygon-lookup";
 import earcut from "earcut";
 
-import { IShapesSettings, Shapes } from "./shapes";
-import { notProperlyDefined } from "./errors";
+import { IShapesSettings, Shapes } from "../shapes";
+import { notProperlyDefined } from "../errors";
 
-jest.mock("./canvas-overlay");
+jest.mock("../canvas-overlay");
 jest.mock("geojson-flatten", () => {
   const realGeojsonFlatten = jest.requireActual<typeof geojsonFlatten>(
     "geojson-flatten"
