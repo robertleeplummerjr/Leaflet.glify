@@ -323,49 +323,62 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
   ): boolean | undefined {
     let foundFeature: Feature<LineString | MultiLineString> | null = null;
     let foundLines: Lines | null = null;
+    let minDistance = Infinity;
 
-    instances.forEach((instance: Lines): void => {
-      const {
-        latitudeKey,
-        longitudeKey,
-        sensitivity,
-        weight,
-        scale,
-        active,
-      } = instance;
-      if (!active) return;
-      if (instance.map !== map) return;
-      function checkClick(
-        coordinate: Position,
-        prevCoordinate: Position,
-        feature: Feature<LineString | MultiLineString>,
-        chosenWeight: number
-      ): void {
-        const distance = latLngDistance(
-          e.latlng.lng,
-          e.latlng.lat,
-          prevCoordinate[longitudeKey],
-          prevCoordinate[latitudeKey],
-          coordinate[longitudeKey],
-          coordinate[latitudeKey]
-        );
-        if (distance <= sensitivity + chosenWeight / scale) {
-          foundFeature = feature;
-          foundLines = instance;
-        }
+    const checkClick = (
+      coordinate: Position,
+      prevCoordinate: Position,
+      feature: Feature<LineString | MultiLineString>,
+      instance: Lines,
+      chosenWeight: number,
+      sensitivity: number,
+      scale: number,
+      latitudeKey: number,
+      longitudeKey: number
+    ): void => {
+      const distance = latLngDistance(
+        e.latlng.lng,
+        e.latlng.lat,
+        prevCoordinate[longitudeKey],
+        prevCoordinate[latitudeKey],
+        coordinate[longitudeKey],
+        coordinate[latitudeKey]
+      );
+      if (
+        distance <= sensitivity + chosenWeight / scale &&
+        distance < minDistance
+      ) {
+        foundFeature = feature;
+        foundLines = instance;
+        minDistance = distance;
       }
-      instance.data.features.forEach(
-        (feature: Feature<LineString | MultiLineString>, i: number): void => {
-          const chosenWeight =
-            typeof weight === "function" ? weight(i, feature) : weight;
+    };
+
+    for (const instance of instances) {
+      const { latitudeKey, longitudeKey, sensitivity, weight, scale, active } =
+        instance;
+
+      if (!active || instance.map !== map) continue;
+
+      const chosenWeightFn =
+        typeof weight === "function" ? weight : () => weight;
+
+      for (const [i, feature] of instance.data.features.entries()) {
+          const chosenWeight = chosenWeightFn(i, feature);
           const { coordinates, type } = feature.geometry;
+
           if (type === "LineString") {
             for (let i = 1; i < coordinates.length; i++) {
               checkClick(
                 coordinates[i] as Position,
                 coordinates[i - 1] as Position,
                 feature,
-                chosenWeight
+                instance,
+                chosenWeight,
+                sensitivity,
+                scale,
+                latitudeKey,
+                longitudeKey
               );
             }
           } else if (type === "MultiLineString") {
@@ -381,26 +394,34 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
                     lastPositions as Position,
                     coordinates[i][j] as Position,
                     feature,
-                    chosenWeight
+                    instance,
+                    chosenWeight,
+                    sensitivity,
+                    scale,
+                    latitudeKey,
+                    longitudeKey
                   );
                 } else if (j > 0) {
                   checkClick(
                     coordinates[i][j] as Position,
                     coordinates[i][j - 1] as Position,
                     feature,
-                    chosenWeight
+                    instance,
+                    chosenWeight,
+                    sensitivity,
+                    scale,
+                    latitudeKey,
+                    longitudeKey
                   );
                 }
               }
             }
           }
         }
-      );
-    });
+    }
 
     if (foundLines && foundFeature) {
-      const result = (foundLines as Lines).click(e, foundFeature);
-      return result !== undefined ? result : undefined;
+      return (foundLines as Lines).click(e, foundFeature) ?? undefined;
     }
   }
 
@@ -412,6 +433,40 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     instances: Lines[]
   ): Array<boolean | undefined> {
     const results: Array<boolean | undefined> = [];
+    let minDistance = Infinity;
+
+    const checkHover = (
+      coordinate: Position,
+      prevCoordinate: Position,
+      feature: Feature<LineString | MultiLineString>,
+      chosenWeight: number,
+      sensitivityHover: number,
+      scale: number,
+      newHoveredFeatures: Set<Feature<LineString | MultiLineString>>,
+      oldHoveredFeatures: Array<Feature<LineString | MultiLineString>>,
+      latitudeKey: number,
+      longitudeKey: number
+    ): boolean => {
+      const distance = latLngDistance(
+        e.latlng.lng,
+        e.latlng.lat,
+        prevCoordinate[longitudeKey],
+        prevCoordinate[latitudeKey],
+        coordinate[longitudeKey],
+        coordinate[latitudeKey]
+      );
+
+      if (
+        distance <= sensitivityHover + chosenWeight / scale &&
+        distance < minDistance
+      ) {
+        minDistance = distance;
+        newHoveredFeatures.add(feature);
+        return !oldHoveredFeatures.includes(feature);
+      }
+      return false;
+    };
+
     instances.forEach((instance: Lines): void => {
       const {
         sensitivityHover,
@@ -422,55 +477,35 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         weight,
         scale,
       } = instance;
-      function checkHover(
-        coordinate: Position,
-        prevCoordinate: Position,
-        feature: Feature<LineString | MultiLineString>,
-        chosenWeight: number
-      ): boolean {
-        const distance = latLngDistance(
-          e.latlng.lng,
-          e.latlng.lat,
-          prevCoordinate[longitudeKey],
-          prevCoordinate[latitudeKey],
-          coordinate[longitudeKey],
-          coordinate[latitudeKey]
-        );
 
-        if (distance <= sensitivityHover + chosenWeight / scale) {
-          if (!newHoveredFeatures.includes(feature)) {
-            newHoveredFeatures.push(feature);
-          }
-          if (!oldHoveredFeatures.includes(feature)) {
-            return true;
-          }
-        }
-        return false;
-      }
-      if (!instance.active) return;
-      if (map !== instance.map) return;
+      if (!instance.active || map !== instance.map) return;
+
       const oldHoveredFeatures = hoveringFeatures;
-      const newHoveredFeatures: Array<
-        Feature<LineString | MultiLineString>
-      > = [];
-      instance.hoveringFeatures = newHoveredFeatures;
+      const newHoveredFeatures: Set<Feature<LineString | MultiLineString>> = new Set();
+      instance.hoveringFeatures = Array.from(newHoveredFeatures);
+      
       // Check if e.latlng is inside the bbox of the features
       const bounds = geoJSON(data.features).getBounds();
-
       if (inBounds(e.latlng, bounds)) {
         data.features.forEach(
           (feature: Feature<LineString | MultiLineString>, i: number): void => {
-            const chosenWeight =
-              typeof weight === "function" ? weight(i, feature) : weight;
+            const chosenWeight = typeof weight === "function" ? weight(i, feature) : weight;
             const { coordinates, type } = feature.geometry;
             let isHovering = false;
+            
             if (type === "LineString") {
               for (let i = 1; i < coordinates.length; i++) {
                 isHovering = checkHover(
                   coordinates[i] as Position,
                   coordinates[i - 1] as Position,
                   feature,
-                  chosenWeight
+                  chosenWeight,
+                  sensitivityHover,
+                  scale,
+                  newHoveredFeatures,
+                  oldHoveredFeatures,
+                  latitudeKey,
+                  longitudeKey
                 );
                 if (isHovering) break;
               }
@@ -487,7 +522,13 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
                       lastPositions as Position,
                       coordinates[i][j] as Position,
                       feature,
-                      chosenWeight
+                      chosenWeight,
+                      sensitivityHover,
+                      scale,
+                      newHoveredFeatures,
+                      oldHoveredFeatures,
+                      latitudeKey,
+                      longitudeKey
                     );
                     if (isHovering) break;
                   } else if (j > 0) {
@@ -495,7 +536,13 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
                       coordinates[i][j] as Position,
                       coordinates[i][j - 1] as Position,
                       feature,
-                      chosenWeight
+                      chosenWeight,
+                      sensitivityHover,
+                      scale,
+                      newHoveredFeatures,
+                      oldHoveredFeatures,
+                      latitudeKey,
+                      longitudeKey
                     );
                     if (isHovering) break;
                   }
@@ -511,13 +558,13 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
           }
         );
       }
-      for (let i = 0; i < oldHoveredFeatures.length; i++) {
-        const feature = oldHoveredFeatures[i];
-        if (!newHoveredFeatures.includes(feature)) {
+      oldHoveredFeatures.forEach((feature) => {
+        if (!newHoveredFeatures.has(feature)) {
           instance.hoverOff(e, feature);
         }
-      }
+      });
     });
+
     return results;
   }
 }
