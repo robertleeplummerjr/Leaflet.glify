@@ -360,8 +360,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
 
       if (!active || instance.map !== map) continue;
 
-      const chosenWeightFn =
-        typeof weight === "function" ? weight : () => weight;
+      const chosenWeightFn = typeof weight === "function" ? weight : () => weight;
 
       for (const [i, feature] of instance.data.features.entries()) {
           const chosenWeight = chosenWeightFn(i, feature);
@@ -443,7 +442,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       sensitivityHover: number,
       scale: number,
       newHoveredFeatures: Set<Feature<LineString | MultiLineString>>,
-      oldHoveredFeatures: Array<Feature<LineString | MultiLineString>>,
+      oldHoveredFeatures: Set<Feature<LineString | MultiLineString>>,
       latitudeKey: number,
       longitudeKey: number
     ): boolean => {
@@ -462,7 +461,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       ) {
         minDistance = distance;
         newHoveredFeatures.add(feature);
-        return !oldHoveredFeatures.includes(feature);
+        return !oldHoveredFeatures.has(feature);
       }
       return false;
     };
@@ -480,16 +479,17 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
 
       if (!instance.active || map !== instance.map) return;
 
-      const oldHoveredFeatures = hoveringFeatures;
+      const oldHoveredFeatures: Set<Feature<LineString | MultiLineString>> = new Set(hoveringFeatures);
       const newHoveredFeatures: Set<Feature<LineString | MultiLineString>> = new Set();
-      instance.hoveringFeatures = Array.from(newHoveredFeatures);
       
       // Check if e.latlng is inside the bbox of the features
       const bounds = geoJSON(data.features).getBounds();
+      const chosenWeightFn = typeof weight === "function" ? weight : () => weight;
+
       if (inBounds(e.latlng, bounds)) {
         data.features.forEach(
           (feature: Feature<LineString | MultiLineString>, i: number): void => {
-            const chosenWeight = typeof weight === "function" ? weight(i, feature) : weight;
+            const chosenWeight = chosenWeightFn(i, feature);
             const { coordinates, type } = feature.geometry;
             let isHovering = false;
             
@@ -563,6 +563,9 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
           instance.hoverOff(e, feature);
         }
       });
+
+      instance.hoveringFeatures = Array.from(newHoveredFeatures);
+
     });
 
     return results;
