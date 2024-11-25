@@ -1,43 +1,64 @@
-import { LatLng } from './leaflet-bindings';
-import { IColor } from './color';
-import { IPixel } from './pixel';
+import { LatLng } from "leaflet";
+import { Position } from "geojson";
+import { IColor } from "./color";
+import { IPixel } from "./pixel";
 
 interface ILineFeatureVerticesSettings {
   project: (coordinates: LatLng, distance: number) => IPixel;
   color: IColor;
-  latitudeKey?: number;
-  longitudeKey?: number;
+  weight: number;
+  latitudeKey: number;
+  longitudeKey: number;
+  opacity: number;
+  mapCenterPixels: IPixel;
 }
 
 export class LineFeatureVertices {
-  project: (coordinates: LatLng, distance: number) => IPixel;
-  latitudeKey?: number;
-  longitudeKey?: number;
-  color: IColor;
+  settings: ILineFeatureVerticesSettings;
   vertexCount: number;
   array: number[];
-  length: number;
-
-  constructor(settings: ILineFeatureVerticesSettings) {
-    Object.assign(this, settings);
-    this.vertexCount = 0;
-    this.array = [];
-    this.length = 0;
+  pixels: IPixel[] = [];
+  latLngs: LatLng[] = [];
+  get length(): number {
+    return this.array.length;
   }
 
-  fillFromCoordinates(coordinates) {
-    const { color } = this;
+  constructor(settings: ILineFeatureVerticesSettings) {
+    this.settings = settings;
+    this.vertexCount = 0;
+    this.array = [];
+  }
+
+  fillFromCoordinates(coordinates: Position[] | Position[][]): void {
+    const {
+      color,
+      opacity,
+      project,
+      latitudeKey,
+      longitudeKey,
+      mapCenterPixels,
+    } = this.settings;
     for (let i = 0; i < coordinates.length; i++) {
       if (Array.isArray(coordinates[i][0])) {
-        this.fillFromCoordinates(coordinates[i]);
+        this.fillFromCoordinates(coordinates[i] as Position[]);
         continue;
       }
-      const pixel = this.project(
-        new LatLng(
-          coordinates[i][this.latitudeKey],
-          coordinates[i][this.longitudeKey]
-        ), 0);
-      this.push(pixel.x, pixel.y, color.r, color.g, color.b);
+      const flatterCoordinates: Position[] = coordinates as Position[];
+      const latLng = new LatLng(
+        flatterCoordinates[i][latitudeKey],
+        flatterCoordinates[i][longitudeKey]
+      );
+      this.latLngs.push(latLng);
+      const pixel = project(latLng, 0);
+      this.pixels.push(pixel);
+      this.push(
+        pixel.x - mapCenterPixels.x,
+        pixel.y - mapCenterPixels.y,
+        color.r,
+        color.g,
+        color.b,
+        color.a ?? opacity
+      );
       if (i !== 0 && i !== coordinates.length - 1) {
         this.vertexCount += 1;
       }
@@ -45,8 +66,7 @@ export class LineFeatureVertices {
     }
   }
 
-  push(...args) {
+  push(...args: number[]) {
     this.array.push(...args);
-    this.length = this.array.length;
   }
 }

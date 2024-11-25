@@ -2,5 +2,10 @@ node_modules
 bower_components
 .idea
 .dev
-dist/report.html
+dist
 yarn.lock
+.cache
+.dev-server
+.build
+__coverage__
+.gh-pages

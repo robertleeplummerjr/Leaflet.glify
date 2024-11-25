@@ -1,0 +1,15 @@
+{
+  "collectCoverage": false,
+  "collectCoverageFrom": ["src/**/*", "!src/**/*.d.ts"],
+  "coverageDirectory": "__coverage__",
+  "coverageProvider": "v8",
+  "globalSetup": "",
+  "preset": "ts-jest/presets/js-with-ts",
+  "setupFiles": ["jest-webgl-canvas-mock"],
+  "testEnvironment": "jsdom",
+  "transform": {
+    "^.+\\.tsx?$": ["ts-jest", { "tsconfig": "tsconfig.json" }],
+    "^.+\\.glsl": "@glen/jest-raw-loader"
+  },
+  "testMatch": ["**/tests/**/*.test.ts"]
+}
