@@ -155,7 +155,7 @@ Adds line data passed in `options.data` to the Leaflet map instance passed in `o
 * `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 ---
 ### `L.glify.shapes(options: object)`
-Adds polygon data passed in `options.data` to the Leaflet map instance passed in `options.map`.
+Adds polygon/multipolygon data passed in `options.data` to the Leaflet map instance passed in `options.map`.
 #### Returns
 `L.glify.Shapes` instance
 #### Options
