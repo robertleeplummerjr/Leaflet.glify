@@ -165,29 +165,31 @@ export class CanvasOverlay extends Layer {
 
   _redraw(): void {
     const { _map, canvas } = this;
-    const size = _map.getSize();
-    const bounds = _map.getBounds();
-    const zoomScale =
-      (size.x * 180) / (20037508.34 * (bounds.getEast() - bounds.getWest())); // resolution = 1/zoomScale
-    const zoom = _map.getZoom();
-    const topLeft = new LatLng(bounds.getNorth(), bounds.getWest());
-    const offset = this._unclampedProject(topLeft, 0);
-    if (canvas) {
-      this._userDrawFunc({
-        bounds,
-        canvas,
-        offset,
-        scale: Math.pow(2, zoom),
-        size,
-        zoomScale,
-        zoom,
-      });
-    }
+    if (_map) {
+      const size = _map.getSize();
+      const bounds = _map.getBounds();
+      const zoomScale =
+        (size.x * 180) / (20037508.34 * (bounds.getEast() - bounds.getWest())); // resolution = 1/zoomScale
+      const zoom = _map.getZoom();
+      const topLeft = new LatLng(bounds.getNorth(), bounds.getWest());
+      const offset = this._unclampedProject(topLeft, 0);
+      if (canvas) {
+        this._userDrawFunc({
+          bounds,
+          canvas,
+          offset,
+          scale: Math.pow(2, zoom),
+          size,
+          zoomScale,
+          zoom,
+        });
+      }
 
-    while (this._redrawCallbacks.length > 0) {
-      const callback = this._redrawCallbacks.shift();
-      if (callback) {
-        callback(this);
+      while (this._redrawCallbacks.length > 0) {
+        const callback = this._redrawCallbacks.shift();
+        if (callback) {
+          callback(this);
+        }
       }
     }
 
