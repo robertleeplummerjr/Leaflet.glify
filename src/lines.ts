@@ -411,6 +411,89 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     }
   }
 
+  // attempts to click the top-most Lines instance
+  static tryContextMenu(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Lines[]
+  ): boolean | undefined {
+    let foundFeature: Feature<LineString | MultiLineString> | null = null;
+    let foundLines: Lines | null = null;
+
+    instances.forEach((instance: Lines): void => {
+      const { latitudeKey, longitudeKey, sensitivity, weight, scale, active } =
+        instance;
+      if (!active) return;
+      if (instance.map !== map) return;
+      function checkContextMenu(
+        coordinate: Position,
+        prevCoordinate: Position,
+        feature: Feature<LineString | MultiLineString>,
+        chosenWeight: number
+      ): void {
+        const distance = latLngDistance(
+          e.latlng.lng,
+          e.latlng.lat,
+          prevCoordinate[longitudeKey],
+          prevCoordinate[latitudeKey],
+          coordinate[longitudeKey],
+          coordinate[latitudeKey]
+        );
+        if (distance <= sensitivity + chosenWeight / scale) {
+          foundFeature = feature;
+          foundLines = instance;
+        }
+      }
+      instance.data.features.forEach(
+        (feature: Feature<LineString | MultiLineString>, i: number): void => {
+          const chosenWeight =
+            typeof weight === "function" ? weight(i, feature) : weight;
+          const { coordinates, type } = feature.geometry;
+          if (type === "LineString") {
+            for (let i = 1; i < coordinates.length; i++) {
+              checkContextMenu(
+                coordinates[i] as Position,
+                coordinates[i - 1] as Position,
+                feature,
+                chosenWeight
+              );
+            }
+          } else if (type === "MultiLineString") {
+            // TODO: Unit test
+            for (let i = 0; i < coordinates.length; i++) {
+              const coordinate = coordinates[i];
+              for (let j = 0; j < coordinate.length; j++) {
+                if (j === 0 && i > 0) {
+                  const prevCoordinates = coordinates[i - 1];
+                  const lastPositions =
+                    prevCoordinates[prevCoordinates.length - 1];
+                  checkContextMenu(
+                    lastPositions as Position,
+                    coordinates[i][j] as Position,
+                    feature,
+                    chosenWeight
+                  );
+                } else if (j > 0) {
+                  checkContextMenu(
+                    coordinates[i][j] as Position,
+                    coordinates[i][j - 1] as Position,
+                    feature,
+                    chosenWeight
+                  );
+                }
+              }
+            }
+          }
+        }
+      );
+    });
+
+    if (foundLines && foundFeature) {
+      const result = (foundLines as Lines).contextMenu(e, foundFeature);
+      return result !== undefined ? result : undefined;
+    }
+  }
+
   hoveringFeatures: Array<Feature<LineString | MultiLineString>> = [];
   // hovers all touching Lines instances
   static tryHover(

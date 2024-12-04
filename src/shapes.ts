@@ -389,6 +389,35 @@ export class Shapes extends BaseGlLayer {
     }
   }
 
+  // attempts to click the top-most Shapes instance
+  static tryContextMenu(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Shapes[]
+  ): boolean | undefined {
+    let foundPolygon: Feature<Polygon, GeoJsonProperties> | null = null;
+    let foundShapes: Shapes | null = null;
+    instances.forEach(function (_instance: Shapes): void {
+      if (!_instance.active) return;
+      if (_instance.map !== map) return;
+      if (!_instance.polygonLookup) return;
+
+      const polygon = _instance.polygonLookup.search(
+        e.latlng.lng,
+        e.latlng.lat
+      );
+      if (polygon) {
+        foundShapes = _instance;
+        foundPolygon = polygon;
+      }
+    });
+
+    if (foundShapes && foundPolygon) {
+      const result = (foundShapes as Shapes).contextMenu(e, foundPolygon);
+      return result !== undefined ? result : undefined;
+    }
+  }
+
   hoveringFeatures: Array<
     | Feature<Polygon, GeoJsonProperties>
     | Feature<MultiPolygon, GeoJsonProperties>
