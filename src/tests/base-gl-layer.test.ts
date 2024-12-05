@@ -406,6 +406,18 @@ describe("BaseGlLayer", () => {
         expect(setupClick).toHaveBeenCalledWith(layer.map);
       });
     });
+    describe("when settings.contextMenu and settings.setupContextMenu are truth", () => {
+      it("calls settings.setupContextMenu with this.map", () => {
+        const contextMenu = () => {};
+        const setupContextMenu = jest.fn();
+        const layer = getGlLayer({
+          contextMenu,
+          setupContextMenu,
+        });
+        expect(layer.setup()).toBe(layer);
+        expect(setupContextMenu).toHaveBeenCalledWith(layer.map);
+      });
+    });
     describe("when settings.hover and settings.setupHover are truthy", () => {
       it("calls settings.setupHover with this.map and settings.hoverWait", () => {
         const hover: EventCallback = () => {};
