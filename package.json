@@ -1,6 +1,6 @@
 {
   "name": "leaflet.glify",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "web gl renderer plugin for leaflet",
   "main": "dist/glify.js",
   "browser": "dist/glify-browser.js",
@@ -78,7 +78,7 @@
     "ts-loader": "^9.5.1",
     "ts-shader-loader": "^2.0.2",
     "typescript": "^5.4.5",
-    "webpack": "^5.92.0",
+    "webpack": "^5.94.0",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^5.0.4"
   },

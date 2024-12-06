@@ -205,60 +205,78 @@ export class Shapes extends BaseGlLayer {
       const alpha = typeof chosenColor.a === "number" ? chosenColor.a : opacity;
 
       coordinates = (feature.geometry || feature).coordinates;
-      if (!Array.isArray(coordinates[0])) {
+
+      //coordinates Array Structure depends on whether feature is multipart or not.
+      //Multi: [ [[],[],[]...], [[],[],[]...], [[],[],[]...]... ], Single: [ [[],[],[]...] ]
+      //Wrap Single Array to treat two types with same method
+      if (feature.geometry.type !== "MultiPolygon") {
+        coordinates = [coordinates];
+      }
+      if (
+        coordinates.length == 0 ||
+        !Array.isArray(coordinates[0]) ||
+        !Array.isArray(coordinates[0][0])
+      ) {
         continue;
       }
-      flat = earcut.flatten(coordinates);
-      indices = earcut(flat.vertices, flat.holes, flat.dimensions);
-      dim = coordinates[0][0].length;
-      const { longitudeKey, latitudeKey } = this;
-      for (let i = 0, iMax = indices.length; i < iMax; i++) {
-        index = indices[i];
-        if (typeof flat.vertices[0] === "number") {
-          triangles.push(
-            flat.vertices[index * dim + longitudeKey],
-            flat.vertices[index * dim + latitudeKey]
-          );
-        } else {
-          throw new Error("unhandled polygon");
-        }
-      }
 
-      for (let i = 0, iMax = triangles.length; i < iMax; i) {
-        pixel = map.project(new LatLng(triangles[i++], triangles[i++]), 0);
-        vertices.push(
-          pixel.x - mapCenterPixels.x,
-          pixel.y - mapCenterPixels.y,
-          chosenColor.r,
-          chosenColor.g,
-          chosenColor.b,
-          alpha
-        );
-      }
-
-      if (border) {
-        const lines = [];
-        let holeIndex = 0;
-        for (let i = 1, iMax = flat.vertices.length - 2; i < iMax; i = i + 2) {
-          // Skip draw between hole and non-hole vertext
-          if(((i + 1) / 2) !== flat.holes[holeIndex]) {
-            lines.push(flat.vertices[i], flat.vertices[i - 1]);
-            lines.push(flat.vertices[i + 2], flat.vertices[i + 1]);
+      for (let num in coordinates) {
+        flat = earcut.flatten(coordinates[num]);
+        indices = earcut(flat.vertices, flat.holes, flat.dimensions);
+        dim = coordinates[num][0][0].length;
+        const { longitudeKey, latitudeKey } = this;
+        for (let i = 0, iMax = indices.length; i < iMax; i++) {
+          index = indices[i];
+          if (typeof flat.vertices[0] === "number") {
+            triangles.push(
+              flat.vertices[index * dim + longitudeKey],
+              flat.vertices[index * dim + latitudeKey]
+            );
           } else {
-            holeIndex++;
+            throw new Error("unhandled polygon");
           }
         }
 
-        for (let i = 0, iMax = lines.length; i < iMax; i) {
-          pixel = latLonToPixel(lines[i++], lines[i++]);
-          vertexLines.push(
+        for (let i = 0, iMax = triangles.length; i < iMax; i) {
+          pixel = map.project(new LatLng(triangles[i++], triangles[i++]), 0);
+          vertices.push(
             pixel.x - mapCenterPixels.x,
             pixel.y - mapCenterPixels.y,
             chosenColor.r,
             chosenColor.g,
             chosenColor.b,
-            borderOpacity
+            alpha
           );
+        }
+
+        if (border) {
+          const lines = [];
+          let holeIndex = 0;
+          for (
+            let i = 1, iMax = flat.vertices.length - 2;
+            i < iMax;
+            i = i + 2
+          ) {
+            // Skip draw between hole and non-hole vertext
+            if ((i + 1) / 2 !== flat.holes[holeIndex]) {
+              lines.push(flat.vertices[i], flat.vertices[i - 1]);
+              lines.push(flat.vertices[i + 2], flat.vertices[i + 1]);
+            } else {
+              holeIndex++;
+            }
+          }
+
+          for (let i = 0, iMax = lines.length; i < iMax; i) {
+            pixel = latLonToPixel(lines[i++], lines[i++]);
+            vertexLines.push(
+              pixel.x - mapCenterPixels.x,
+              pixel.y - mapCenterPixels.y,
+              chosenColor.r,
+              chosenColor.g,
+              chosenColor.b,
+              borderOpacity
+            );
+          }
         }
       }
     }
@@ -280,12 +298,23 @@ export class Shapes extends BaseGlLayer {
     if (!this.gl) return this;
 
     const { scale, offset, canvas } = e;
-    const { mapMatrix, gl, vertices, settings, vertexLines, border, mapCenterPixels } = this;
+    const {
+      mapMatrix,
+      gl,
+      vertices,
+      settings,
+      vertexLines,
+      border,
+      mapCenterPixels,
+    } = this;
     // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
     mapMatrix
       .setSize(canvas.width, canvas.height)
       .scaleTo(scale)
-      .translateTo(-offset.x + mapCenterPixels.x, -offset.y + mapCenterPixels.y);
+      .translateTo(
+        -offset.x + mapCenterPixels.x,
+        -offset.y + mapCenterPixels.y
+      );
 
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -360,7 +389,10 @@ export class Shapes extends BaseGlLayer {
     }
   }
 
-  hoveringFeatures: Array<Feature<Polygon, GeoJsonProperties> | Feature<MultiPolygon, GeoJsonProperties>> = [];
+  hoveringFeatures: Array<
+    | Feature<Polygon, GeoJsonProperties>
+    | Feature<MultiPolygon, GeoJsonProperties>
+  > = [];
   // hovers all touching Shapes instances
   static tryHover(
     e: LeafletMouseEvent,
@@ -374,7 +406,10 @@ export class Shapes extends BaseGlLayer {
       if (instance.map !== map) return;
       if (!instance.polygonLookup) return;
       const oldHoveredFeatures = hoveringFeatures;
-      const newHoveredFeatures: Array<Feature<Polygon, GeoJsonProperties> | Feature<MultiPolygon, GeoJsonProperties>> = [];
+      const newHoveredFeatures: Array<
+        | Feature<Polygon, GeoJsonProperties>
+        | Feature<MultiPolygon, GeoJsonProperties>
+      > = [];
       instance.hoveringFeatures = newHoveredFeatures;
 
       const feature = instance.polygonLookup.search(e.latlng.lng, e.latlng.lat);
