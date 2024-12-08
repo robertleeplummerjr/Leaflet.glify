@@ -10,8 +10,9 @@ import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as Color from "./color";
 import { LeafletMouseEvent, Map, Point, LatLng } from "leaflet";
 import { IPixel } from "./pixel";
-import { getChosenColor, locationDistance, pixelInCircle } from "./utils";
+import { locationDistance, pixelInCircle } from "./utils";
 import glify from "./index";
+import { getChosenColor } from "./color";
 
 export interface IPointsSettings extends IBaseGlLayerSettings {
   data: number[][] | FeatureCollection<GeoPoint>;

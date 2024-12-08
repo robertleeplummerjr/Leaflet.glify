@@ -18,10 +18,11 @@ import {
 } from "./base-gl-layer";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as Color from "./color";
-import { getChosenColor, latLonToPixel } from "./utils";
+import { latLonToPixel } from "./utils";
 
 import { notProperlyDefined } from "./errors";
 import glify from "./index";
+import { getChosenColor } from "./color";
 
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
