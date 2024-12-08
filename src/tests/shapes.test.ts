@@ -314,3 +314,109 @@ describe("Shapes", () => {
     });
   });
 });
+
+function getShapesWithPolygon(settings?: Partial<IShapesSettings>): Shapes {
+  const element = document.createElement("div");
+  const map = new Map(element);
+
+  // Minimalistic FeatureCollection with a single polygon
+  const data: FeatureCollection = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0], // Bottom-left
+              [0, 1], // Top-left
+              [1, 1], // Top-right
+              [1, 0], // Bottom-right
+              [0, 0], // Closing the loop
+            ],
+          ],
+        },
+        properties: {
+          id: 1,
+          name: "Test Polygon",
+        },
+      },
+    ],
+  };
+
+  return new Shapes({
+    map,
+    data,
+    vertexShaderSource: " ",
+    fragmentShaderSource: " ",
+    latitudeKey: 1,
+    longitudeKey: 0,
+    ...settings,
+  });
+}
+
+describe("Shapes - Color Input", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("encodes a hex string color in vertices", () => {
+    const shapes = getShapesWithPolygon({ color: "#ff5733" });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the last RGB values before the final number
+    expect(color).toEqual([1, 0.3411764705882353, 0.2]); // r, g, b for #ff5733
+  });
+
+  it("encodes an RGB array in vertices", () => {
+    const shapes = getShapesWithPolygon({ color: [0.1, 0.4, 0.8] });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGBA array in vertices (ignores alpha)", () => {
+    const shapes = getShapesWithPolygon({ color: [0.1, 0.4, 0.8, 0.6] });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGB object in vertices", () => {
+    const shapes = getShapesWithPolygon({ color: { r: 0.1, g: 0.4, b: 0.8 } });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGBA object in vertices (ignores alpha)", () => {
+    const shapes = getShapesWithPolygon({
+      color: { r: 0.1, g: 0.4, b: 0.8, a: 0.5 },
+    });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes default gray color for invalid hex string", () => {
+    const shapes = getShapesWithPolygon({ color: "invalid" });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.5, 0.5, 0.5]); // Default gray color
+  });
+});

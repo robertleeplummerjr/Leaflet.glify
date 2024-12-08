@@ -21,6 +21,7 @@ function getPoints(settings?: Partial<IPointsSettings>): Points {
   });
 }
 
+
 describe("Points", () => {
   beforeEach(() => {
     jest.spyOn(console, "warn").mockImplementation(() => {});
@@ -667,4 +668,68 @@ describe("Points", () => {
 
   // TODO: tryClick
   // TODO: tryHover
+});
+
+
+function getPointsWithColor(
+  color:
+    | string
+    | [number, number, number]
+    | [number, number, number, number]
+    | { r: number; g: number; b: number }
+    | { r: number; g: number; b: number, a: number }
+): Points {
+  const element = document.createElement("div");
+  const map = new Map(element);
+  const data = [[1, 1]]; // Mock data for points
+  return new Points({
+    size: 5,
+    map,
+    data,
+    vertexShaderSource: " ",
+    fragmentShaderSource: " ",
+    latitudeKey: 0,
+    longitudeKey: 1,
+    color, // Pass the color input here
+  });
+}
+describe("Points - Color Input", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("accepts a hex string as color", () => {
+    const points = getPointsWithColor("#ff5733");
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([1, 0.3411764705882353, 0.2]);
+  });
+
+  it("encodes an RGB array in vertices", () => {
+    const points = getPointsWithColor([0.1, 0.4, 0.8]);
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGBA array in vertices (ignores alpha)", () => {
+    const points = getPointsWithColor([0.1, 0.4, 0.8, 0.5]);
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGB object in vertices", () => {
+    const points = getPointsWithColor({ r: 0.1, g: 0.4, b: 0.8 });
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes default gray color for invalid hex string", () => {
+    const points = getPointsWithColor("invalid");
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([0.5, 0.5, 0.5]); // Default gray color
+  });
+
 });
