@@ -1,4 +1,4 @@
-import { fromHex, getChosenColor, hexToRgbNormalized, pallet, random } from "../color";
+import { blue, fromHex, getChosenColor, green, hexToRgbNormalized, pallet, random, red, teal, yellow } from "../color";
 
 describe("color", () => {
   beforeEach(() => {
@@ -21,6 +21,11 @@ describe("color", () => {
       b: 0,
       a: 1,
     });
+    // Invalid inputs
+    expect(fromHex("")).toBeNull();
+    expect(fromHex("#")).toBeNull();
+    expect(fromHex("#fff")).toBeNull();
+    expect(fromHex("#1234")).toBeNull();
   });
 
   test("random", () => {
@@ -35,16 +40,66 @@ describe("color", () => {
     expect(color.a).toBeGreaterThan(0);
   });
 
-  test("pallet", () => {
-    const color = pallet();
-    expect(color.r).toBeLessThan(1.01);
-    expect(color.r).toBeGreaterThan(-0.01);
-    expect(color.g).toBeLessThan(1.01);
-    expect(color.g).toBeGreaterThan(-0.01);
-    expect(color.b).toBeLessThan(1.01);
-    expect(color.b).toBeGreaterThan(-0.01);
-    expect(color.a).toBeLessThan(1.01);
-    expect(color.a).toBeGreaterThan(-0.01);
+  describe("pallet", () => {
+    const validColors = [green, red, blue, teal, yellow];
+
+    test("pallet", () => {
+      const color = pallet();
+      expect(color.r).toBeLessThan(1.01);
+      expect(color.r).toBeGreaterThan(-0.01);
+      expect(color.g).toBeLessThan(1.01);
+      expect(color.g).toBeGreaterThan(-0.01);
+      expect(color.b).toBeLessThan(1.01);
+      expect(color.b).toBeGreaterThan(-0.01);
+      expect(color.a).toBeLessThan(1.01);
+      expect(color.a).toBeGreaterThan(-0.01);
+    });
+    test("should return a valid IColor object", () => {
+      const color = pallet();
+      expect(color.r).toBeGreaterThanOrEqual(0);
+      expect(color.r).toBeLessThanOrEqual(1);
+      expect(color.g).toBeGreaterThanOrEqual(0);
+      expect(color.g).toBeLessThanOrEqual(1);
+      expect(color.b).toBeGreaterThanOrEqual(0);
+      expect(color.b).toBeLessThanOrEqual(1);
+      if (color.a !== undefined) {
+        expect(color.a).toBeGreaterThanOrEqual(0);
+        expect(color.a).toBeLessThanOrEqual(1);
+      }
+    });
+
+    test("should return one of the predefined colors", () => {
+      const color = pallet();
+      expect(validColors).toContainEqual(color);
+    });
+
+    test("should return each predefined color over multiple calls", () => {
+      const occurrences = { green: 0, red: 0, blue: 0, teal: 0, yellow: 0 };
+
+      // Call `pallet` multiple times to ensure each color is returned
+      for (let i = 0; i < 1000; i++) {
+        const color = pallet();
+        if (color === green) occurrences.green++;
+        else if (color === red) occurrences.red++;
+        else if (color === blue) occurrences.blue++;
+        else if (color === teal) occurrences.teal++;
+        else if (color === yellow) occurrences.yellow++;
+      }
+
+      // Ensure each color appears at least once
+      Object.values(occurrences).forEach((count) => {
+        expect(count).toBeGreaterThan(0);
+      });
+    });
+
+    test("should return yellow as default for unexpected cases", () => {
+      // Mock Math.random to simulate an unexpected case
+      const originalMathRandom = Math.random;
+      Math.random = () => 5; // Out of range
+      const color = pallet();
+      expect(color).toEqual(yellow);
+      Math.random = originalMathRandom; // Restore Math.random
+    });
   });
 
   describe("hexToRgbNormalized", () => {

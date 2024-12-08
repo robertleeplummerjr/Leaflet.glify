@@ -67,6 +67,20 @@ describe("Shapes", () => {
         }).toThrow(notProperlyDefined("settings.border"));
       });
     });
+    describe("when border is a boolean", () => {
+      it("returns correct output for border: true", () => {
+        const shapes = getShapes({ border: true });
+        expect(shapes.settings.border).toBe(true); // Ensure the setting is applied
+        // Additional assertions to validate the behavior when border is true
+      });
+
+      it("returns correct output for border: false", () => {
+        const shapes = getShapes({ border: false });
+        expect(shapes.settings.border).toBe(false); // Ensure the setting is applied
+        // Additional assertions to validate the behavior when border is false
+      });
+    });
+
   });
   describe("borderOpacity", () => {
     describe("when borderOpacity is not a number", () => {
