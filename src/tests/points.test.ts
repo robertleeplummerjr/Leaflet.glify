@@ -22,6 +22,13 @@ function getPoints(settings?: Partial<IPointsSettings>): Points {
 }
 
 describe("Points", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   describe("size", () => {
     describe("when this.settings.size is falsey", () => {
       it("returns null", () => {

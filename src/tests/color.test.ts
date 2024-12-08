@@ -1,6 +1,13 @@
 import { fromHex, getChosenColor, hexToRgbNormalized, pallet, random } from "../color";
 
 describe("color", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   test("fromHex", () => {
     expect(fromHex("#ffffff")).toEqual({
       r: 1,
@@ -41,6 +48,7 @@ describe("color", () => {
   });
 
   describe("hexToRgbNormalized", () => {
+
     it("converts a 6-character hex to normalized RGB", () => {
       expect(hexToRgbNormalized("#ff5733")).toEqual({
         r: 1,
