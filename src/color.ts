@@ -119,8 +119,20 @@ export function getChosenColor(
     }
   }
   // Handle RGB object
-  else {
+  else if (
+    typeof chosenColor === "object" &&
+    chosenColor !== null &&
+    "r" in chosenColor &&
+    "g" in chosenColor &&
+    "b" in chosenColor &&
+    (chosenColor.a === undefined || typeof chosenColor.a === "number")
+  ) {
     rgb = chosenColor;
+  }
+  // Invalid input
+  else {
+    console.warn("Invalid color input. Falling back to default gray.");
+    rgb = gray;
   }
 
   return rgb;
