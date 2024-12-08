@@ -30,9 +30,7 @@ const mockFeatureCollection: FeatureCollection<LineString> = {
   ],
 };
 
-function getSettings(
-  settings?: Partial<ILinesSettings>
-): Partial<ILinesSettings> {
+function getSettings(settings?: Partial<ILinesSettings>): Partial<ILinesSettings> {
   const element = document.createElement("div");
   const map = new Map(element);
   return {
