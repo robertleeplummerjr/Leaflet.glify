@@ -80,7 +80,6 @@ describe("Shapes", () => {
         // Additional assertions to validate the behavior when border is false
       });
     });
-
   });
   describe("borderOpacity", () => {
     describe("when borderOpacity is not a number", () => {
@@ -253,11 +252,11 @@ describe("Shapes", () => {
       });
     });
     describe('when data.type = "MultiPolygon"', () => {
+      const data: MultiPolygon = {
+        type: "MultiPolygon",
+        coordinates: [],
+      };
       it("calls PolygonLookup.loadFeatureCollection and geojsonFlatten correctly", () => {
-        const data: MultiPolygon = {
-          type: "MultiPolygon",
-          coordinates: [],
-        };
         const shapes = getShapes({
           data,
         });
@@ -279,6 +278,147 @@ describe("Shapes", () => {
         });
         expect(geojsonFlatten).toHaveBeenCalledWith(data);
       });
+
+      it("calls PolygonLookup.loadFeatureCollection and geojsonFlatten correctly with border set to true", () => {
+        const shapes = getShapes({
+          data,
+          border: true,
+        });
+
+        expect(
+          shapes.polygonLookup?.loadFeatureCollection
+        ).toHaveBeenCalledWith({
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "MultiPolygon",
+                coordinates: data.coordinates,
+              },
+            },
+          ],
+        });
+        expect(shapes.settings.border).toBe(true);
+      });
+
+      const datamulti: Feature = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: [
+            [
+              [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 0.0], // Closing the first polygon
+              ],
+            ],
+            [
+              [
+                [2.0, 2.0],
+                [3.0, 2.0],
+                [3.0, 3.0],
+                [2.0, 3.0],
+                [2.0, 2.0], // Closing the second polygon
+              ],
+            ],
+          ],
+        },
+      };
+      it("calls PolygonLookup.loadFeatureCollection and geojsonFlatten correctly with border set to true", () => {
+        const shapes = getShapes({
+          data: datamulti,
+          border: true,
+        });
+        expect(
+          shapes.polygonLookup?.loadFeatureCollection
+        ).toHaveBeenCalledWith({
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: datamulti.geometry,
+            },
+          ],
+        });
+        expect(geojsonFlatten).toHaveBeenCalledWith(datamulti);
+        expect(shapes.settings.border).toBe(true);
+
+        delete shapes.vertices;
+        delete shapes.vertexLines;
+        shapes.polygonLookup = null;
+        shapes.resetVertices();
+        expect(shapes.vertices.length).toBeGreaterThan(0);
+        expect(shapes.vertexLines.length).toBeGreaterThan(0);
+        expect(shapes.vertexLines.length).toBeGreaterThan(
+          shapes.vertices.length
+        );
+
+        const shapesWithoutBorder = getShapes({
+          data: datamulti,
+          border: false, // Without border
+        });
+        shapesWithoutBorder.resetVertices();
+        expect(shapesWithoutBorder.vertexLines.length).toBe(0);
+
+      });
+
+      const datamultiWithHole: Feature = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: [
+            // Polygon 1 (with hole)
+            [
+              [
+                [0.0, 0.0],
+                [4.0, 0.0],
+                [4.0, 4.0],
+                [0.0, 4.0],
+                [0.0, 0.0], // Closing the outer ring
+              ],
+              [
+                [1.0, 1.0],
+                [3.0, 1.0],
+                [3.0, 3.0],
+                [1.0, 3.0],
+                [1.0, 1.0], // Closing the hole
+              ],
+            ],
+            // Polygon 2 (no hole)
+            [
+              [
+                [5.0, 5.0],
+                [7.0, 5.0],
+                [7.0, 7.0],
+                [5.0, 7.0],
+                [5.0, 5.0], // Closing the outer ring
+              ],
+            ],
+          ],
+        },
+      };
+
+      it("processes MultiPolygon with a hole correctly", () => {
+        const shapes = getShapes({
+          data: datamultiWithHole,
+          border: true,
+        });
+
+        shapes.resetVertices();
+
+        // Ensure vertices and vertexLines are populated
+        expect(shapes.vertices.length).toBeGreaterThan(0);
+        expect(shapes.vertexLines.length).toBeGreaterThan(0);
+      });
+
     });
     describe("when data.type is a default case", () => {
       it("calls PolygonLookup.loadFeatureCollection", () => {
