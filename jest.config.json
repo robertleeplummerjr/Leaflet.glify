@@ -1,5 +1,5 @@
 {
-  "collectCoverage": false,
+  "collectCoverage": true,
   "collectCoverageFrom": ["src/**/*", "!src/**/*.d.ts"],
   "coverageDirectory": "__coverage__",
   "coverageProvider": "v8",

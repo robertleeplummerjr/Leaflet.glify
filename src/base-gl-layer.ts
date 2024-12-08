@@ -43,7 +43,7 @@ export interface IBaseGlLayerSettings {
   click?: EventCallback;
   hover?: EventCallback;
   hoverOff?: EventCallback;
-  color?: ColorCallback | IColor | null;
+  color?: ColorCallback | IColor | string | number[] | null;
   className?: string;
   opacity?: number;
   preserveDrawingBuffer?: boolean;
@@ -59,7 +59,7 @@ export const defaults: Partial<IBaseGlLayerSettings> = {
 export type ColorCallback = (featureIndex: number, feature: any) => IColor;
 
 export abstract class BaseGlLayer<
-  T extends IBaseGlLayerSettings = IBaseGlLayerSettings
+  T extends IBaseGlLayerSettings = IBaseGlLayerSettings,
 > {
   bytes = 0;
   active: boolean;
@@ -146,7 +146,7 @@ export abstract class BaseGlLayer<
     return this.settings.opacity;
   }
 
-  get color(): ColorCallback | IColor | null {
+  get color(): ColorCallback | IColor | string | number[] | null {
     return this.settings.color ?? null;
   }
 
@@ -160,10 +160,10 @@ export abstract class BaseGlLayer<
     this.matrix = null;
     this.vertices = null;
     this.vertexLines = null;
-    try{
-      this.mapCenterPixels =  this.map.project(this.map.getCenter(), 0)
-    } catch(err){
-      this.mapCenterPixels = {x:-0,y:-0}
+    try {
+      this.mapCenterPixels = this.map.project(this.map.getCenter(), 0);
+    } catch (err) {
+      this.mapCenterPixels = { x: -0, y: -0 };
     }
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
     const layer = (this.layer = new CanvasOverlay(
