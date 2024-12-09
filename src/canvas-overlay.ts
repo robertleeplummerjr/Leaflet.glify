@@ -272,6 +272,14 @@ class MockCanvasOverlay extends RealCanvasOverlay {
   addTo(map: Map): this {
     this.canvas = document.createElement("canvas");
     map.addLayer(this);
+    // Spy on this with jest or vitest, whichever is defined for the dependent project
+    // @ts-expect-error vi is not defined here, but it may be in the dependent project
+    const testRef = process.env.TS_JEST ? jest : vi;
+    try {
+      testRef.spyOn(this.canvas, "getContext");
+    } catch (e) {
+      throw new Error(`No testing framework found ${JSON.stringify(e)}`);
+    }
     return this;
   }
 }
