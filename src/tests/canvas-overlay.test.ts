@@ -1,4 +1,4 @@
-import { CanvasOverlay } from "../canvas-overlay";
+import { CanvasOverlay, CanvasOverlayType } from "../canvas-overlay";
 import {
   Bounds,
   LatLng,
@@ -369,7 +369,7 @@ describe("CanvasOverlay", () => {
   });
 });
 
-function getCo(mapOptions?: MapOptions): CanvasOverlay {
+function getCo(mapOptions?: MapOptions): CanvasOverlayType {
   const co = new CanvasOverlay(() => {}, "pane");
   const el = document.createElement("div");
   const map = new Map(el, mapOptions);

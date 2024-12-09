@@ -5,7 +5,6 @@ import { IShapesSettings, Shapes } from "../shapes";
 import { LatLng, LeafletMouseEvent, Map, Point } from "leaflet";
 import { FeatureCollection, LineString, MultiPolygon } from "geojson";
 
-jest.mock("../canvas-overlay");
 type mouseEventFunction = (e: LeafletMouseEvent) => void;
 jest.mock("../utils", () => {
   return {

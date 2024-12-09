@@ -2,7 +2,11 @@ import { LeafletMouseEvent, Map } from "leaflet";
 
 import { IColor } from "./color";
 import { IPixel } from "./pixel";
-import { CanvasOverlay, ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import {
+  CanvasOverlay,
+  CanvasOverlayType,
+  ICanvasOverlayDrawEvent,
+} from "./canvas-overlay";
 import { notProperlyDefined } from "./errors";
 import { MapMatrix } from "./map-matrix";
 
@@ -68,7 +72,7 @@ export abstract class BaseGlLayer<
   fragmentShader: any;
   canvas: HTMLCanvasElement;
   gl: WebGLRenderingContext | WebGL2RenderingContext;
-  layer: CanvasOverlay;
+  layer: CanvasOverlayType;
   mapMatrix: MapMatrix;
   matrix: WebGLUniformLocation | null;
   program: WebGLProgram | null;

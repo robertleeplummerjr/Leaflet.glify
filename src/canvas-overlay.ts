@@ -36,9 +36,9 @@ export interface ICanvasOverlayDrawEvent {
 
 export type IUserDrawFunc = (event: ICanvasOverlayDrawEvent) => void;
 
-export type RedrawCallback = (instance: CanvasOverlay) => void;
+export type RedrawCallback = (instance: CanvasOverlayType) => void;
 
-export class CanvasOverlay extends Layer {
+class RealCanvasOverlay extends Layer {
   _userDrawFunc: IUserDrawFunc;
   _redrawCallbacks: RedrawCallback[];
   canvas?: HTMLCanvasElement;
@@ -264,3 +264,30 @@ export class CanvasOverlay extends Layer {
     ]);
   }
 }
+class MockCanvasOverlay extends RealCanvasOverlay {
+  constructor(userDrawFunc: IUserDrawFunc, pane: string) {
+    super(userDrawFunc, pane);
+  }
+
+  addTo(map: Map): this {
+    this.canvas = document.createElement("canvas");
+    map.addLayer(this);
+    return this;
+  }
+}
+
+function isBrowserEnvironment(): boolean {
+  if (process.env.TS_JEST != "1") return false;
+  if (process.env.MODE == "test") return false;
+  if (process.env.NODE_ENV == "test") return false;
+  if (process.env.VITEST == "true") return false;
+  return true;
+}
+
+const CanvasOverlay = isBrowserEnvironment()
+  ? RealCanvasOverlay
+  : MockCanvasOverlay;
+
+type CanvasOverlayType = RealCanvasOverlay;
+
+export { CanvasOverlay, CanvasOverlayType };

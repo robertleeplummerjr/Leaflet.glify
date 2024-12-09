@@ -8,8 +8,6 @@ import {
 import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 
-jest.mock("../canvas-overlay");
-
 describe("BaseGlLayer", () => {
   interface ITestLayerSettings extends IBaseGlLayerSettings {}
   class TestLayer extends BaseGlLayer<ITestLayerSettings> {
