@@ -273,23 +273,42 @@ class MockCanvasOverlay extends RealCanvasOverlay {
     this.canvas = document.createElement("canvas");
     map.addLayer(this);
     // Spy on this with jest or vitest, whichever is defined for the dependent project
-    // @ts-expect-error vi is not defined here, but it may be in the dependent project
-    const testRef = process.env.TS_JEST ? jest : vi;
     try {
-      testRef.spyOn(this.canvas, "getContext");
+      console.log({
+        context3d: this.canvas.getContext("webgl"),
+      });
+      jest.spyOn(this.canvas, "getContext");
     } catch (e) {
-      throw new Error(`No testing framework found ${JSON.stringify(e)}`);
+      console.log(
+        "env",
+        JSON.stringify({
+          jest: process.env.TS_JEST,
+          mode: process.env.MODE,
+          node_env: process.env.NODE_ENV,
+          vitest: process.env.VITEST,
+        })
+      );
+
+      console.error(`No testing framework found ${JSON.stringify(e)}`);
     }
     return this;
   }
 }
 
 function isBrowserEnvironment(): boolean {
-  if (process.env.TS_JEST != "1") return false;
-  if (process.env.MODE == "test") return false;
-  if (process.env.NODE_ENV == "test") return false;
-  if (process.env.VITEST == "true") return false;
-  return true;
+  console.log(
+    `Checking if browser environment with env: ${JSON.stringify(process.env)}`
+  );
+  const isBrowserEnv =
+    process.env.TS_JEST != "1" ||
+    process.env.MODE == "test" ||
+    process.env.VITEST == "true" ||
+    process.env.NODE_ENV == "test"
+      ? false
+      : true;
+
+  console.log(`isBrowserEnv: ${isBrowserEnv}`);
+  return isBrowserEnv;
 }
 
 const CanvasOverlay = isBrowserEnvironment()
