@@ -36,9 +36,9 @@ export interface ICanvasOverlayDrawEvent {
 
 export type IUserDrawFunc = (event: ICanvasOverlayDrawEvent) => void;
 
-export type RedrawCallback = (instance: CanvasOverlayType) => void;
+export type RedrawCallback = (instance: CanvasOverlay) => void;
 
-class RealCanvasOverlay extends Layer {
+export class CanvasOverlay extends Layer {
   _userDrawFunc: IUserDrawFunc;
   _redrawCallbacks: RedrawCallback[];
   canvas?: HTMLCanvasElement;
@@ -85,7 +85,6 @@ class RealCanvasOverlay extends Layer {
     this._map = map;
     const canvas = (this.canvas =
       this.canvas ?? document.createElement("canvas"));
-
     const size = map.getSize();
     const animated = this.isAnimated();
     canvas.width = size.x;
@@ -136,7 +135,11 @@ class RealCanvasOverlay extends Layer {
   }
 
   addTo(map: Map): this {
+    if (!this.canvas) {
+      this.canvas = document.createElement("canvas");
+    }
     map.addLayer(this);
+    this._map = map;
     return this;
   }
 
@@ -264,64 +267,3 @@ class RealCanvasOverlay extends Layer {
     ]);
   }
 }
-class MockCanvasOverlay extends RealCanvasOverlay {
-  constructor(userDrawFunc: IUserDrawFunc, pane: string) {
-    super(userDrawFunc, pane);
-  }
-
-  addTo(map: Map): this {
-    this.canvas = document.createElement("canvas");
-    map.addLayer(this);
-    // Spy on this with jest or vitest, whichever is defined for the dependent project
-    try {
-      const spy = jest.spyOn(this.canvas, "getContext");
-      console.log(spy);
-    } catch (e) {
-      console.log(
-        "env",
-        JSON.stringify({
-          jest: process.env.TS_JEST,
-          mode: process.env.MODE,
-          node_env: process.env.NODE_ENV,
-          vitest: process.env.VITEST,
-        })
-      );
-
-      console.error(`No testing framework found ${JSON.stringify(e)}`);
-    }
-    return this;
-  }
-}
-
-function isBrowserEnvironment(): boolean {
-  console.log(
-    `Checking if browser environment with env: ${JSON.stringify(process.env)}`
-  );
-  try {
-    const isBrowserEnv =
-      process.env.TS_JEST == "1" ||
-      process.env.MODE == "test" ||
-      process.env.VITEST == "true" ||
-      process.env.NODE_ENV == "test"
-        ? false
-        : true;
-    console.log(
-      `Env: ${JSON.stringify(process.env.TS_JEST)} ${JSON.stringify(process.env.MODE)} ${JSON.stringify(process.env.VITEST)} ${JSON.stringify(process.env.NODE_ENV)}`
-    );
-    console.log(`isBrowserEnv: ${isBrowserEnv}`);
-    return isBrowserEnv;
-  } catch (e) {
-    console.error(
-      `Error checking if browser environment: ${JSON.stringify(e)}`
-    );
-    return true;
-  }
-}
-
-const CanvasOverlay = isBrowserEnvironment()
-  ? RealCanvasOverlay
-  : MockCanvasOverlay;
-
-type CanvasOverlayType = RealCanvasOverlay;
-
-export { CanvasOverlay, CanvasOverlayType };
