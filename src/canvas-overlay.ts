@@ -274,10 +274,8 @@ class MockCanvasOverlay extends RealCanvasOverlay {
     map.addLayer(this);
     // Spy on this with jest or vitest, whichever is defined for the dependent project
     try {
-      console.log({
-        context3d: this.canvas.getContext("webgl"),
-      });
-      jest.spyOn(this.canvas, "getContext");
+      const spy = jest.spyOn(this.canvas, "getContext");
+      console.log(spy);
     } catch (e) {
       console.log(
         "env",
@@ -299,16 +297,25 @@ function isBrowserEnvironment(): boolean {
   console.log(
     `Checking if browser environment with env: ${JSON.stringify(process.env)}`
   );
-  const isBrowserEnv =
-    process.env.TS_JEST != "1" ||
-    process.env.MODE == "test" ||
-    process.env.VITEST == "true" ||
-    process.env.NODE_ENV == "test"
-      ? false
-      : true;
-
-  console.log(`isBrowserEnv: ${isBrowserEnv}`);
-  return isBrowserEnv;
+  try {
+    const isBrowserEnv =
+      process.env.TS_JEST == "1" ||
+      process.env.MODE == "test" ||
+      process.env.VITEST == "true" ||
+      process.env.NODE_ENV == "test"
+        ? false
+        : true;
+    console.log(
+      `Env: ${JSON.stringify(process.env.TS_JEST)} ${JSON.stringify(process.env.MODE)} ${JSON.stringify(process.env.VITEST)} ${JSON.stringify(process.env.NODE_ENV)}`
+    );
+    console.log(`isBrowserEnv: ${isBrowserEnv}`);
+    return isBrowserEnv;
+  } catch (e) {
+    console.error(
+      `Error checking if browser environment: ${JSON.stringify(e)}`
+    );
+    return true;
+  }
 }
 
 const CanvasOverlay = isBrowserEnvironment()
