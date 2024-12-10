@@ -85,7 +85,6 @@ export class CanvasOverlay extends Layer {
     this._map = map;
     const canvas = (this.canvas =
       this.canvas ?? document.createElement("canvas"));
-
     const size = map.getSize();
     const animated = this.isAnimated();
     canvas.width = size.x;
@@ -136,7 +135,11 @@ export class CanvasOverlay extends Layer {
   }
 
   addTo(map: Map): this {
+    if (!this.canvas) {
+      this.canvas = document.createElement("canvas");
+    }
     map.addLayer(this);
+    this._map = map;
     return this;
   }
 

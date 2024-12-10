@@ -1,7 +1,7 @@
 import { LeafletMouseEvent, Map } from "leaflet";
 
 import { IColor } from "./color";
-import { IPixel } from "./pixel"
+import { IPixel } from "./pixel";
 import { CanvasOverlay, ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import { notProperlyDefined } from "./errors";
 import { MapMatrix } from "./map-matrix";
@@ -34,6 +34,7 @@ export interface IBaseGlLayerSettings {
     [name: string]: IShaderVariable;
   };
   setupClick?: (map: Map) => void;
+  setupContextMenu?: (map: Map) => void;
   setupHover?: SetupHoverCallback;
   sensitivity?: number;
   sensitivityHover?: number;
@@ -41,6 +42,7 @@ export interface IBaseGlLayerSettings {
   fragmentShaderSource?: (() => string) | string;
   canvas?: HTMLCanvasElement;
   click?: EventCallback;
+  contextMenu?: EventCallback;
   hover?: EventCallback;
   hoverOff?: EventCallback;
   color?: ColorCallback | IColor | null;
@@ -59,7 +61,7 @@ export const defaults: Partial<IBaseGlLayerSettings> = {
 export type ColorCallback = (featureIndex: number, feature: any) => IColor;
 
 export abstract class BaseGlLayer<
-  T extends IBaseGlLayerSettings = IBaseGlLayerSettings
+  T extends IBaseGlLayerSettings = IBaseGlLayerSettings,
 > {
   bytes = 0;
   active: boolean;
@@ -160,10 +162,10 @@ export abstract class BaseGlLayer<
     this.matrix = null;
     this.vertices = null;
     this.vertexLines = null;
-    try{
-      this.mapCenterPixels =  this.map.project(this.map.getCenter(), 0)
-    } catch(err){
-      this.mapCenterPixels = {x:-0,y:-0}
+    try {
+      this.mapCenterPixels = this.map.project(this.map.getCenter(), 0);
+    } catch (err) {
+      this.mapCenterPixels = { x: -0, y: -0 };
     }
     const preserveDrawingBuffer = Boolean(settings.preserveDrawingBuffer);
     const layer = (this.layer = new CanvasOverlay(
@@ -234,6 +236,9 @@ export abstract class BaseGlLayer<
     const settings = this.settings;
     if (settings.click && settings.setupClick) {
       settings.setupClick(this.map);
+    }
+    if (settings.contextMenu && settings.setupContextMenu) {
+      settings.setupContextMenu(this.map);
     }
     if (settings.hover && settings.setupHover) {
       settings.setupHover(this.map, this.hoverWait);
@@ -412,6 +417,14 @@ export abstract class BaseGlLayer<
   click(e: LeafletMouseEvent, feature: any): boolean | undefined {
     if (!this.settings.click) return;
     const result = this.settings.click(e, feature);
+    if (result !== undefined) {
+      return result;
+    }
+  }
+
+  contextMenu(e: LeafletMouseEvent, feature: any): boolean | undefined {
+    if (!this.settings.contextMenu) return;
+    const result = this.settings.contextMenu(e, feature);
     if (result !== undefined) {
       return result;
     }

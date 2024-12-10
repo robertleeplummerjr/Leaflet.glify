@@ -15,6 +15,14 @@ const web = {
     new webpack.ProvidePlugin({
       leaflet: "leaflet",
     }),
+    new webpack.DefinePlugin({
+      "process.env": {
+        NODE_ENV: JSON.stringify(process.env.NODE_ENV),
+        TS_JEST: JSON.stringify(process.env.TS_JEST),
+        MODE: JSON.stringify(process.env.MODE),
+        VITEST: JSON.stringify(process.env.VITEST),
+      },
+    }),
   ],
   externals: {
     leaflet: {
