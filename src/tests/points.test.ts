@@ -3,8 +3,6 @@ import { FeatureCollection, Point as GeoPoint } from "geojson";
 import { IPointVertex, IPointsSettings, Points } from "../points";
 import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 
-jest.mock("../canvas-overlay");
-
 function getPoints(settings?: Partial<IPointsSettings>): Points {
   const element = document.createElement("div");
   const map = new Map(element);

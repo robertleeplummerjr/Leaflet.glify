@@ -5,7 +5,6 @@ import { IShapesSettings, Shapes } from "../shapes";
 import { LatLng, LeafletMouseEvent, Map, Point } from "leaflet";
 import { FeatureCollection, LineString, MultiPolygon } from "geojson";
 
-jest.mock("../canvas-overlay");
 type mouseEventFunction = (e: LeafletMouseEvent) => void;
 jest.mock("../utils", () => {
   return {
@@ -91,6 +90,7 @@ describe("glify", () => {
         size,
         data,
         setupClick: points.settings.setupClick,
+        setupContextMenu: points.settings.setupContextMenu,
         setupHover: points.settings.setupHover,
         latitudeKey: 1,
         longitudeKey: 1,
@@ -133,6 +133,7 @@ describe("glify", () => {
         weight,
         data,
         setupClick: lines.settings.setupClick,
+        setupContextMenu: lines.settings.setupContextMenu,
         setupHover: lines.settings.setupHover,
         latitudeKey: 1,
         longitudeKey: 1,
@@ -172,6 +173,7 @@ describe("glify", () => {
         map,
         data,
         setupClick: shapes.settings.setupClick,
+        setupContextMenu: shapes.settings.setupContextMenu,
         setupHover: shapes.settings.setupHover,
         latitudeKey: 2,
         longitudeKey: 3,
@@ -269,10 +271,10 @@ describe("glify", () => {
         });
         describe("when Points.tryClick returns a value", () => {
           beforeEach(() => {
-            PointsSpy.tryCLickResult = false;
+            PointsSpy.tryClickResult = false;
           });
           afterEach(() => {
-            delete PointsSpy.tryCLickResult;
+            delete PointsSpy.tryClickResult;
           });
           it("returns early", () => {
             map.fireEvent("click", {
@@ -320,10 +322,10 @@ describe("glify", () => {
         });
         describe("when Lines.tryClick returns a value", () => {
           beforeEach(() => {
-            LinesSpy.tryCLickResult = false;
+            LinesSpy.tryClickResult = false;
           });
           afterEach(() => {
-            delete LinesSpy.tryCLickResult;
+            delete LinesSpy.tryClickResult;
           });
           it("returns early", () => {
             map.fireEvent("click", {
@@ -340,6 +342,176 @@ describe("glify", () => {
               type: "click",
             });
             expect(shapesTryClickSpy).not.toHaveBeenCalled();
+          });
+        });
+      });
+    });
+  });
+  describe.skip("setupContextMenu", () => {
+    describe("when this.contextMenuSetupMaps does not include map", () => {
+      it("pushes it to glify.maps", () => {
+        const glify = new Glify();
+        const element = document.createElement("div");
+        const map = new Map(element);
+        expect(glify.contextMenuSetupMaps.length).toBe(0);
+        glify.setupContextMenu(map);
+        expect(glify.contextMenuSetupMaps.length).toBe(1);
+      });
+    });
+    describe("when this.contextMenuSetupMaps includes map", () => {
+      it("returns early", () => {
+        const glify = new Glify();
+        const element = document.createElement("div");
+        const map = new Map(element);
+        glify.contextMenuSetupMaps.push(map);
+        expect(glify.contextMenuSetupMaps.length).toBe(1);
+        glify.setupContextMenu(map);
+        expect(glify.contextMenuSetupMaps.length).toBe(1);
+      });
+    });
+    it('calls map.on("contextMenu") correctly', () => {
+      const glify = new Glify();
+      const element = document.createElement("div");
+      const map = new Map(element);
+      jest.spyOn(map, "on");
+      glify.setupContextMenu(map);
+      expect(map.on).toHaveBeenCalled();
+    });
+    describe("when a contextMenu occurs", () => {
+      let glify: Glify;
+      let map: Map;
+      let element: HTMLElement;
+      let pointsTryContextMenuSpy: jest.SpyInstance;
+      let linesTryContextMenuSpy: jest.SpyInstance;
+      let shapesTryContextMenuSpy: jest.SpyInstance;
+      let latlng: LatLng;
+      let layerPoint: Point;
+      let containerPoint: Point;
+
+      beforeEach(() => {
+        glify = new Glify();
+        glify.Points = PointsSpy;
+        glify.Lines = LinesSpy;
+        glify.Shapes = ShapesSpy;
+        pointsTryContextMenuSpy = jest.spyOn(glify.Points, "tryContextMenu");
+        linesTryContextMenuSpy = jest.spyOn(glify.Lines, "tryContextMenu");
+        shapesTryContextMenuSpy = jest.spyOn(glify.Shapes, "tryContextMenu");
+        element = document.createElement("div");
+        map = new Map(element);
+        glify.setupContextMenu(map);
+        map.setView([10, 10], 7);
+        latlng = new LatLng(1, 1);
+        layerPoint = map.latLngToLayerPoint(latlng);
+        containerPoint = map.latLngToContainerPoint(latlng);
+      });
+      afterEach(() => {
+        pointsTryContextMenuSpy.mockRestore();
+        linesTryContextMenuSpy.mockRestore();
+        shapesTryContextMenuSpy.mockRestore();
+      });
+      describe("calling Points.tryContextMenu", () => {
+        describe("when Points.tryContextMenu returns undefined", () => {
+          it("continues on to Lines", () => {
+            //TODO: TypeError: Cannot read properties of undefined (reading 'preventDefault')
+            map.fireEvent("contextmenu", {
+              latlng,
+              layerPoint,
+              containerPoint,
+            });
+            expect(pointsTryContextMenuSpy.mock.calls[0][0]).toEqual({
+              containerPoint,
+              latlng,
+              layerPoint,
+              sourceTarget: map,
+              target: map,
+              type: "contextmenu",
+            });
+            expect(linesTryContextMenuSpy.mock.calls[0][0]).toEqual({
+              containerPoint,
+              latlng,
+              layerPoint,
+              sourceTarget: map,
+              target: map,
+              type: "contextmenu",
+            });
+          });
+        });
+        describe("when Points.tryContextMenu returns a value", () => {
+          beforeEach(() => {
+            PointsSpy.tryContextMenuResult = false;
+          });
+          afterEach(() => {
+            delete PointsSpy.tryContextMenuResult;
+          });
+          it("returns early", () => {
+            //TODO: TypeError: Cannot read properties of undefined (reading 'preventDefault')
+            map.fireEvent("contextmenu", {
+              latlng,
+              layerPoint,
+              containerPoint,
+            });
+            expect(pointsTryContextMenuSpy.mock.calls[0][0]).toEqual({
+              containerPoint,
+              latlng,
+              layerPoint,
+              sourceTarget: map,
+              target: map,
+              type: "click",
+            });
+            expect(linesTryContextMenuSpy).not.toHaveBeenCalled();
+          });
+        });
+      });
+      describe("calling Lines.tryContextMenu", () => {
+        describe("when Lines.tryContextMenu returns undefined", () => {
+          it("continues on to Shapes", () => {
+            //TODO: TypeError: Cannot read properties of undefined (reading 'preventDefault')
+            map.fireEvent("contextmenu", {
+              latlng,
+              layerPoint,
+              containerPoint,
+            });
+            expect(linesTryContextMenuSpy.mock.calls[0][0]).toEqual({
+              containerPoint,
+              latlng,
+              layerPoint,
+              sourceTarget: map,
+              target: map,
+              type: "contextmenu",
+            });
+            expect(shapesTryContextMenuSpy.mock.calls[0][0]).toEqual({
+              containerPoint,
+              latlng,
+              layerPoint,
+              sourceTarget: map,
+              target: map,
+              type: "contextmenu",
+            });
+          });
+        });
+        describe("when Lines.tryContextMenu returns a value", () => {
+          beforeEach(() => {
+            LinesSpy.tryContextMenuResult = false;
+          });
+          afterEach(() => {
+            delete LinesSpy.tryContextMenuResult;
+          });
+          it("returns early", () => {
+            //TODO: TypeError: Cannot read properties of undefined (reading 'preventDefault')
+            map.fireEvent("contextmenu", {
+              latlng,
+              layerPoint,
+              containerPoint,
+            });
+            expect(linesTryContextMenuSpy.mock.calls[0][0]).toEqual({
+              containerPoint,
+              latlng,
+              layerPoint,
+              sourceTarget: map,
+              target: map,
+              type: "contextmenu",
+            });
+            expect(shapesTryContextMenuSpy).not.toHaveBeenCalled();
           });
         });
       });
@@ -433,13 +605,23 @@ describe("glify", () => {
 });
 
 class PointsSpy extends Points {
-  static tryCLickResult: boolean | undefined;
+  static tryClickResult: boolean | undefined;
+  static tryContextMenuResult: boolean | undefined;
+
   static tryClick(
     e: LeafletMouseEvent,
     map: Map,
     instances: Points[]
   ): boolean | undefined {
-    return this.tryCLickResult;
+    return this.tryClickResult;
+  }
+
+  static tryContextMenu(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Points[]
+  ): boolean | undefined {
+    return this.tryContextMenuResult;
   }
 
   static tryHover(
@@ -451,13 +633,22 @@ class PointsSpy extends Points {
   }
 }
 class LinesSpy extends Lines {
-  static tryCLickResult: boolean | undefined;
+  static tryClickResult: boolean | undefined;
+  static tryContextMenuResult: boolean | undefined;
   static tryClick(
     e: LeafletMouseEvent,
     map: Map,
     instances: Lines[]
   ): boolean | undefined {
-    return this.tryCLickResult;
+    return this.tryClickResult;
+  }
+
+  static tryContextMenu(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Lines[]
+  ): boolean | undefined {
+    return this.tryContextMenuResult;
   }
 
   static tryHover(
@@ -469,13 +660,22 @@ class LinesSpy extends Lines {
   }
 }
 class ShapesSpy extends Shapes {
-  static tryCLickResult: boolean | undefined;
+  static tryClickResult: boolean | undefined;
+  static tryContextMenuResult: boolean | undefined;
   static tryClick(
     e: LeafletMouseEvent,
     map: Map,
     instances: Shapes[]
   ): boolean | undefined {
-    return this.tryCLickResult;
+    return this.tryClickResult;
+  }
+
+  static tryContextMenu(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Shapes[]
+  ): boolean | undefined {
+    return this.tryContextMenuResult;
   }
 
   static tryHover(

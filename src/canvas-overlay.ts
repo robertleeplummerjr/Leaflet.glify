@@ -48,6 +48,14 @@ export class CanvasOverlay extends Layer {
   _leaflet_id?: number;
   options: LayerOptions;
 
+  get map(): Map {
+    return this._map;
+  }
+
+  set map(map: Map) {
+    this._map = map;
+  }
+
   constructor(userDrawFunc: IUserDrawFunc, pane: string) {
     super();
     this._userDrawFunc = userDrawFunc;
@@ -78,11 +86,11 @@ export class CanvasOverlay extends Layer {
   }
 
   isAnimated(): boolean {
-    return Boolean(this._map.options.zoomAnimation && Browser.any3d);
+    return Boolean(this.map.options.zoomAnimation && Browser.any3d);
   }
 
   onAdd(map: Map): this {
-    this._map = map;
+    this.map = map;
     const canvas = (this.canvas =
       this.canvas ?? document.createElement("canvas"));
 
@@ -136,16 +144,12 @@ export class CanvasOverlay extends Layer {
   }
 
   addTo(map: Map): this {
+    if (!this.canvas) {
+      //Resolves an issue where the canvas is not added to the map, discovered in a jsdom testing environment
+      this.canvas = document.createElement("canvas");
+    }
     map.addLayer(this);
     return this;
-  }
-
-  get map(): Map {
-    return this._map;
-  }
-
-  set map(map: Map) {
-    this._map = map;
   }
 
   _resize(resizeEvent: ResizeEvent): void {
@@ -157,19 +161,19 @@ export class CanvasOverlay extends Layer {
 
   _reset(): void {
     if (this.canvas) {
-      const topLeft = this._map.containerPointToLayerPoint([0, 0]);
+      const topLeft = this.map.containerPointToLayerPoint([0, 0]);
       DomUtil.setPosition(this.canvas, topLeft);
     }
     this._redraw();
   }
 
   _redraw(): void {
-    const { _map, canvas } = this;
-    const size = _map.getSize();
-    const bounds = _map.getBounds();
+    const { map, canvas } = this;
+    const size = map.getSize();
+    const bounds = map.getBounds();
     const zoomScale =
       (size.x * 180) / (20037508.34 * (bounds.getEast() - bounds.getWest())); // resolution = 1/zoomScale
-    const zoom = _map.getZoom();
+    const zoom = map.getZoom();
     const topLeft = new LatLng(bounds.getNorth(), bounds.getWest());
     const offset = this._unclampedProject(topLeft, 0);
     if (canvas) {
@@ -195,10 +199,10 @@ export class CanvasOverlay extends Layer {
   }
 
   _animateZoom(e: ZoomAnimEvent): void {
-    const { _map, canvas } = this;
-    const scale = _map.getZoomScale(e.zoom, _map.getZoom());
+    const { map, canvas } = this;
+    const scale = map.getZoomScale(e.zoom, map.getZoom());
     const offset = this._unclampedLatLngBoundsToNewLayerBounds(
-      _map.getBounds(),
+      map.getBounds(),
       e.zoom,
       e.center
     ).min;
@@ -208,15 +212,15 @@ export class CanvasOverlay extends Layer {
   }
 
   _animateZoomNoLayer(e: ZoomAnimEvent): void {
-    const { _map, canvas } = this;
+    const { map, canvas } = this;
     if (canvas) {
-      const scale = _map.getZoomScale(e.zoom, _map.getZoom());
-      const offset = _map
+      const scale = map.getZoomScale(e.zoom, map.getZoom());
+      const offset = map
         // @ts-expect-error experimental
         ._getCenterOffset(e.center)
         ._multiplyBy(-scale)
         // @ts-expect-error  experimental
-        .subtract(_map._getMapPanePos());
+        .subtract(map._getMapPanePos());
       DomUtil.setTransform(canvas, offset, scale);
     }
   }
@@ -224,7 +228,7 @@ export class CanvasOverlay extends Layer {
   _unclampedProject(latlng: LatLng, zoom: number): Point {
     // imported partly from https://github.com/Leaflet/Leaflet/blob/1ae785b73092fdb4b97e30f8789345e9f7c7c912/src/geo/projection/Projection.SphericalMercator.js#L21
     // used because they clamp the latitude
-    const { crs } = this._map.options;
+    const { crs } = this.map.options;
     // @ts-expect-error experimental
     const { R } = crs.projection;
     const d = Math.PI / 180;
@@ -247,7 +251,7 @@ export class CanvasOverlay extends Layer {
     // imported party from https://github.com/Leaflet/Leaflet/blob/84bc05bbb6e4acc41e6f89ff7421dd7c6520d256/src/map/Map.js#L1500
     // used because it uses crs.projection.project, which clamp the latitude
     // @ts-expect-error experimental
-    const topLeft = this._map._getNewPixelOrigin(center, zoom);
+    const topLeft = this.map._getNewPixelOrigin(center, zoom);
     return new Bounds([
       this._unclampedProject(latLngBounds.getSouthWest(), zoom).subtract(
         topLeft
