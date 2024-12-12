@@ -4,7 +4,6 @@ import { MapMatrix } from "../map-matrix";
 import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 import { ILinesSettings, Lines, WeightCallback } from "../lines";
 
-jest.mock("../canvas-overlay");
 jest.mock("../utils", () => {
   return {
     inBounds: () => true,
@@ -279,50 +278,10 @@ describe("Lines", () => {
       jest.spyOn(lines.map, "project").mockReturnValue(new Point(1, 2));
       lines.resetVertices();
       const expected = [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
+        1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,
       ];
       const expectedVerticesArray = [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
+        1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,
       ];
       expect(lines.vertices.length).toBe(1);
       expect(lines.vertices[0].array).toEqual(expectedVerticesArray);

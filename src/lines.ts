@@ -142,6 +142,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     let weightFn: WeightCallback | null = null;
     let chosenColor: color.IColor;
     let featureIndex = 0;
+    let coordinates: Position[] | Position[][];
 
     if (typeof color === "function") {
       colorFn = color;
@@ -166,20 +167,29 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         ? weightFn(featureIndex, feature)
         : (weight as number);
 
-      const featureVertices = new LineFeatureVertices({
-        project,
-        latitudeKey,
-        longitudeKey,
-        color: chosenColor,
-        weight: chosenWeight,
-        opacity,
-        mapCenterPixels,
-      });
+      //coorinates Array Structure depends on whether feature is multipart or not.
+      //Multi: [ [[],[],[]...], [[],[],[]...], [[],[],[]...]... ], Single: [ [[],[],[]...] ]
+      //Wrap Single Array to treat two types with same method
+      coordinates = (feature.geometry || feature).coordinates;
+      if (feature.geometry.type !== "MultiLineString") {
+        coordinates = [coordinates as Position[]];
+      }
 
-      featureVertices.fillFromCoordinates(feature.geometry.coordinates);
-      vertices.push(featureVertices);
-      if (eachVertex) {
-        eachVertex(featureVertices);
+      for (const coordinate of coordinates) {
+        const featureVertices = new LineFeatureVertices({
+          project,
+          latitudeKey,
+          longitudeKey,
+          color: chosenColor,
+          weight: chosenWeight,
+          opacity,
+          mapCenterPixels,
+        });
+        featureVertices.fillFromCoordinates(coordinate as Position[]);
+        vertices.push(featureVertices);
+        if (eachVertex) {
+          eachVertex(featureVertices);
+        }
       }
     }
 
@@ -260,7 +270,10 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     gl.vertexAttrib1f(aPointSize, pointSize);
     mapMatrix.setSize(canvas.width, canvas.height).scaleTo(scale);
     if (zoom > 18) {
-      mapMatrix.translateTo((-offset.x + mapCenterPixels.x), (-offset.y + mapCenterPixels.y));
+      mapMatrix.translateTo(
+        -offset.x + mapCenterPixels.x,
+        -offset.y + mapCenterPixels.y
+      );
       // -- attach matrix value to 'mapMatrix' uniform in shader
       gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
 
@@ -271,8 +284,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         for (let xOffset = -weight; xOffset <= weight; xOffset += 0.5) {
           // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
           mapMatrix.translateTo(
-            (-offset.x + mapCenterPixels.x) + xOffset / scale,
-            (-offset.y + mapCenterPixels.y) + yOffset / scale
+            -offset.x + mapCenterPixels.x + xOffset / scale,
+            -offset.y + mapCenterPixels.y + yOffset / scale
           );
           // -- attach matrix value to 'mapMatrix' uniform in shader
           gl.uniformMatrix4fv(matrix, false, mapMatrix.array);
@@ -300,8 +313,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
           ) {
             // -- set base matrix to translate canvas pixel coordinates -> webgl coordinates
             mapMatrix.translateTo(
-              (-offset.x + mapCenterPixels.x) + xOffset / scale,
-              (-offset.y + mapCenterPixels.y) + yOffset / scale
+              -offset.x + mapCenterPixels.x + xOffset / scale,
+              -offset.y + mapCenterPixels.y + yOffset / scale
             );
             // -- attach matrix value to 'mapMatrix' uniform in shader
             gl.uniformMatrix4fv(this.matrix, false, mapMatrix.array);
@@ -325,14 +338,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     let foundLines: Lines | null = null;
 
     instances.forEach((instance: Lines): void => {
-      const {
-        latitudeKey,
-        longitudeKey,
-        sensitivity,
-        weight,
-        scale,
-        active,
-      } = instance;
+      const { latitudeKey, longitudeKey, sensitivity, weight, scale, active } =
+        instance;
       if (!active) return;
       if (instance.map !== map) return;
       function checkClick(
@@ -404,6 +411,89 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     }
   }
 
+  // attempts to click the top-most Lines instance
+  static tryContextMenu(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Lines[]
+  ): boolean | undefined {
+    let foundFeature: Feature<LineString | MultiLineString> | null = null;
+    let foundLines: Lines | null = null;
+
+    instances.forEach((instance: Lines): void => {
+      const { latitudeKey, longitudeKey, sensitivity, weight, scale, active } =
+        instance;
+      if (!active) return;
+      if (instance.map !== map) return;
+      function checkContextMenu(
+        coordinate: Position,
+        prevCoordinate: Position,
+        feature: Feature<LineString | MultiLineString>,
+        chosenWeight: number
+      ): void {
+        const distance = latLngDistance(
+          e.latlng.lng,
+          e.latlng.lat,
+          prevCoordinate[longitudeKey],
+          prevCoordinate[latitudeKey],
+          coordinate[longitudeKey],
+          coordinate[latitudeKey]
+        );
+        if (distance <= sensitivity + chosenWeight / scale) {
+          foundFeature = feature;
+          foundLines = instance;
+        }
+      }
+      instance.data.features.forEach(
+        (feature: Feature<LineString | MultiLineString>, i: number): void => {
+          const chosenWeight =
+            typeof weight === "function" ? weight(i, feature) : weight;
+          const { coordinates, type } = feature.geometry;
+          if (type === "LineString") {
+            for (let i = 1; i < coordinates.length; i++) {
+              checkContextMenu(
+                coordinates[i] as Position,
+                coordinates[i - 1] as Position,
+                feature,
+                chosenWeight
+              );
+            }
+          } else if (type === "MultiLineString") {
+            // TODO: Unit test
+            for (let i = 0; i < coordinates.length; i++) {
+              const coordinate = coordinates[i];
+              for (let j = 0; j < coordinate.length; j++) {
+                if (j === 0 && i > 0) {
+                  const prevCoordinates = coordinates[i - 1];
+                  const lastPositions =
+                    prevCoordinates[prevCoordinates.length - 1];
+                  checkContextMenu(
+                    lastPositions as Position,
+                    coordinates[i][j] as Position,
+                    feature,
+                    chosenWeight
+                  );
+                } else if (j > 0) {
+                  checkContextMenu(
+                    coordinates[i][j] as Position,
+                    coordinates[i][j - 1] as Position,
+                    feature,
+                    chosenWeight
+                  );
+                }
+              }
+            }
+          }
+        }
+      );
+    });
+
+    if (foundLines && foundFeature) {
+      const result = (foundLines as Lines).contextMenu(e, foundFeature);
+      return result !== undefined ? result : undefined;
+    }
+  }
+
   hoveringFeatures: Array<Feature<LineString | MultiLineString>> = [];
   // hovers all touching Lines instances
   static tryHover(
@@ -450,9 +540,8 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
       if (!instance.active) return;
       if (map !== instance.map) return;
       const oldHoveredFeatures = hoveringFeatures;
-      const newHoveredFeatures: Array<
-        Feature<LineString | MultiLineString>
-      > = [];
+      const newHoveredFeatures: Array<Feature<LineString | MultiLineString>> =
+        [];
       instance.hoveringFeatures = newHoveredFeatures;
       // Check if e.latlng is inside the bbox of the features
       const bounds = geoJSON(data.features).getBounds();
