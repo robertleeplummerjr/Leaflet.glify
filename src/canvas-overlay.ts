@@ -106,6 +106,7 @@ export class CanvasOverlay extends Layer {
     }
     pane.appendChild(this.canvas);
 
+    map.on("zoom", this._reset, this);
     map.on("moveend", this._reset, this);
     map.on("resize", this._resize, this);
 
@@ -130,6 +131,7 @@ export class CanvasOverlay extends Layer {
       pane.removeChild(this.canvas);
     }
 
+    map.off("zoom", this._reset, this);
     map.off("moveend", this._reset, this);
     map.off("resize", this._resize, this);
 
