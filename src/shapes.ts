@@ -22,6 +22,7 @@ import { latLonToPixel } from "./utils";
 
 import { notProperlyDefined } from "./errors";
 import glify from "./index";
+import { getChosenColor } from "./color";
 
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
@@ -201,6 +202,7 @@ export class Shapes extends BaseGlLayer {
       } else {
         chosenColor = color as Color.IColor;
       }
+      chosenColor = getChosenColor(chosenColor);
 
       const alpha = typeof chosenColor.a === "number" ? chosenColor.a : opacity;
 

@@ -12,6 +12,7 @@ import { LeafletMouseEvent, Map, Point, LatLng } from "leaflet";
 import { IPixel } from "./pixel";
 import { locationDistance, pixelInCircle } from "./utils";
 import glify from "./index";
+import { getChosenColor } from "./color";
 
 export interface IPointsSettings extends IBaseGlLayerSettings {
   data: number[][] | FeatureCollection<GeoPoint>;
@@ -194,6 +195,7 @@ export class Points extends BaseGlLayer<IPointsSettings> {
         } else {
           chosenColor = color as Color.IColor;
         }
+        chosenColor = getChosenColor(chosenColor);
 
         chosenColor = { ...chosenColor, a: chosenColor.a ?? opacity ?? 0 };
 

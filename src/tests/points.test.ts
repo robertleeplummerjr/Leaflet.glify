@@ -19,7 +19,15 @@ function getPoints(settings?: Partial<IPointsSettings>): Points {
   });
 }
 
+
 describe("Points", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   describe("size", () => {
     describe("when this.settings.size is falsey", () => {
       it("returns null", () => {
@@ -658,4 +666,165 @@ describe("Points", () => {
 
   // TODO: tryClick
   // TODO: tryHover
+});
+
+
+function getPointsWithColor(
+  color:
+    | string
+    | [number, number, number]
+    | [number, number, number, number]
+    | { r: number; g: number; b: number }
+    | { r: number; g: number; b: number, a: number }
+): Points {
+  const element = document.createElement("div");
+  const map = new Map(element);
+  const data = [[1, 1]]; // Mock data for points
+  return new Points({
+    size: 5,
+    map,
+    data,
+    vertexShaderSource: " ",
+    fragmentShaderSource: " ",
+    latitudeKey: 0,
+    longitudeKey: 1,
+    color, // Pass the color input here
+  });
+}
+
+describe("Points - Color Input", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("accepts a hex string as color", () => {
+    const points = getPointsWithColor("#ff5733");
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([1, 0.3411764705882353, 0.2]);
+  });
+
+  it("encodes an RGB array in vertices", () => {
+    const points = getPointsWithColor([0.1, 0.4, 0.8]);
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGBA array in vertices (ignores alpha)", () => {
+    const points = getPointsWithColor([0.1, 0.4, 0.8, 0.5]);
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGB object in vertices", () => {
+    const points = getPointsWithColor({ r: 0.1, g: 0.4, b: 0.8 });
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes default gray color for invalid hex string", () => {
+    const points = getPointsWithColor("invalid");
+    points.resetVertices();
+    expect(points.vertices.slice(2, 5)).toEqual([0.5, 0.5, 0.5]); // Default gray color
+  });
+
+});
+
+// Helper function to create Points instance with custom settings
+function getPointsWithColorFunction(colorFn: (index: number, point: any) => any): Points {
+  const element = document.createElement("div");
+  const map = new Map(element);
+  const data = [
+    [50.2, 14.2],
+    [50.3, 14.3],
+    [50.4, 14.4],
+  ];
+  return new Points({
+    map,
+    data,
+    size: 50,
+    vertexShaderSource: " ",
+    fragmentShaderSource: " ",
+    latitudeKey: 0,
+    longitudeKey: 1,
+    color: colorFn,
+  });
+}
+describe("Points - Color Function", () => {
+  it("applies the correct color from the color function", () => {
+    const color_min = [
+      {
+        r: 0.462745098039216,
+        g: 0.129411764705882,
+        b: 0.505882352941176,
+        a: 0.1,
+      },
+      {
+        r: 0.431372549019608,
+        g: 0.117647058823529,
+        b: 0.505882352941176,
+        a: 0.5,
+      },
+      {
+        r: 0.090196078431372,
+        g: 0.058823529411762,
+        b: 0.295294117647059,
+        a: 1,
+      },
+    ];
+
+    const colorFunction = (index: number) => color_min[index];
+
+    const points = getPointsWithColorFunction(colorFunction);
+
+    points.resetVertices();
+
+    const vertices = points.vertices;
+
+    // Validate colors in the vertices array
+    expect(vertices.slice(2, 6)).toEqual([
+      0.462745098039216,
+      0.129411764705882,
+      0.505882352941176,
+      0.1, // Color for point 1
+    ]);
+
+    expect(vertices.slice(9, 13)).toEqual([
+      0.431372549019608,
+      0.117647058823529,
+      0.505882352941176,
+      0.5, // Color for point 2
+    ]);
+
+    expect(vertices.slice(16, 20)).toEqual([
+      0.090196078431372,
+      0.058823529411762,
+      0.295294117647059,
+      1, // Color for point 3
+    ]);
+  });
+
+  beforeEach(() => {
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("handles invalid color function gracefully", () => {
+
+    const invalidColorFunction = (index: number) => null;
+
+    const points = getPointsWithColorFunction(invalidColorFunction);
+
+    points.resetVertices();
+
+    const vertices = points.vertices;
+
+    // Validate default color is applied
+    expect(vertices.slice(2, 6)).toEqual([0.5, 0.5, 0.5, 1]); // Default gray color
+  });
 });
