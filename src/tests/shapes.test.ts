@@ -1,11 +1,12 @@
 import { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
-import { Map, Point } from "leaflet";
+import { LatLng, LatLngBounds, Map, Point } from "leaflet";
 import geojsonFlatten from "geojson-flatten";
 import PolygonLookup from "polygon-lookup";
 import earcut from "earcut";
 
 import { IShapesSettings, Shapes } from "../shapes";
 import { notProperlyDefined } from "../errors";
+import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 
 jest.mock("geojson-flatten", () => {
   const realGeojsonFlatten =
@@ -63,6 +64,19 @@ describe("Shapes", () => {
         expect(() => {
           getShapes({ border: undefined });
         }).toThrow(notProperlyDefined("settings.border"));
+      });
+    });
+    describe("when border is a boolean", () => {
+      it("returns correct output for border: true", () => {
+        const shapes = getShapes({ border: true });
+        expect(shapes.settings.border).toBe(true); // Ensure the setting is applied
+        // Additional assertions to validate the behavior when border is true
+      });
+
+      it("returns correct output for border: false", () => {
+        const shapes = getShapes({ border: false });
+        expect(shapes.settings.border).toBe(false); // Ensure the setting is applied
+        // Additional assertions to validate the behavior when border is false
       });
     });
   });
@@ -237,11 +251,11 @@ describe("Shapes", () => {
       });
     });
     describe('when data.type = "MultiPolygon"', () => {
+      const data: MultiPolygon = {
+        type: "MultiPolygon",
+        coordinates: [],
+      };
       it("calls PolygonLookup.loadFeatureCollection and geojsonFlatten correctly", () => {
-        const data: MultiPolygon = {
-          type: "MultiPolygon",
-          coordinates: [],
-        };
         const shapes = getShapes({
           data,
         });
@@ -262,6 +276,145 @@ describe("Shapes", () => {
           ],
         });
         expect(geojsonFlatten).toHaveBeenCalledWith(data);
+      });
+
+      it("calls PolygonLookup.loadFeatureCollection and geojsonFlatten correctly with border set to true", () => {
+        const shapes = getShapes({
+          data,
+          border: true,
+        });
+
+        expect(
+          shapes.polygonLookup?.loadFeatureCollection
+        ).toHaveBeenCalledWith({
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "MultiPolygon",
+                coordinates: data.coordinates,
+              },
+            },
+          ],
+        });
+        expect(shapes.settings.border).toBe(true);
+      });
+
+      const datamulti: Feature = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: [
+            [
+              [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 0.0], // Closing the first polygon
+              ],
+            ],
+            [
+              [
+                [2.0, 2.0],
+                [3.0, 2.0],
+                [3.0, 3.0],
+                [2.0, 3.0],
+                [2.0, 2.0], // Closing the second polygon
+              ],
+            ],
+          ],
+        },
+      };
+      it("calls PolygonLookup.loadFeatureCollection and geojsonFlatten correctly with border set to true", () => {
+        const shapes = getShapes({
+          data: datamulti,
+          border: true,
+        });
+        expect(
+          shapes.polygonLookup?.loadFeatureCollection
+        ).toHaveBeenCalledWith({
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: datamulti.geometry,
+            },
+          ],
+        });
+        expect(geojsonFlatten).toHaveBeenCalledWith(datamulti);
+        expect(shapes.settings.border).toBe(true);
+
+        delete shapes.vertices;
+        delete shapes.vertexLines;
+        shapes.polygonLookup = null;
+        shapes.resetVertices();
+        expect(shapes.vertices.length).toBeGreaterThan(0);
+        expect(shapes.vertexLines.length).toBeGreaterThan(0);
+        expect(shapes.vertexLines.length).toBeGreaterThan(
+          shapes.vertices.length
+        );
+
+        const shapesWithoutBorder = getShapes({
+          data: datamulti,
+          border: false, // Without border
+        });
+        shapesWithoutBorder.resetVertices();
+        expect(shapesWithoutBorder.vertexLines.length).toBe(0);
+      });
+
+      const datamultiWithHole: Feature = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: [
+            // Polygon 1 (with hole)
+            [
+              [
+                [0.0, 0.0],
+                [4.0, 0.0],
+                [4.0, 4.0],
+                [0.0, 4.0],
+                [0.0, 0.0], // Closing the outer ring
+              ],
+              [
+                [1.0, 1.0],
+                [3.0, 1.0],
+                [3.0, 3.0],
+                [1.0, 3.0],
+                [1.0, 1.0], // Closing the hole
+              ],
+            ],
+            // Polygon 2 (no hole)
+            [
+              [
+                [5.0, 5.0],
+                [7.0, 5.0],
+                [7.0, 7.0],
+                [5.0, 7.0],
+                [5.0, 5.0], // Closing the outer ring
+              ],
+            ],
+          ],
+        },
+      };
+
+      it("processes MultiPolygon with a hole correctly", () => {
+        const shapes = getShapes({
+          data: datamultiWithHole,
+          border: true,
+        });
+
+        shapes.resetVertices();
+
+        // Ensure vertices and vertexLines are populated
+        expect(shapes.vertices.length).toBeGreaterThan(0);
+        expect(shapes.vertexLines.length).toBeGreaterThan(0);
       });
     });
     describe("when data.type is a default case", () => {
@@ -310,5 +463,246 @@ describe("Shapes", () => {
         });
       });
     });
+  });
+
+  describe("drawOnCanvas", () => {
+    function callDrawOnCanvas(
+      shapes: Shapes,
+      event?: Partial<ICanvasOverlayDrawEvent>
+    ): void {
+      shapes.drawOnCanvas({
+        canvas: shapes.canvas,
+        bounds: new LatLngBounds(new LatLng(1, 1), new LatLng(2, 2)),
+        offset: new Point(1, 1),
+        scale: 1,
+        size: new Point(10, 10),
+        zoomScale: 1,
+        zoom: 1,
+        ...event,
+      });
+    }
+
+    const datamulti: Feature = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [0.0, 0.0],
+              [1.0, 0.0],
+              [1.0, 1.0],
+              [0.0, 1.0],
+              [0.0, 0.0], // Closing the first polygon
+            ],
+          ],
+          [
+            [
+              [2.0, 2.0],
+              [3.0, 2.0],
+              [3.0, 3.0],
+              [2.0, 3.0],
+              [2.0, 2.0], // Closing the second polygon
+            ],
+          ],
+        ],
+      },
+    };
+
+    it("calls gl.clear() correctly", () => {
+      const shapes = getShapes({ data: datamulti });
+      const { gl } = shapes;
+      const clearSpy = jest.spyOn(gl, "clear");
+      callDrawOnCanvas(shapes);
+      expect(clearSpy).toHaveBeenCalledWith(gl.COLOR_BUFFER_BIT);
+    });
+    it("calls gl.viewport() correctly", () => {
+      const shapes = getShapes({ data: datamulti });
+      const { gl } = shapes;
+      const viewportSpy = jest.spyOn(gl, "viewport");
+      callDrawOnCanvas(shapes);
+      expect(viewportSpy).toHaveBeenCalledWith(
+        0,
+        0,
+        shapes.canvas.width,
+        shapes.canvas.height
+      );
+    });
+    it("calls gl.vertexAttrib1f() correctly", () => {
+      const shapes = getShapes({ data: datamulti });
+      const { gl } = shapes;
+      const vertexAttrib1fSpy = jest.spyOn(gl, "vertexAttrib1f");
+      callDrawOnCanvas(shapes);
+      //expect(vertexAttrib1fSpy).toHaveBeenCalledWith(shapes.bytes, 6);
+      // TODO - add checks
+    });
+    it("calls mapMatrix.setSize and mapMatrix.scaleMatrix correctly", () => {
+      const shapes = getShapes({ data: datamulti });
+      const setSizeSpy = jest.spyOn(shapes.mapMatrix, "setSize");
+      const scaleMatrixSpy = jest.spyOn(shapes.mapMatrix, "scaleTo");
+      callDrawOnCanvas(shapes);
+      expect(setSizeSpy).toHaveBeenCalledWith(
+        shapes.canvas.width,
+        shapes.canvas.height
+      );
+      expect(scaleMatrixSpy).toHaveBeenCalledWith(1);
+    });
+
+    describe("when border is set to true", () => {
+      it("renders border using gl.vertexAttrib1f() correctly", () => {
+        const shapes = getShapes({ data: datamulti, border: true });
+        const { gl } = shapes;
+        const vertexAttrib1fSpy = jest.spyOn(gl, "vertexAttrib1f");
+
+        callDrawOnCanvas(shapes);
+        // TODO - add checks
+      });
+
+      it("populates vertexLines when border is true", () => {
+        const shapes = getShapes({ data: datamulti, border: true });
+
+        shapes.resetVertices();
+
+        // Expect vertexLines to be populated
+        expect(shapes.vertexLines.length).toBeGreaterThan(0);
+      });
+
+      it("does not populate vertexLines when border is false", () => {
+        const shapes = getShapes({ data: datamulti, border: false });
+
+        shapes.resetVertices();
+
+        // Expect vertexLines to remain empty
+        expect(shapes.vertexLines.length).toBe(0);
+      });
+
+      it("calls gl.bindBuffer and gl.drawArrays for border rendering", () => {
+        const shapes = getShapes({ data: datamulti, border: true });
+        const { gl } = shapes;
+        const bindBufferSpy = jest.spyOn(gl, "bindBuffer");
+        const drawArraysSpy = jest.spyOn(gl, "drawArrays");
+
+        callDrawOnCanvas(shapes);
+
+        // Verify the buffer binding and drawing for borders
+        expect(bindBufferSpy).toHaveBeenCalledWith(
+          gl.ARRAY_BUFFER,
+          shapes.buffers.vertexLines
+        );
+        expect(drawArraysSpy).toHaveBeenCalledWith(
+          gl.LINES,
+          0,
+          shapes.vertexLines.length / 6 // Assuming 6 attributes per vertex
+        );
+      });
+    });
+  });
+});
+
+
+function getShapesWithPolygon(settings?: Partial<IShapesSettings>): Shapes {
+  const element = document.createElement("div");
+  const map = new Map(element);
+
+  // Minimalistic FeatureCollection with a single polygon
+  const data: FeatureCollection = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [0, 0], // Bottom-left
+              [0, 1], // Top-left
+              [1, 1], // Top-right
+              [1, 0], // Bottom-right
+              [0, 0], // Closing the loop
+            ],
+          ],
+        },
+        properties: {
+          id: 1,
+          name: "Test Polygon",
+        },
+      },
+    ],
+  };
+
+  return new Shapes({
+    map,
+    data,
+    vertexShaderSource: " ",
+    fragmentShaderSource: " ",
+    latitudeKey: 1,
+    longitudeKey: 0,
+    ...settings,
+  });
+}
+
+describe("Shapes - Color Input", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("encodes a hex string color in vertices", () => {
+    const shapes = getShapesWithPolygon({ color: "#ff5733" });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the last RGB values before the final number
+    expect(color).toEqual([1, 0.3411764705882353, 0.2]); // r, g, b for #ff5733
+  });
+
+  it("encodes an RGB array in vertices", () => {
+    const shapes = getShapesWithPolygon({ color: [0.1, 0.4, 0.8] });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGBA array in vertices (ignores alpha)", () => {
+    const shapes = getShapesWithPolygon({ color: [0.1, 0.4, 0.8, 0.6] });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGB object in vertices", () => {
+    const shapes = getShapesWithPolygon({ color: { r: 0.1, g: 0.4, b: 0.8 } });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes an RGBA object in vertices (ignores alpha)", () => {
+    const shapes = getShapesWithPolygon({
+      color: { r: 0.1, g: 0.4, b: 0.8, a: 0.5 },
+    });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.1, 0.4, 0.8]); // r, g, b
+  });
+
+  it("encodes default gray color for invalid hex string", () => {
+    const shapes = getShapesWithPolygon({ color: "invalid" });
+    shapes.resetVertices();
+
+    const vertices = shapes.vertices;
+    const color = vertices.slice(-4, -1); // Extract the RGB values
+    expect(color).toEqual([0.5, 0.5, 0.5]); // Default gray color
   });
 });

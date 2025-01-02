@@ -45,7 +45,7 @@ export interface IBaseGlLayerSettings {
   contextMenu?: EventCallback;
   hover?: EventCallback;
   hoverOff?: EventCallback;
-  color?: ColorCallback | IColor | null;
+  color?: ColorCallback | IColor | string | number[] | null;
   className?: string;
   opacity?: number;
   preserveDrawingBuffer?: boolean;
@@ -148,7 +148,7 @@ export abstract class BaseGlLayer<
     return this.settings.opacity;
   }
 
-  get color(): ColorCallback | IColor | null {
+  get color(): ColorCallback | IColor | string | number[] | null {
     return this.settings.color ?? null;
   }
 
