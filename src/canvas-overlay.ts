@@ -134,7 +134,7 @@ export class CanvasOverlay extends Layer {
       pane.removeChild(this.canvas);
     }
 
-    map.off("zoom", this._reset, this);
+    //FIXME: map.off("zoom", this._reset, this);
     map.off("moveend", this._reset, this);
     map.off("resize", this._resize, this);
 
