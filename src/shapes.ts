@@ -22,6 +22,7 @@ import { latLonToPixel } from "./utils";
 
 import { notProperlyDefined } from "./errors";
 import glify from "./index";
+import { getChosenColor } from "./color";
 
 export interface IShapesSettings extends IBaseGlLayerSettings {
   border?: boolean;
@@ -201,6 +202,7 @@ export class Shapes extends BaseGlLayer {
       } else {
         chosenColor = color as Color.IColor;
       }
+      chosenColor = getChosenColor(chosenColor);
 
       const alpha = typeof chosenColor.a === "number" ? chosenColor.a : opacity;
 
@@ -385,6 +387,35 @@ export class Shapes extends BaseGlLayer {
 
     if (foundShapes && foundPolygon) {
       const result = (foundShapes as Shapes).click(e, foundPolygon);
+      return result !== undefined ? result : undefined;
+    }
+  }
+
+  // attempts to click the top-most Shapes instance
+  static tryContextMenu(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Shapes[]
+  ): boolean | undefined {
+    let foundPolygon: Feature<Polygon, GeoJsonProperties> | null = null;
+    let foundShapes: Shapes | null = null;
+    instances.forEach(function (_instance: Shapes): void {
+      if (!_instance.active) return;
+      if (_instance.map !== map) return;
+      if (!_instance.polygonLookup) return;
+
+      const polygon = _instance.polygonLookup.search(
+        e.latlng.lng,
+        e.latlng.lat
+      );
+      if (polygon) {
+        foundShapes = _instance;
+        foundPolygon = polygon;
+      }
+    });
+
+    if (foundShapes && foundPolygon) {
+      const result = (foundShapes as Shapes).contextMenu(e, foundPolygon);
       return result !== undefined ? result : undefined;
     }
   }

@@ -8,8 +8,6 @@ import {
 import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 
-jest.mock("../canvas-overlay");
-
 describe("BaseGlLayer", () => {
   interface ITestLayerSettings extends IBaseGlLayerSettings {}
   class TestLayer extends BaseGlLayer<ITestLayerSettings> {
@@ -404,6 +402,18 @@ describe("BaseGlLayer", () => {
         });
         expect(layer.setup()).toBe(layer);
         expect(setupClick).toHaveBeenCalledWith(layer.map);
+      });
+    });
+    describe("when settings.contextMenu and settings.setupContextMenu are truth", () => {
+      it("calls settings.setupContextMenu with this.map", () => {
+        const contextMenu = () => {};
+        const setupContextMenu = jest.fn();
+        const layer = getGlLayer({
+          contextMenu,
+          setupContextMenu,
+        });
+        expect(layer.setup()).toBe(layer);
+        expect(setupContextMenu).toHaveBeenCalledWith(layer.map);
       });
     });
     describe("when settings.hover and settings.setupHover are truthy", () => {

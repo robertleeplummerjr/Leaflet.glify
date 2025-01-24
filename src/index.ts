@@ -29,6 +29,7 @@ export class Glify {
   longitudeKey = 1;
   latitudeKey = 0;
   clickSetupMaps: Map[] = [];
+  contextMenuSetupMaps: Map[] = [];
   hoverSetupMaps: Map[] = [];
   shader = shader;
 
@@ -63,6 +64,7 @@ export class Glify {
   points(settings: Partial<IPointsSettings>): Points {
     const points = new this.Points({
       setupClick: this.setupClick.bind(this),
+      setupContextMenu: this.setupContextMenu.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: glify.latitudeKey,
       longitudeKey: glify.longitudeKey,
@@ -81,6 +83,7 @@ export class Glify {
   lines(settings: Partial<ILinesSettings>): Lines {
     const lines = new this.Lines({
       setupClick: this.setupClick.bind(this),
+      setupContextMenu: this.setupContextMenu.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
@@ -99,6 +102,7 @@ export class Glify {
   shapes(settings: Partial<IShapesSettings>): Shapes {
     const shapes = new this.Shapes({
       setupClick: this.setupClick.bind(this),
+      setupContextMenu: this.setupContextMenu.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
       longitudeKey: this.longitudeKey,
@@ -126,6 +130,23 @@ export class Glify {
       if (hit !== undefined) return hit;
 
       hit = this.Shapes.tryClick(e, map, this.shapesInstances);
+      if (hit !== undefined) return hit;
+    });
+  }
+
+  setupContextMenu(map: Map): void {
+    if (this.contextMenuSetupMaps.includes(map)) return;
+    this.clickSetupMaps.push(map);
+    map.on("contextmenu", (e: LeafletMouseEvent) => {
+      e.originalEvent.preventDefault(); // Prevent the default context menu from showing
+      let hit;
+      hit = this.Points.tryContextMenu(e, map, this.pointsInstances);
+      if (hit !== undefined) return hit;
+
+      hit = this.Lines.tryContextMenu(e, map, this.linesInstances);
+      if (hit !== undefined) return hit;
+
+      hit = this.Shapes.tryContextMenu(e, map, this.shapesInstances);
       if (hit !== undefined) return hit;
     });
   }

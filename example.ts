@@ -25,6 +25,15 @@ Promise.all([
 
       console.log("clicked on Shape", feature, e);
     },
+    contextMenu: (e, feature): void => {
+      e.originalEvent.preventDefault(); // Prevent the default context menu from showing
+      L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`You right clicked on ${feature.properties.NAZKR_ENG}`)
+        .openOn(map);
+
+      console.log("clicked on Shape", feature, e);
+    },
     hover: (e: LeafletMouseEvent, feature) => {
       console.log("hovered on Shape", feature, e);
     },
@@ -44,6 +53,14 @@ Promise.all([
         .openOn(map);
 
       console.log("clicked on Line", feature, e);
+    },
+    contextMenu: (e: LeafletMouseEvent, feature) => {
+      e.originalEvent.preventDefault(); // Prevent the default context menu from showing
+      //set up a standalone popup (use a popup as a layer)
+      L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`right clicked on Line ${feature.properties.name}`)
+        .openOn(map);
     },
     hover: (e: LeafletMouseEvent, feature) => {
       console.log("hovered on Line", feature, e);
@@ -73,6 +90,16 @@ Promise.all([
 
       console.log("clicked on Point", feature, e);
     },
+    contextMenu: (e: LeafletMouseEvent, feature) => {
+      e.originalEvent.preventDefault(); // Prevent the default context menu from showing
+      //set up a standalone popup (use a popup as a layer)
+      L.popup()
+        .setLatLng(feature)
+        .setContent(
+          `You right clicked the point at longitude:${e.latlng.lng}, latitude:${e.latlng.lat}`
+        )
+        .openOn(map);
+    },
     data: points,
   });
 
@@ -94,6 +121,18 @@ Promise.all([
         .setLatLng(feature)
         .setContent(
           `You clicked the point at longitude:${e.latlng.lng}, latitude:${e.latlng.lat}`
+        )
+        .openOn(map);
+
+      console.log("clicked on Point", feature, e);
+    },
+    contextMenu: (e: LeafletMouseEvent, feature) => {
+      e.originalEvent.preventDefault(); // Prevent the default context menu from showing
+      //set up a standalone popup (use a popup as a layer)
+      L.popup()
+        .setLatLng(feature)
+        .setContent(
+          `You right clicked the point at longitude:${e.latlng.lng}, latitude:${e.latlng.lat}`
         )
         .openOn(map);
 
@@ -126,6 +165,16 @@ Promise.all([
       L.popup()
         .setLatLng(feature.geometry.coordinates)
         .setContent("You clicked on:" + feature.properties.name)
+        .openOn(map);
+
+      console.log("clicked on Point", feature, e);
+    },
+    contextMenu: (e, feature) => {
+      e.originalEvent.preventDefault(); // Prevent the default context menu from showing
+      //set up a standalone popup (use a popup as a layer)
+      L.popup()
+        .setLatLng(feature.geometry.coordinates)
+        .setContent("You right clicked on:" + feature.properties.name)
         .openOn(map);
 
       console.log("clicked on Point", feature, e);
@@ -168,6 +217,15 @@ Promise.all([
       L.popup()
         .setLatLng(e.latlng)
         .setContent(`You clicked on ${feature.properties.name}`)
+        .openOn(map);
+
+      console.log("clicked on Shape", feature, e);
+    },
+    contextMenu: (e, feature) => {
+      e.originalEvent.preventDefault(); // Prevent the default context menu from showing
+      L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`You right clicked on ${feature.properties.name}`)
         .openOn(map);
 
       console.log("clicked on Shape", feature, e);

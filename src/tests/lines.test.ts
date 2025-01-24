@@ -4,7 +4,6 @@ import { MapMatrix } from "../map-matrix";
 import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 import { ILinesSettings, Lines, WeightCallback } from "../lines";
 
-jest.mock("../canvas-overlay");
 jest.mock("../utils", () => {
   return {
     inBounds: () => true,
@@ -30,9 +29,7 @@ const mockFeatureCollection: FeatureCollection<LineString> = {
   ],
 };
 
-function getSettings(
-  settings?: Partial<ILinesSettings>
-): Partial<ILinesSettings> {
+function getSettings(settings?: Partial<ILinesSettings>): Partial<ILinesSettings> {
   const element = document.createElement("div");
   const map = new Map(element);
   return {
@@ -279,50 +276,10 @@ describe("Lines", () => {
       jest.spyOn(lines.map, "project").mockReturnValue(new Point(1, 2));
       lines.resetVertices();
       const expected = [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
+        1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,
       ];
       const expectedVerticesArray = [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
+        1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6,
       ];
       expect(lines.vertices.length).toBe(1);
       expect(lines.vertices[0].array).toEqual(expectedVerticesArray);
@@ -694,4 +651,97 @@ describe("Lines", () => {
       });
     });
   });
+});
+
+
+function getLines(settings?: Partial<ILinesSettings>): Lines {
+  const lineSettings = getSettings(settings);
+  return new Lines(lineSettings as ILinesSettings);
+}
+
+describe("Lines - Color Input", () => {
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("encodes a hex string color in vertices", () => {
+    const lines = getLines({ color: "#ff5733" });
+    lines.resetVertices();
+    const rgb = lines.vertices[0].settings.color;
+    expect(rgb).toEqual({
+      r: 1,
+      g: 0.3411764705882353,
+      b: 0.2,
+      a: undefined, // Default alpha for RGB input
+    });
+  });
+
+  it("accepts an RGB array as color", () => {
+    const lines = getLines({ color: [0.1, 0.4, 0.8] });
+    lines.resetVertices();
+
+    const rgb = lines.vertices[0].settings.color;
+    expect(rgb).toEqual({
+      r: 0.1,
+      g: 0.4,
+      b: 0.8,
+      a: undefined, // Default alpha for RGB input
+    });
+  });
+
+  it("accepts an RGBA array as color", () => {
+    const lines = getLines({ color: [0.1, 0.4, 0.8, 0.6] });
+    lines.resetVertices();
+
+    const rgb = lines.vertices[0].settings.color;
+    expect(rgb).toEqual({
+      r: 0.1,
+      g: 0.4,
+      b: 0.8,
+      a: 0.6, // Alpha provided in input
+    });
+  });
+
+  it("accepts an RGB object as color", () => {
+    const lines = getLines({ color: { r: 0.1, g: 0.4, b: 0.8 } });
+    lines.resetVertices();
+
+    const rgb = lines.vertices[0].settings.color;
+    expect(rgb).toEqual({
+      r: 0.1,
+      g: 0.4,
+      b: 0.8,
+      a: undefined, // Default alpha for RGB input
+    });
+  });
+
+  it("accepts an RGBA object as color", () => {
+    const lines = getLines({ color: { r: 0.1, g: 0.4, b: 0.8, a: 0.5 } });
+    lines.resetVertices();
+
+    const rgb = lines.vertices[0].settings.color;
+    expect(rgb).toEqual({
+      r: 0.1,
+      g: 0.4,
+      b: 0.8,
+      a: 0.5, // Alpha provided in input
+    });
+  });
+
+  it("encodes default gray color for invalid hex string", () => {
+    const lines = getLines({ color: "invalid" });
+    lines.resetVertices();
+
+    const rgb = lines.vertices[0].settings.color;
+    expect(rgb).toEqual({
+      r: 0.5,
+      g: 0.5,
+      b: 0.5,
+      a: 1, // Default alpha for invalid input
+    });
+  });
+
 });
