@@ -106,7 +106,10 @@ export class CanvasOverlay extends Layer {
     }
     pane.appendChild(this.canvas);
 
-    map.on("zoom", this._reset, this);
+    //FIXME: glify.shapes disappear on zoom, show up again on moveend...?
+    // when "leaflet-smooth-zoom" package is used, works fine and actually improves UX
+    // see https://github.com/robertleeplummerjr/Leaflet.glify/issues/132 for more info
+    // map.on("zoom", this._reset, this);
     map.on("moveend", this._reset, this);
     map.on("resize", this._resize, this);
 
