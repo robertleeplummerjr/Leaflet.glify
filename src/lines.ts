@@ -9,9 +9,8 @@ import {
 
 import {
   BaseGlLayer,
-  ColorCallback,
-  IBaseGlLayerSettings,
 } from "./base-gl-layer";
+import { IBaseGlLayerSettings, ColorCallback } from "./types-base";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as color from "./color";
 import { LineFeatureVertices } from "./line-feature-vertices";

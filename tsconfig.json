@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "allowJs": true,
+    "allowJs": true, 
     "allowSyntheticDefaultImports": true,
     "checkJs": false,
     "esModuleInterop": true,
-    // "declaration": true,
-    // "emitDeclarationOnly": true,
-    // "declarationMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "declarationDir": "./dist",
     "module": "esnext",
     "moduleResolution": "node",
     // "noEmit": true,
@@ -18,5 +18,6 @@
     "target": "es2018",
     "lib": ["es2019", "dom"]
   },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.glsl"],
   "exclude": ["node_modules", "**/*.json", "dist", "examples", "__coverage__"]
 }

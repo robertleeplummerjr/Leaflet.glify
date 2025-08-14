@@ -1,8 +1,11 @@
-import { Glify } from "../index";
-import { IPointsSettings, Points } from "../points";
-import { ILinesSettings, Lines } from "../lines";
-import { IShapesSettings, Shapes } from "../shapes";
-import { LatLng, LeafletMouseEvent, Map, Point } from "leaflet";
+import { Map } from "leaflet";
+import { IPointsSettings, ILinesSettings, IShapesSettings } from "../types-base";
+import { Points } from "../points";
+import { Lines } from "../lines";
+import { Shapes } from "../shapes";
+import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
+import glify, { Glify } from "../index";
+import { LatLng, LeafletMouseEvent, Point } from "leaflet";
 import { FeatureCollection, LineString, MultiPolygon } from "geojson";
 
 type mouseEventFunction = (e: LeafletMouseEvent) => void;

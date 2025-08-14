@@ -2,9 +2,8 @@ import {
   BaseGlLayer,
   defaultHoverWait,
   defaultPane,
-  EventCallback,
-  IBaseGlLayerSettings,
 } from "../base-gl-layer";
+import { EventCallback, IBaseGlLayerSettings } from "../types-base";
 import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 import { LatLng, LatLngBounds, LeafletMouseEvent, Map, Point } from "leaflet";
 
@@ -219,12 +218,10 @@ describe("BaseGlLayer", () => {
 
   describe("opacity", () => {
     describe("when settings.opacity is not defined", () => {
-      it("throws", () => {
+      it("returns default value", () => {
         const layer = getGlLayer();
         delete layer.settings.opacity;
-        expect(() => {
-          layer.opacity;
-        }).toThrow();
+        expect(layer.opacity).toBe(0.5);
       });
     });
     describe("when settings.opacity is defined", () => {

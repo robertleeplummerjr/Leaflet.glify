@@ -5,22 +5,14 @@ import {
   Position,
 } from "geojson";
 
-import { BaseGlLayer, IBaseGlLayerSettings } from "./base-gl-layer";
-import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
+import { BaseGlLayer } from "./base-gl-layer";
+import { IPointsSettings, IPointVertex, ICanvasOverlayDrawEvent } from "./types-base";
 import * as Color from "./color";
 import { LeafletMouseEvent, Map, Point, LatLng } from "leaflet";
 import { IPixel } from "./pixel";
 import { locationDistance, pixelInCircle } from "./utils";
 import glify from "./index";
 import { getChosenColor } from "./color";
-
-export interface IPointsSettings extends IBaseGlLayerSettings {
-  data: number[][] | FeatureCollection<GeoPoint>;
-  size?: ((i: number, latLng: LatLng | null) => number) | number | null;
-  eachVertex?: (pointVertex: IPointVertex) => void;
-  sensitivity?: number;
-  sensitivityHover?: number;
-}
 
 const defaults: Partial<IPointsSettings> = {
   color: Color.random,
@@ -46,15 +38,6 @@ const defaults: Partial<IPointsSettings> = {
     },
   },
 };
-
-export interface IPointVertex {
-  latLng: LatLng;
-  pixel: IPixel;
-  chosenColor: Color.IColor;
-  chosenSize: number;
-  key: string;
-  feature?: any;
-}
 
 export class Points extends BaseGlLayer<IPointsSettings> {
   static defaults = defaults;

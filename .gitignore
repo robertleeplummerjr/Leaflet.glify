@@ -9,3 +9,4 @@ yarn.lock
 .build
 __coverage__
 .gh-pages
+.notes

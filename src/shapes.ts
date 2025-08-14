@@ -13,9 +13,8 @@ import {
 
 import {
   BaseGlLayer,
-  ColorCallback,
-  IBaseGlLayerSettings,
 } from "./base-gl-layer";
+import { IBaseGlLayerSettings, ColorCallback } from "./types-base";
 import { ICanvasOverlayDrawEvent } from "./canvas-overlay";
 import * as Color from "./color";
 import { latLonToPixel } from "./utils";

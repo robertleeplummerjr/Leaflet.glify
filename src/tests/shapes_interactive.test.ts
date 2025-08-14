@@ -2,7 +2,17 @@ import { Feature, FeatureCollection, Polygon } from "geojson";
 import { LatLng, LeafletMouseEvent, Map, Point } from "leaflet";
 import { IShapesSettings, Shapes } from "../shapes";
 
-jest.mock("../canvas-overlay");
+jest.mock("../canvas-overlay", () => {
+  return {
+    CanvasOverlay: jest.fn().mockImplementation(() => {
+      return {
+        addTo: jest.fn().mockReturnThis(),
+        canvas: document.createElement('canvas'),
+        redraw: jest.fn(),
+      };
+    }),
+  };
+});
 
 const mockFeatureCollection: FeatureCollection<Polygon> = {
   type: "FeatureCollection",

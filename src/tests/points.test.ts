@@ -1,6 +1,7 @@
 import { LatLng, LatLngBounds, Map, Point } from "leaflet";
 import { FeatureCollection, Point as GeoPoint } from "geojson";
-import { IPointVertex, IPointsSettings, Points } from "../points";
+import { Points } from "../points";
+import { IPointVertex, IPointsSettings } from "../types-base";
 import { ICanvasOverlayDrawEvent } from "../canvas-overlay";
 
 function getPoints(settings?: Partial<IPointsSettings>): Points {

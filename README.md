@@ -14,6 +14,122 @@ inspired by http://bl.ocks.org/Sumbera/c6fed35c377a46ff74c3 & need.
 - Remaining as simple as possible with current fastest libs
 - Providing the same sort of user experience one would get using standard html and elements
 
+## GeoJSON & WGS84 Standard Compliance
+
+Leaflet.glify follows the **World Geodetic System (WGS84) standard** as defined by the National Geospatial-Intelligence Agency (NGA) and adopted by the GeoJSON specification.
+
+### **Default Coordinate Order**
+- **Default format**: `[longitude, latitude]` (WGS84/GeoJSON standard)
+- **Why this matters**: GeoJSON specification requires coordinates in `[lng, lat]` order
+- **Reference**: [WGS84 Standard (NGA)](https://earth-info.nga.mil/php/download.php?file=coord-wgs84), [GeoJSON Specification](https://geojson.org/)
+
+### **Coordinate Order Methods**
+```typescript
+import glify from 'leaflet.glify';
+
+// Check current coordinate order, "lngFirst" (default)
+const currentOrder = glify.getCoordinateOrder(); 
+
+// Set coordinate order
+// WGS84/GeoJSON standard [longitude, latitude]
+glify.setCoordinateOrder("lngFirst");  
+// Legacy format [latitude, longitude]
+glify.setCoordinateOrder("latFirst"); 
+
+// Fluent API
+// Same as setCoordinateOrder("lngFirst")
+glify.longitudeFirst();
+// Same as setCoordinateOrder("latFirst") 
+glify.latitudeFirst();  
+```
+
+## TypeScript Support
+
+Leaflet.glify provides comprehensive TypeScript definitions for better development experience and type safety. The type system is organized to avoid circular dependencies while maintaining full type inference.
+
+### **Type Organization**
+Types are organized into logical groups:
+- **`types-base.ts`** - Base interfaces and utility types (no class references)
+- **`types-glify.ts`** - Core library interface that references actual classes
+- **`types.ts`** - Main export file that re-exports all types
+
+### **Importing Types**
+```typescript
+import glify, { 
+  IGlify, 
+  GlifyCoordinateOrder, 
+  IPointsSettings,
+  GlifyClickCallback 
+} from 'leaflet.glify';
+
+// Type-safe coordinate order configuration
+const order: GlifyCoordinateOrder = "lngFirst";
+glify.setCoordinateOrder(order);
+
+// Type-safe settings with full type inference
+const settings: Partial<IPointsSettings> = {
+  map: leafletMap,
+  data: geoJsonData,
+  size: 5,
+  click: (e, feature) => {
+    console.log('Clicked:', feature);
+    return false; 
+  }
+};
+
+// Full type inference - points is typed as Points class
+const points = glify.points(settings);
+```
+
+### **Available Types**
+- **Core**: `IGlify`, `IGlifyShader`, `GlifyInstance`
+- **Settings**: `IPointsSettings`, `ILinesSettings`, `IShapesSettings`, `IBaseGlLayerSettings`
+- **Events**: `GlifyClickCallback<T>`, `GlifyHoverCallback<T>`, `GlifyContextMenuCallback<T>`
+- **Coordinates**: `GlifyCoordinateOrder`, `IGlifyCoordinateConfig`
+- **WebGL**: `IShaderVariable`, `ICanvasOverlayDrawEvent`
+- **Utilities**: `IColor`, `IPixel`, `IPointVertex`
+- **Callbacks**: `ColorCallback`, `WeightCallback`, `EventCallback`, `SetupHoverCallback`
+
+### **Type Safety Features**
+- **Real class types** - No forward declarations, 100% type consistency
+- **Full inheritance** - Settings interfaces properly extend base interfaces
+- **Generic support** - Event callbacks support custom feature types
+- **Method chaining** - Fluent API with proper return type inference
+
+### **Working with Types**
+The type system is designed to provide maximum type safety while avoiding circular dependencies:
+
+```typescript
+// Import the main library and types
+import glify, { 
+  IGlify, 
+  IPointsSettings, 
+  GlifyClickCallback 
+} from 'leaflet.glify';
+
+// Create type-safe settings
+const settings: Partial<IPointsSettings> = {
+  map: leafletMap,
+  data: geoJsonData,
+  size: 5,
+  // Type-safe event handlers
+  click: (e, feature) => {
+    // feature is properly typed based on your data
+    console.log('Clicked:', feature);
+    return false;
+  }
+};
+
+// Get fully typed instance
+const points = glify.points(settings);
+
+// TypeScript knows this is a Points instance
+// All methods and properties are properly typed
+points.update(newData, 0);
+points.remove([1, 2]);
+points.render();
+```
+
 ## Usage
 
 ### Browser
@@ -56,6 +172,39 @@ L.glify.points({
 });
 ```
 
+### **Typed Points Usage**
+```typescript
+import glify, { IPointsSettings, GlifyClickCallback } from 'leaflet.glify';
+
+// Type-safe click handler with custom feature type
+interface MyPointFeature {
+  properties: { name: string; value: number };
+  geometry: { coordinates: [number, number] };
+}
+
+const clickHandler: GlifyClickCallback<MyPointFeature> = (e, feature, xy) => {
+  console.log('Clicked feature:', feature.properties.name);
+  return true; 
+};
+
+const settings: Partial<IPointsSettings> = {
+  map: leafletMap,
+  data: geoJsonData, 
+  size: 5,
+  click: clickHandler,
+  hover: (e, feature) => {
+    console.log('Hovered:', feature);
+  }
+};
+
+// Full type inference - points is typed as Points class
+const points = glify.points(settings);
+
+// Type-safe access to Points methods and properties
+points.update(newData, 0);
+points.remove([1, 2, 3]);
+```
+
 ### Simple Lines Usage
 ```ts
 L.glify.lines({
@@ -75,6 +224,38 @@ L.glify.lines({
 });
 ```
 
+### **Typed Lines Usage**
+```typescript
+import glify, { ILinesSettings, GlifyHoverCallback } from 'leaflet.glify';
+
+// Type-safe hover handler with custom feature type
+interface LineFeature {
+  properties: { name: string; type: string };
+  geometry: { coordinates: [number, number][] };
+}
+
+const hoverHandler: GlifyHoverCallback<LineFeature> = (e, feature, xy) => {
+  console.log('Hovered line:', feature.properties.name);
+};
+
+const settings: Partial<ILinesSettings> = {
+  map: leafletMap,
+  data: lineGeoJson,
+  weight: 2,
+  hover: hoverHandler,
+  hoverOff: (e, feature) => {
+    console.log('Hover off:', feature);
+  }
+};
+
+// Full type inference - lines is typed as Lines class
+const lines = glify.lines(settings);
+
+// Type-safe access to Lines methods and properties
+lines.update(newLineFeature, 0);
+lines.remove([0, 1]);
+```
+
 ### Simple Polygon Usage
 ```ts
 L.glify.shapes({
@@ -90,6 +271,37 @@ L.glify.shapes({
 });
 ```
 
+### **Typed Shapes Usage**
+```typescript
+import glify, { IShapesSettings, GlifyContextMenuCallback } from 'leaflet.glify';
+
+// Type-safe context menu handler with custom feature type
+interface PolygonFeature {
+  properties: { name: string; area: number };
+  geometry: { coordinates: [number, number][][] };
+}
+
+const contextMenuHandler: GlifyContextMenuCallback<PolygonFeature> = (e, feature) => {
+  console.log('Right-clicked polygon:', feature.properties.name);
+  return true; 
+};
+
+const settings: Partial<IShapesSettings> = {
+  map: leafletMap,
+  data: polygonGeoJson, 
+  border: true,
+  borderOpacity: 0.8,
+  contextMenu: contextMenuHandler
+};
+
+// Full type inference - shapes is typed as Shapes class
+const shapes = glify.shapes(settings);
+
+// Type-safe access to Shapes methods and properties
+shapes.update(newPolygonFeature, 0);
+shapes.remove([0, 1]);
+```
+
 ## API
 **`L.glify` methods**
 * [`points(options)`](#lglifypointsoptions-object)
@@ -97,20 +309,28 @@ L.glify.shapes({
 * [`shapes(options)`](#lglifyshapesoptions-object)
 * [`longitudeFirst()`](#longitudefirst)
 * [`latitudeFirst()`](#latitudefirst)
+* [`setCoordinateOrder(order)`](#setcoordinateorder)
+* [`getCoordinateOrder()`](#getcoordinateorder)
 
 **`L.glify` properties**
 * [`pointsInstances`](#pointsinstances)
 * [`linesInstances`](#linesinstances)
 * [`shapesInstances`](#shapesinstances)
+* [`longitudeKey`](#longitudekey)
+* [`latitudeKey`](#latitudekey)
+* [`instances`](#instances)
 
 ---
 ### `L.glify.points(options: object)`
 Adds point data passed in `options.data` to the Leaflet map instance passed in `options.map`.
+
+**Note**: By default, coordinates are expected in `[longitude, latitude]` format (WGS84/GeoJSON standard).
+
 #### Returns
 `L.glify.Points` instance
 #### Options
 * `map` `{Object}` required leaflet map
-* `data` `{Object}` required geojson `FeatureCollection` object or an array of `[lat: number, lng: number]` arrays
+* `data` `{Object}` required geojson `FeatureCollection` object or an array of `[lng: number, lat: number]` arrays (WGS84 standard)
 * `vertexShaderSource` `{String|Function}` optional glsl vertex shader source, defaults to use `L.glify.shader.vertex`
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.point`
 * `click` `{Function}` optional event handler for clicking a point
@@ -130,11 +350,14 @@ Adds point data passed in `options.data` to the Leaflet map instance passed in `
 ---
 ### `L.glify.lines(options: object)`
 Adds line data passed in `options.data` to the Leaflet map instance passed in `options.map`.
+
+**Note**: By default, coordinates are expected in `[longitude, latitude]` format (WGS84/GeoJSON standard).
+
 #### Returns
 `L.glify.Lines` instance
 #### Options
 * `map` `{Object}` required leaflet map
-* `data` `{Object}` required geojson `FeatureCollection` object with `geometry.coordinates` arrays being in a `[lat: number, lng: number]` format
+* `data` `{Object}` required geojson `FeatureCollection` object with `geometry.coordinates` arrays being in a `[lng: number, lat: number]` format (WGS84 standard)
 * `vertexShaderSource` `{String|Function}` optional glsl vertex shader source, defaults to use `L.glify.shader.vertex`
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.point`
 * `click` `{Function}` optional event handler for clicking a line
@@ -156,11 +379,14 @@ Adds line data passed in `options.data` to the Leaflet map instance passed in `o
 ---
 ### `L.glify.shapes(options: object)`
 Adds polygon/multipolygon data passed in `options.data` to the Leaflet map instance passed in `options.map`.
+
+**Note**: By default, coordinates are expected in `[longitude, latitude]` format (WGS84/GeoJSON standard).
+
 #### Returns
 `L.glify.Shapes` instance
 #### Options
 * `map` `{Object}` required leaflet map
-* `data` `{Object}` required geojson `FeatureCollection` object with `geometry.coordinates` arrays being in a `[lng: number, lat: number]` format *Note: `lat` and `lng` are expected in a different order than in `.points()` and `.lines()`*
+* `data` `{Object}` required geojson `FeatureCollection` object with `geometry.coordinates` arrays being in a `[lng: number, lat: number]` format (WGS84 standard)
 * `vertexShaderSource` `{String|Function}` optional glsl vertex shader source, defaults to use `L.glify.shader.vertex`
 * `fragmentShaderSource` `{String|Function}` optional glsl fragment shader source, defaults to use `L.glify.shader.fragment.polygon`
 * `click` `{Function}` optional event handler for clicking a shape
@@ -177,15 +403,34 @@ Adds polygon/multipolygon data passed in `options.data` to the Leaflet map insta
 * `pane` `{String}` optional, default is `overlayPane`. Can be set to a custom pane.
 ---
 ### `longitudeFirst()`
-Sets the expecetd order of arrays in the `coordinates` array of GeoJSON passed to `options.data` to be `[lng, lat]`
+Sets the expected order of arrays in the `coordinates` array of GeoJSON passed to `options.data` to be `[lng, lat]` (WGS84/GeoJSON standard)
+
 #### Returns
 The updated `L.glify` instance it was called on
 
 ---
 ### `latitudeFirst()`
-Sets the expecetd order of arrays in the `coordinates` array of GeoJSON passed to `options.data` to be `[lat, lng]`
+Sets the expected order of arrays in the `coordinates` array of GeoJSON passed to `options.data` to be `[lat, lng]` (legacy format)
+
 #### Returns
 The updated `L.glify` instance it was called on
+
+---
+### `setCoordinateOrder(order)`
+Sets the coordinate order for data parsing.
+
+**Parameters:**
+- `order` `{String}` - `"lngFirst"` for WGS84/GeoJSON standard `[longitude, latitude]`, `"latFirst"` for legacy format `[latitude, longitude]`
+
+#### Returns
+The updated `L.glify` instance it was called on
+
+---
+### `getCoordinateOrder()`
+Gets the current coordinate order setting.
+
+#### Returns
+`{String}` - `"lngFirst"` for WGS84/GeoJSON standard, `"latFirst"` for legacy format
 
 ---
 ### `pointsInstances`  
@@ -199,6 +444,20 @@ All of the `L.glify.Lines` instances
 ### `shapesInstances`
 All of the `L.glify.Shapes` instances
 
+---
+### `longitudeKey`
+The array index for longitude coordinates. Defaults to `0` (WGS84/GeoJSON standard).
+
+---
+### `latitudeKey`
+The array index for latitude coordinates. Defaults to `1` (WGS84/GeoJSON standard).
+
+---
+### `instances`
+Returns an array of all active layer instances (`Points`, `Lines`, and `Shapes`).
+
+#### Returns
+`Array<Points | Lines | Shapes>` - All active layer instances
 
 ## Building
 
