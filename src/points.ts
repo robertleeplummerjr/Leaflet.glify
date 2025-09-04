@@ -97,10 +97,10 @@ export class Points extends BaseGlLayer<IPointsSettings> {
         "unhandled data type. Supported types are Array and GeoJson.FeatureCollection"
       );
     }
-
-    if (map.options.crs?.code !== "EPSG:3857") {
-      console.warn("layer designed for SphericalMercator, alternate detected");
-    }
+	
+	if (map.options.crs?.code !== "EPSG:3857" && map.options.crs?.code !== "EPSG:4326") {
+		console.warn("Layer type is not supported");
+	}
 
     this.setup().render();
   }
@@ -205,20 +205,23 @@ export class Points extends BaseGlLayer<IPointsSettings> {
           chosenSize = size as number;
         }
 
-        vertices.push(
-          // vertex
-          pixel.x - mapCenterPixels.x,
-          pixel.y - mapCenterPixels.y,
+		const crs = map.options.crs;
 
-          // color
-          chosenColor.r,
-          chosenColor.g,
-          chosenColor.b,
-          chosenColor.a ?? 0,
+		vertices.push(
+		  crs?.code === 'EPSG:4326' 
+			? pixel.x
+			: pixel.x - mapCenterPixels.x,
+		  crs?.code === 'EPSG:4326' 
+			? pixel.y
+			: pixel.y - mapCenterPixels.y,
 
-          // size
-          chosenSize
-        );
+		  chosenColor.r,
+		  chosenColor.g,
+		  chosenColor.b,
+		  chosenColor.a ?? 0,
+
+		  chosenSize
+		);
         const vertex = {
           latLng,
           key,
@@ -259,17 +262,12 @@ export class Points extends BaseGlLayer<IPointsSettings> {
         }
 
         vertices.push(
-          // vertex
           pixel.x - mapCenterPixels.x,
           pixel.y - mapCenterPixels.y,
-
-          // color
           chosenColor.r,
           chosenColor.g,
           chosenColor.b,
           chosenColor.a ?? 0,
-
-          // size
           chosenSize
         );
         const vertex: IPointVertex = {

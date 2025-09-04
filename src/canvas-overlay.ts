@@ -232,23 +232,24 @@ export class CanvasOverlay extends Layer {
     }
   }
 
-  _unclampedProject(latlng: LatLng, zoom: number): Point {
-    // imported partly from https://github.com/Leaflet/Leaflet/blob/1ae785b73092fdb4b97e30f8789345e9f7c7c912/src/geo/projection/Projection.SphericalMercator.js#L21
-    // used because they clamp the latitude
-    const { crs } = this.map.options;
-    // @ts-expect-error experimental
-    const { R } = crs.projection;
-    const d = Math.PI / 180;
-    const lat = latlng.lat;
-    const sin = Math.sin(lat * d);
-    const projectedPoint = new Point(
-      R * latlng.lng * d,
-      (R * Math.log((1 + sin) / (1 - sin))) / 2
-    );
-    const scale = crs?.scale(zoom) ?? 0;
-    // @ts-expect-error experimental
-    return crs.transformation._transform(projectedPoint, scale);
-  }
+	_unclampedProject(latlng: LatLng, zoom: number): Point {
+	  const crs = this.map.options.crs as any;
+	  const scale = crs.scale(zoom);
+
+	  if (crs?.code === "EPSG:4326") {
+		return crs.latLngToPoint(latlng, zoom);
+	  }
+
+	  const d = Math.PI / 180;
+	  const sin = Math.sin(latlng.lat * d);
+	  const projected = new Point(
+		6378137 * latlng.lng * d,
+		6378137 * Math.log((1 + sin) / (1 - sin)) / 2
+	  );
+
+	  const transformation = crs.transformation;
+	  return transformation.transform(projected, scale);
+	}
 
   _unclampedLatLngBoundsToNewLayerBounds(
     latLngBounds: LatLngBounds,
