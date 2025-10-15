@@ -41,6 +41,7 @@ export class Glify {
   latitudeKey = 1;
   
   clickSetupMaps: Map[] = [];
+  dblClickSetupMaps: Map[] = [];
   contextMenuSetupMaps: Map[] = [];
   hoverSetupMaps: Map[] = [];
   shader = shader;
@@ -106,6 +107,7 @@ export class Glify {
   points(settings: Partial<IPointsSettings>): Points {
     const points = new this.Points({
       setupClick: this.setupClick.bind(this),
+      setupDblClick: this.setupDblClick.bind(this),
       setupContextMenu: this.setupContextMenu.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: glify.latitudeKey,
@@ -125,6 +127,7 @@ export class Glify {
   lines(settings: Partial<ILinesSettings>): Lines {
     const lines = new this.Lines({
       setupClick: this.setupClick.bind(this),
+      setupDblClick: this.setupDblClick.bind(this),
       setupContextMenu: this.setupContextMenu.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
@@ -144,6 +147,7 @@ export class Glify {
   shapes(settings: Partial<IShapesSettings>): Shapes {
     const shapes = new this.Shapes({
       setupClick: this.setupClick.bind(this),
+      setupDblClick: this.setupDblClick.bind(this),
       setupContextMenu: this.setupContextMenu.bind(this),
       setupHover: this.setupHover.bind(this),
       latitudeKey: this.latitudeKey,
@@ -174,6 +178,22 @@ export class Glify {
       hit = this.Shapes.tryClick(e, map, this.shapesInstances);
       if (hit !== undefined) return hit;
     });
+  }
+
+  setupDblClick(map: Map): void {
+    if (this.dblClickSetupMaps.includes(map)) return;
+    this.dblClickSetupMaps.push(map);
+    map.on("dblclick", (e: LeafletMouseEvent) => {
+      let hit;
+      hit = this.Points.tryDblClick(e, map, this.pointsInstances);
+      if (hit !== undefined) return hit;
+
+      hit = this.Lines.tryDblClick(e, map, this.linesInstances);
+      if (hit !== undefined) return hit;
+
+      hit = this.Shapes.tryDblClick(e, map, this.shapesInstances);
+      if (hit !== undefined) return hit;
+    })
   }
 
   setupContextMenu(map: Map): void {

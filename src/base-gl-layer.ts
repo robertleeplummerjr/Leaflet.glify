@@ -35,6 +35,7 @@ export interface IBaseGlLayerSettings {
   };
   setupClick?: (map: Map) => void;
   setupContextMenu?: (map: Map) => void;
+  setupDblClick?: (map: Map) => void;
   setupHover?: SetupHoverCallback;
   sensitivity?: number;
   sensitivityHover?: number;
@@ -42,6 +43,7 @@ export interface IBaseGlLayerSettings {
   fragmentShaderSource?: (() => string) | string;
   canvas?: HTMLCanvasElement;
   click?: EventCallback;
+  dblClick?: EventCallback;
   contextMenu?: EventCallback;
   hover?: EventCallback;
   hoverOff?: EventCallback;
@@ -237,6 +239,9 @@ export abstract class BaseGlLayer<
     if (settings.click && settings.setupClick) {
       settings.setupClick(this.map);
     }
+    if (settings.dblClick && settings.setupDblClick) {
+      settings.setupDblClick(this.map);
+    }
     if (settings.contextMenu && settings.setupContextMenu) {
       settings.setupContextMenu(this.map);
     }
@@ -417,6 +422,14 @@ export abstract class BaseGlLayer<
   click(e: LeafletMouseEvent, feature: any): boolean | undefined {
     if (!this.settings.click) return;
     const result = this.settings.click(e, feature);
+    if (result !== undefined) {
+      return result;
+    }
+  }
+
+  dblClick(e: LeafletMouseEvent, feature: any): boolean | undefined {
+    if (!this.settings.dblClick) return;
+    const result = this.settings.dblClick(e, feature);
     if (result !== undefined) {
       return result;
     }

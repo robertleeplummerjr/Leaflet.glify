@@ -436,6 +436,50 @@ export class Points extends BaseGlLayer<IPointsSettings> {
   }
 
   // attempts to click the top-most Points instance
+  static tryDblClick(
+    e: LeafletMouseEvent,
+    map: Map,
+    instances: Points[]
+  ): boolean | undefined {
+    const closestFromEach: IPointVertex[] = [];
+    const instancesLookup: { [key: string]: Points } = {};
+    let result;
+    let settings: Partial<IPointsSettings> | null = null;
+    let pointLookup: IPointVertex | null;
+
+    instances.forEach((_instance: Points) => {
+      settings = _instance.settings;
+      if (!_instance.active) return;
+      if (_instance.map !== map) return;
+
+      pointLookup = _instance.lookup(e.latlng);
+      if (pointLookup === null) return;
+      instancesLookup[pointLookup.key] = _instance;
+      closestFromEach.push(pointLookup);
+    });
+
+    if (closestFromEach.length < 1) return;
+    if (!settings) return;
+
+    const found = this.closest(e.latlng, closestFromEach, map);
+
+    if (!found) return;
+
+    const instance = instancesLookup[found.key];
+    if (!instance) return;
+    const { sensitivity } = instance;
+    const foundLatLng = found.latLng;
+    const xy = map.latLngToLayerPoint(foundLatLng);
+
+    if (
+      pixelInCircle(xy, e.layerPoint, found.chosenSize * (sensitivity ?? 1))
+    ) {
+      result = instance.dblClick(e, found.feature || found.latLng);
+      return result !== undefined ? result : true;
+    }
+  }
+
+  // attempts to click the top-most Points instance
   static tryContextMenu(
     e: LeafletMouseEvent,
     map: Map,
