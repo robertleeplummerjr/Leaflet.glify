@@ -1,4 +1,14 @@
-import { Map, LeafletMouseEvent, geoJSON } from "leaflet";
+import type {
+  Map,
+  LeafletMouseEvent,
+  LatLngBounds,
+  LatLng,
+} from "leaflet";
+import {
+  latLng, // L.latLng()
+  latLngBounds, // L.latLngBounds()
+} from "leaflet";
+
 import {
   Feature,
   FeatureCollection,
@@ -74,7 +84,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
 
   constructor(settings: Partial<ILinesSettings>) {
     super(settings);
-    this.settings = { ...Lines.defaults, ...settings };
+    this.settings = { ...Lines.defaults, ...settings }; // as ILinesSettings;
 
     if (!settings.data) {
       throw new Error('"data" is missing');
@@ -330,6 +340,74 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     return this;
   }
 
+  // cache, to not recalculate bounds on each tryHover
+  private _lastFeatureCount: number = 0;
+  private _cachedBounds?: LatLngBounds;
+
+  /**
+   * Calculates and returns the bounding box (`LatLngBounds`) for all features in the current dataset (`settings.data.features`).
+   *
+   * The bounds are computed by iterating through each feature's geometry and determining the minimum and maximum
+   * latitude and longitude values. The result is cached (for performance optimization) and recalculated only if the number of features changes.
+   *
+   * @returns {LatLngBounds} The calculated bounding box containing all feature coordinates.
+   */
+  getBounds(): LatLngBounds {
+    const me = this;
+    const features = me.settings.data?.features!; // settings.data is always declared in constructor. Avoiding warnings.
+    const featuresCount = features.length;
+
+    if (me._lastFeatureCount !== featuresCount) {
+      me._lastFeatureCount = featuresCount;
+
+      let minLat = Infinity, minLng = Infinity;
+      let maxLat = -Infinity, maxLng = -Infinity;
+
+      for (const feature of features) {
+        for (const line of feature.geometry.type === 'LineString'
+                                        ? [feature.geometry.coordinates]
+                                        : feature.geometry.coordinates as Position[][]) {
+          for (const coord of line) {
+            const lat = coord[me.latitudeKey];
+            const lng = coord[me.longitudeKey];
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+            if (lng < minLng) minLng = lng;
+            if (lng > maxLng) maxLng = lng;
+          }
+        }
+      }
+
+      // set cached bounds
+      me._cachedBounds = latLngBounds( // L.latLngBounds()
+        { lat: minLat, lng: minLng }, // sw
+        { lat: maxLat, lng: maxLng }  // ne
+      );
+    }
+
+    return me._cachedBounds!; // guarantee that bounds are calculated
+  }
+
+  /**
+   * Expands the given bounding box by a specified sensitivity and the line weight.
+   * It's not really accurate if weight is a function, but it works for most cases.
+   *
+   * @param sensitivity - The amount to expand the bounds by, in map units.
+   * @param bounds - Optional. The bounding box to expand. If not provided, uses the object's bounds.
+   * @returns A new `LatLngBounds` object representing the expanded bounding box.
+   */
+  incBounds(sensitivity: number, bounds?: LatLngBounds): LatLngBounds {
+    const bBox = bounds ?? this.getBounds();
+
+    // increase the bounding box of the features by sensitivity + weight
+    const pad = sensitivity
+                    + (typeof this.weight === "function" ? 0 : this.weight) / this.scale;
+    const sw = latLng(bBox.getSouth() - pad, bBox.getWest() - pad);
+    const ne = latLng(bBox.getNorth() + pad, bBox.getEast() + pad);
+
+    return latLngBounds(sw, ne);
+  }
+
   // attempts to click the top-most Lines instance
   static tryClick(
     e: LeafletMouseEvent,
@@ -340,10 +418,25 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     let foundLines: Lines | null = null;
 
     instances.forEach((instance: Lines): void => {
-      const { latitudeKey, longitudeKey, sensitivity, weight, scale, active } =
-        instance;
-      if (!active) return;
-      if (instance.map !== map) return;
+      const {
+        latitudeKey,
+        longitudeKey,
+        sensitivity,
+        data,
+        weight,
+        scale,
+        active
+      } = instance;
+
+      const features: Feature<LineString | MultiLineString>[] = data.features;
+      const featuresLen: number = features.length;
+
+      if (!active
+            || map !== instance.map
+            || !featuresLen) {
+        return;
+      }
+
       function checkClick(
         coordinate: Position,
         prevCoordinate: Position,
@@ -358,15 +451,16 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
           coordinate[longitudeKey],
           coordinate[latitudeKey]
         );
+
         if (distance <= sensitivity + chosenWeight / scale) {
           foundFeature = feature;
           foundLines = instance;
         }
       }
-      instance.data.features.forEach(
+
+      features.forEach(
         (feature: Feature<LineString | MultiLineString>, i: number): void => {
-          const chosenWeight =
-            typeof weight === "function" ? weight(i, feature) : weight;
+          const chosenWeight = typeof weight === "function" ? weight(i, feature) : weight;
           const { coordinates, type } = feature.geometry;
           if (type === "LineString") {
             for (let i = 1; i < coordinates.length; i++) {
@@ -409,7 +503,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
 
     if (foundLines && foundFeature) {
       const result = (foundLines as Lines).click(e, foundFeature);
-      return result !== undefined ? result : undefined;
+      return result; // same as: return result !== undefined ? result : undefined;
     }
   }
 
@@ -423,10 +517,25 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     let foundLines: Lines | null = null;
 
     instances.forEach((instance: Lines): void => {
-      const { latitudeKey, longitudeKey, sensitivity, weight, scale, active } =
-        instance;
-      if (!active) return;
-      if (instance.map !== map) return;
+      const {
+        latitudeKey,
+        longitudeKey,
+        sensitivity,
+        data,
+        weight,
+        scale,
+        active
+      } = instance;
+
+      const features: Feature<LineString | MultiLineString>[] = data.features;
+      const featuresLen: number = features.length;
+
+      if (!active
+            || map !== instance.map
+            || !featuresLen) {
+        return;
+      }
+
       function checkContextMenu(
         coordinate: Position,
         prevCoordinate: Position,
@@ -446,10 +555,10 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
           foundLines = instance;
         }
       }
-      instance.data.features.forEach(
+
+      features.forEach(
         (feature: Feature<LineString | MultiLineString>, i: number): void => {
-          const chosenWeight =
-            typeof weight === "function" ? weight(i, feature) : weight;
+          const chosenWeight = typeof weight === "function" ? weight(i, feature) : weight;
           const { coordinates, type } = feature.geometry;
           if (type === "LineString") {
             for (let i = 1; i < coordinates.length; i++) {
@@ -492,11 +601,12 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
 
     if (foundLines && foundFeature) {
       const result = (foundLines as Lines).contextMenu(e, foundFeature);
-      return result !== undefined ? result : undefined;
+      return result; // same as: return result !== undefined ? result : undefined;
     }
   }
 
   hoveringFeatures: Array<Feature<LineString | MultiLineString>> = [];
+
   // hovers all touching Lines instances
   static tryHover(
     e: LeafletMouseEvent,
@@ -504,6 +614,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
     instances: Lines[]
   ): Array<boolean | undefined> {
     const results: Array<boolean | undefined> = [];
+
     instances.forEach((instance: Lines): void => {
       const {
         sensitivityHover,
@@ -513,7 +624,19 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         hoveringFeatures,
         weight,
         scale,
+        active
       } = instance;
+
+      const features: Feature<LineString | MultiLineString>[] = data.features;
+      const featuresLen: number = features.length;
+
+      if (!active
+            || map !== instance.map
+            || !featuresLen
+            || (!instance.hover && !instance.hoverOff)) { // if none of these method are used, no need to do all the calculations below to check whether mouse hovers some feature.
+        return;
+      }
+
       function checkHover(
         coordinate: Position,
         prevCoordinate: Position,
@@ -539,20 +662,17 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
         }
         return false;
       }
-      if (!instance.active) return;
-      if (map !== instance.map) return;
-      const oldHoveredFeatures = hoveringFeatures;
-      const newHoveredFeatures: Array<Feature<LineString | MultiLineString>> =
-        [];
-      instance.hoveringFeatures = newHoveredFeatures;
-      // Check if e.latlng is inside the bbox of the features
-      const bounds = geoJSON(data.features).getBounds();
 
-      if (inBounds(e.latlng, bounds)) {
-        data.features.forEach(
+      const oldHoveredFeatures = hoveringFeatures;
+      const newHoveredFeatures: Array<Feature<LineString | MultiLineString>> = [];
+      instance.hoveringFeatures = newHoveredFeatures;
+
+      // AK 2025-07-21: this is check for performance optimization, if point is outside of boundaries of all features but feel free to comment out the inBounds check.
+      // Use incBounds to increase the bounding box of the features by sensitivityHover + weight
+      if (inBounds(e.latlng, instance.incBounds(sensitivityHover))) { // Check if e.latlng is inside the boundaries of all the features (BTW, don't use Leaflet's geoJSON, it has swapped lat/lng)
+        features.forEach(
           (feature: Feature<LineString | MultiLineString>, i: number): void => {
-            const chosenWeight =
-              typeof weight === "function" ? weight(i, feature) : weight;
+            const chosenWeight = typeof weight === "function" ? weight(i, feature) : weight;
             const { coordinates, type } = feature.geometry;
             let isHovering = false;
             if (type === "LineString") {
@@ -581,6 +701,7 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
                       chosenWeight
                     );
                     if (isHovering) break;
+
                   } else if (j > 0) {
                     isHovering = checkHover(
                       coordinates[i][j] as Position,
@@ -602,10 +723,13 @@ export class Lines extends BaseGlLayer<ILinesSettings> {
           }
         );
       }
-      for (let i = 0; i < oldHoveredFeatures.length; i++) {
-        const feature = oldHoveredFeatures[i];
-        if (!newHoveredFeatures.includes(feature)) {
-          instance.hoverOff(e, feature);
+
+      // call `hoverOff()` only if it's really used in current instance.
+      if (instance.hoverOff) {
+        for (const oldHoveredFeature of oldHoveredFeatures) {
+          if (!newHoveredFeatures.includes(oldHoveredFeature)) {
+            instance.hoverOff(e, oldHoveredFeature);
+          }
         }
       }
     });
