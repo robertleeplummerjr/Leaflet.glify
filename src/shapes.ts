@@ -231,8 +231,8 @@ export class Shapes extends BaseGlLayer {
           index = indices[i];
           if (typeof flat.vertices[0] === "number") {
             triangles.push(
-              flat.vertices[index * dim + longitudeKey],
-              flat.vertices[index * dim + latitudeKey]
+              flat.vertices[index * dim + latitudeKey],
+              flat.vertices[index * dim + longitudeKey]
             );
           } else {
             throw new Error("unhandled polygon");
